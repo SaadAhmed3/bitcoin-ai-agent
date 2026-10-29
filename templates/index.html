@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Overview · BTC Signal Lab</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <script src="{{ url_for('plotly_js') }}" charset="utf-8"></script>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">₿</span>
+      <div><strong>BTC Signal Lab</strong><small>v{{ version }}</small></div>
+    </div>
+    <nav id="viewNav" aria-label="Views">
+      <p class="nav-label">Views</p>
+      <a href="#/overview" data-view="overview">Overview</a>
+      <a href="#/market" data-view="market">Market &amp; chart</a>
+      <a href="#/news" data-view="news">News &amp; calendar</a>
+      <a href="#/signal" data-view="signal">Signal details</a>
+      <a href="#/research" data-view="research">Research (backtest)</a>
+      <a href="#/paper" data-view="paper">Risk &amp; paper</a>
+      <a href="#/alerts" data-view="alerts">Alerts <b class="nav-badge" id="navAlertBadge" hidden>0</b></a>
+      <a href="#/assistant" data-view="assistant">Ask the data</a>
+      <a href="#/system" data-view="system">System &amp; sources</a>
+      <p class="nav-label">Configure</p>
+      <a href="/settings">Settings</a>
+    </nav>
+    <p class="sidebar-foot">Research tool only. Never places orders. Not financial advice.</p>
+  </aside>
+
+  <main id="main" data-view="overview" data-view-ready="0">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+      <div class="topbar-title">
+        <h1 id="viewTitle">Overview</h1>
+        <span class="muted" id="clock" title="Your local time"></span>
+      </div>
+      <a class="fresh" id="freshness" href="#/system" title="Data freshness. Opens System &amp; sources.">Waiting for first refresh…</a>
+      <div class="topbar-actions">
+        <span class="pill" id="statusPill"><i></i><span>Connecting…</span></span>
+        <a class="btn ghost ask-link" href="#/assistant" id="askLink">Ask the data</a>
+        <a class="icon-btn bell" href="#/alerts" id="bellBtn" aria-label="Alerts: 0 unread" title="Alert centre">🔔<b class="badge" id="bellBadge" hidden>0</b></a>
+        <a class="btn ghost settings-link" href="/settings" id="settingsLink">Settings</a>
+        <button class="btn ghost" id="refreshBtn">Refresh</button>
+        <button class="icon-btn" id="themeBtn" aria-label="Toggle light/dark theme">◐</button>
+      </div>
+    </header>
+
+    <!-- ============================================================ Overview -->
+    <section id="overview" class="kpis" data-views="overview">
+      <article class="card kpi kpi-price">
+        <div class="kpi-head"><span>BTC price</span><span class="tag live">Live</span></div>
+        <div class="kpi-value mono" id="price">Waiting…</div>
+        <div class="kpi-sub" id="priceMeta">Waiting for first refresh…</div>
+        <div class="kpi-warn" id="priceWarn"></div>
+      </article>
+      <article class="card kpi">
+        <div class="kpi-head"><span>24h change</span><span class="tag live">Live</span></div>
+        <div class="kpi-value mono" id="change">Waiting…</div>
+        <div class="kpi-sub" id="changeMeta">From the price source</div>
+      </article>
+      <article class="card kpi">
+        <div class="kpi-head"><span>Market cap · dominance</span><span class="tag live">Aggregated</span></div>
+        <div class="kpi-value mono" id="mcap">Waiting…</div>
+        <div class="kpi-sub" id="mcapMeta">CoinGecko</div>
+      </article>
+      <article class="card kpi">
+        <div class="kpi-head"><span>Volatility regime</span><span class="tag calc">Calculated</span></div>
+        <div class="kpi-value" id="volRegime">Waiting…</div>
+        <div class="kpi-sub" id="volMeta">ATR% percentile, selected timeframe</div>
+      </article>
+    </section>
+
+    <section id="sigSummary" class="card sig-summary" data-views="overview" data-state="loading">
+      <div class="card-head">
+        <div><h2>Current signal</h2><p class="muted">Research signal · spot only · never executes trades</p></div>
+        <span class="tag model">Model estimate</span>
+      </div>
+      <div class="sum-grid">
+        <div>
+          <div class="sig-badge" id="sumBadge">Waiting…</div>
+          <p class="sum-reason" id="sumReason">Waiting for first refresh…</p>
+        </div>
+        <dl class="sum-facts" id="sumFacts"></dl>
+      </div>
+      <div id="sumPending"></div>
+      <a class="btn ghost sum-link" href="#/signal" id="sumLink">See full reasoning →</a>
+    </section>
+
+    <!-- ============================================================ Signal -->
+    <section id="signal" class="card signal-card" data-views="signal" data-state="loading">
+      <div class="card-head">
+        <div><h2>Current signal</h2><p class="muted" id="sigMeta">Research signal · spot only · never executes trades</p></div>
+        <div class="row-gap"><span class="tag model">Model estimate</span><button class="btn ghost small-btn" id="sigRefresh">Recalculate</button></div>
+      </div>
+      <div class="sig-top">
+        <div class="sig-main">
+          <div class="sig-badge" id="sigBadge">Waiting…</div>
+          <div class="sig-sub" id="sigSub">Waiting for first refresh…</div>
+          <div class="score-meter"><div class="track"><span class="mark sell"></span><span class="mark buy"></span><span class="mark strong"></span><i id="sigDot"></i></div>
+            <div class="scale"><span>−1 bearish</span><span>0</span><span>+1 bullish</span></div></div>
+        </div>
+        <div class="sig-gates" id="sigGates"></div>
+      </div>
+      <details class="fold" id="fdEvidence"><summary>Evidence for / against</summary>
+        <div class="sig-grid two">
+          <div><h3>Bullish evidence</h3><ul class="ev up-list" id="sigFor"></ul></div>
+          <div><h3>Bearish evidence</h3><ul class="ev down-list" id="sigAgainst"></ul></div>
+        </div>
+      </details>
+      <details class="fold" id="fdComponents"><summary>Components table <small class="muted">(weights are documented and adjustable)</small></summary>
+        <div class="table-wrap"><table class="table stack" id="sigComp"><thead><tr><th>Component</th><th>Score</th><th>Weight</th><th>Contribution</th><th>Why</th></tr></thead><tbody></tbody></table></div>
+      </details>
+      <details class="fold" id="fdPlan"><summary>Plan, levels &amp; invalidation</summary>
+        <div class="sig-grid two">
+          <div><h3>Trade plan</h3><div id="sigPlan" class="plan"></div></div>
+          <div><h3>Invalidation / what would change it</h3><ul class="ev" id="sigInval"></ul>
+            <h3 class="sub">Levels vs live price</h3><ul class="ev" id="sigLevels"></ul></div>
+        </div>
+      </details>
+      <details class="fold" id="fdRisk"><summary>Risk &amp; volatility</summary><ul class="ev" id="sigRisk"></ul></details>
+      <details class="fold" id="fdNews"><summary>Related news</summary><ul class="ev" id="sigNews"></ul></details>
+      <details class="fold" id="fdDiag"><summary>Diagnostics</summary><ul class="ev" id="sigDiag"></ul></details>
+      <details class="fold" id="fdWarn"><summary>Data warnings <span class="muted" id="sigWarnCount"></span></summary><ul class="ev" id="sigWarn"></ul></details>
+      <p class="disclaimer" id="sigConf"></p>
+    </section>
+
+    <section id="sighist" class="card" data-views="signal">
+      <div class="card-head"><div><h2>Signal history &amp; audit log</h2><p class="muted">Stored on every change, and hourly otherwise</p></div>
+        <div class="head-actions"><span class="tag model">Model estimate</span><div class="export" data-dataset="signals"></div></div></div>
+      <div class="table-wrap"><table class="table stack" id="histTable">
+        <thead><tr><th>Time</th><th>Signal</th><th>Setup</th><th>Score</th><th>BTC</th><th>Why recorded</th></tr></thead>
+        <tbody><tr><td colspan="6" class="empty">No signals yet.</td></tr></tbody></table></div>
+    </section>
+
+    <!-- ============================================================ Chart (overview + market) -->
+    <section id="chart" class="card" data-views="overview market">
+      <div class="card-head">
+        <div>
+          <h2>Price chart</h2>
+          <p class="muted" id="chartMeta">Closed candles only</p>
+        </div>
+        <div class="head-actions"><span class="tag live">Live</span>
+          <div class="seg" id="tfSeg" role="group" aria-label="Chart timeframe">
+            {% for tf in timeframes %}<button data-tf="{{ tf }}" class="{{ 'on' if tf == '1h' else '' }}">{{ tf }}</button>{% endfor %}
+          </div></div>
+      </div>
+      <div class="overlay-toggles" id="overlayToggles" role="group" aria-label="Chart overlays">
+        <label><input type="checkbox" data-ov="ema" checked> EMA 9/21/50/200</label>
+        <label><input type="checkbox" data-ov="bb" checked> Bollinger</label>
+        <label><input type="checkbox" data-ov="vwap"> VWAP</label>
+        <label><input type="checkbox" data-ov="levels"> Support / resistance</label>
+        <label><input type="checkbox" data-ov="alerts"> Alert prices</label>
+        <label><input type="checkbox" data-ov="markers"> Signal markers</label>
+      </div>
+      <div id="chartBox" class="chart-box" role="figure" aria-label="BTC candlestick chart with volume and RSI for the selected timeframe"><div class="empty">Loading chart…</div></div>
+      <p class="muted small" id="chartNote"></p>
+      <div class="chart-warn" id="chartWarn"></div>
+    </section>
+
+    <!-- ============================================================ Market -->
+    <section class="grid-2" id="analysis" data-views="market">
+      <article class="card">
+        <div class="card-head">
+          <div><h2>Indicator readings</h2><p class="muted" id="anaMeta">Waiting for first refresh…</p></div>
+          <span class="tag calc">Calculated</span>
+        </div>
+        <div class="tally" id="tally"></div>
+        <ul class="readings" id="readings"><li class="empty">Loading…</li></ul>
+        <p class="disclaimer">Readings are evidence, not guarantees. A count of bullish vs bearish readings is not a probability of profit.</p>
+      </article>
+      <article class="card">
+        <div class="card-head"><div><h2>Structure &amp; levels</h2><p class="muted">From confirmed swing points</p></div>
+          <span class="tag calc">Calculated</span></div>
+        <div class="facts" id="facts"></div>
+        <div class="levels">
+          <div><h3>Resistance</h3><ul id="resList"></ul></div>
+          <div><h3>Support</h3><ul id="supList"></ul></div>
+        </div>
+        <div class="kpi-warn" id="anaWarn"></div>
+      </article>
+    </section>
+
+    <section id="mtf" class="card" data-views="market">
+      <div class="card-head"><div><h2>Multi-timeframe snapshot</h2>
+        <p class="muted">Each row uses its own closed candles</p></div>
+        <span class="tag calc">Calculated</span></div>
+      <div class="table-wrap">
+        <table class="table stack" id="mtfTable">
+          <thead><tr><th>TF</th><th>Close</th><th>RSI</th><th>ADX</th><th>Structure</th><th>Range</th><th>Volatility</th><th>Bull / Bear</th><th>Data</th></tr></thead>
+          <tbody><tr><td colspan="9" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================ News -->
+    <section id="news" class="news-grid" data-views="news">
+      <article class="card">
+        <div class="card-head">
+          <div><h2>News sentiment &amp; impact</h2><p class="muted" id="newsMeta">Last 72 hours · each story counted once</p></div>
+          <span class="tag model">Rule-based estimate</span>
+        </div>
+        <div class="bias" id="newsBias"><div class="empty">Loading news…</div></div>
+        <div class="sent-bars" id="sentBars"></div>
+        <h3 class="sub">By category <small class="muted">(primary category)</small></h3>
+        <ul class="cat-list" id="catList"></ul>
+        <h3 class="sub">Conflicting reports</h3>
+        <ul class="conflicts" id="conflicts"></ul>
+        <details class="docs"><summary>How the news bias is calculated</summary><p class="muted small" id="newsMethod"></p></details>
+        <div class="kpi-warn" id="newsWarn"></div>
+      </article>
+      <article class="card">
+        <div class="card-head">
+          <div><h2>News feed</h2><p class="muted">Headlines link to the original publisher</p></div>
+          <div class="head-actions"><span class="tag live">Live</span><div class="export" data-dataset="news" data-query="hours=72"></div>
+          <button class="btn ghost small-btn" id="newsRefresh">Fetch now</button></div>
+        </div>
+        <div class="filters">
+          <select id="fSent" aria-label="Sentiment"><option value="">All sentiment</option><option>bullish</option><option>bearish</option><option>uncertain</option><option>neutral</option></select>
+          <select id="fImpact" aria-label="Impact"><option value="">All impact</option><option>high</option><option>medium</option><option>low</option></select>
+          <select id="fCat" aria-label="Category"><option value="">All categories</option></select>
+          <label class="chk"><input type="checkbox" id="fOld"> Show priced-in / superseded / &gt;72h</label>
+        </div>
+        <ul class="news-list" id="newsList"><li class="empty">Loading…</li></ul>
+      </article>
+    </section>
+
+    <!-- ============================================================ Overview: latest alerts + next event -->
+    <section class="grid-2 even" id="ovExtra" data-views="overview">
+      <article class="card" id="ovAlerts">
+        <div class="card-head"><div><h2>Latest alerts</h2><p class="muted" id="ovAlertsMeta">The 3 newest alerts</p></div>
+          <a class="btn ghost small-btn" href="#/alerts">Alert centre →</a></div>
+        <ul class="alert-list compact" id="ovAlertList"><li class="empty">Loading…</li></ul>
+      </article>
+      <article class="card" id="ovCalendar">
+        <div class="card-head"><div><h2>Next economic event</h2><p class="muted">Verified US events</p></div>
+          <a class="btn ghost small-btn" href="#/news">Calendar →</a></div>
+        <div id="ovNextEvent" class="next-event"><p class="empty">Loading…</p></div>
+      </article>
+    </section>
+
+    <section class="grid-2" id="markets" data-views="overview news">
+      <article class="card" id="watchlist" data-views="overview" data-state="loading">
+        <div class="card-head"><div><h2>Watchlist</h2><p class="muted" id="wlMeta">Binance spot · display only, no signals</p></div>
+          <div class="head-actions"><span class="tag live">Live</span><a class="btn ghost small-btn" href="/settings#watchlist">Edit</a></div></div>
+        <div class="table-wrap"><table class="table stack" id="wlTable">
+          <thead><tr><th>Symbol</th><th>Last</th><th>24h</th><th>Source · time</th></tr></thead>
+          <tbody><tr><td colspan="4" class="empty">Loading…</td></tr></tbody></table></div>
+        <p class="kpi-warn" id="wlWarn"></p>
+      </article>
+      <article class="card" id="calendar" data-views="news" data-state="loading">
+        <div class="card-head"><div><h2>Economic calendar</h2><p class="muted" id="calMeta">Verified US events · next 14 days</p></div>
+          <span class="tag live">Official sources</span></div>
+        <ul class="cal-list" id="calList"><li class="empty">Loading…</li></ul>
+        <p class="muted small" id="calNext"></p>
+        <details class="docs"><summary>Sources</summary><ul class="cal-sources" id="calSources"></ul></details>
+      </article>
+    </section>
+
+    <!-- ============================================================ Research -->
+    <section id="backtest" class="card" data-views="research" data-state="idle">
+      <div class="card-head">
+        <div><h2>Backtest &amp; validation</h2>
+          <p class="muted">Replays the live signal engine on real Binance history, bar by bar, with no look-ahead. Only out-of-sample results can lift the NO TRADE gate.</p></div>
+        <div class="head-actions"><span class="tag hyp">Hypothetical</span>
+          <div class="export" data-dataset="backtest" id="btExport" hidden></div></div>
+      </div>
+      <div class="bt-controls toolbar" role="group" aria-label="Backtest run settings">
+        <label>Test period
+          <select id="btYears"><option value="2">2 years</option><option value="3">3 years</option><option value="4" selected>4 years</option><option value="5">5 years</option></select></label>
+        <label>Entry rule
+          <select id="btEntryMode"><option value="standard" selected>standard</option><option value="breakout">breakout</option><option value="pullback">pullback</option></select></label>
+        <label>Period
+          <select id="btPeriod"><option value="full" selected>full</option><option value="design">design (to 2025-10-29)</option><option value="holdout">holdout (from 2025-10-29)</option></select></label>
+        <label class="chk"><input type="checkbox" id="btDownload" checked> Download/refresh history first</label>
+        <button class="btn" id="btRun">Run backtest</button>
+        <button class="btn ghost" id="btCancel" hidden>Cancel</button>
+      </div>
+      <details class="help"><summary>What do these choices mean?</summary>
+        <ul class="ev">
+          <li><b>Period:</b> <i>full</i> = the whole test span (it overlaps the reserved holdout year); <i>design</i> = up to 2025-10-29, in-sample for rule research, can never validate; <i>holdout</i> = from 2025-10-29, reserved for one pre-registered test.</li>
+          <li><b>Entry rule:</b> <i>standard</i> = buy at the next open after a BUY setup; <i>breakout</i> / <i>pullback</i> = the pre-registered pending-order rules (Phase 6.2).</li>
+          <li><b>Download:</b> refreshes 1h/4h/1d Binance history first (about 60-80 free requests). A 4-year run takes roughly 5-10 minutes.</li>
+        </ul>
+      </details>
+      <p class="muted small" id="btHistory"></p>
+      <div class="progress" id="btProgress" hidden><i></i></div>
+      <p class="muted small" id="btMsg"></p>
+      <div id="btResult" class="bt-result"><div class="empty">Loading…</div></div>
+    </section>
+
+    <!-- ============================================================ Paper -->
+    <section id="risk" class="grid-2" data-views="paper">
+      <article class="card">
+        <div class="card-head"><div><h2>Position size &amp; risk</h2><p class="muted">Spot only · no leverage · nothing is executed</p></div>
+          <span class="tag calc">Calculator</span></div>
+        <form id="riskForm" class="form-grid">
+          <label>Portfolio value (USDT)<input type="number" step="any" min="0" id="rkPortfolio" value="10000" required></label>
+          <label>Risk per trade (%)<input type="number" step="0.1" min="0.1" max="5" id="rkRisk" value="1" required></label>
+          <label>Entry price<input type="number" step="any" min="0" id="rkEntry" required></label>
+          <label>Stop price<input type="number" step="any" min="0" id="rkStop" required></label>
+          <div class="form-actions"><button class="btn" type="submit">Calculate</button>
+            <button class="btn ghost" type="button" id="rkFromPlan">Use signal plan / live price</button></div>
+        </form>
+        <div id="riskOut" class="risk-out"></div>
+      </article>
+      <article class="card paper-card">
+        <div class="card-head"><div><h2>Paper trading</h2><p class="sim-banner">SIMULATED ACCOUNT · no real money · no real orders</p></div>
+          <div class="head-actions"><span class="tag hyp">Simulated</span><div class="export" data-dataset="paper_orders"></div></div></div>
+        <div class="facts" id="paperFacts"><div class="empty">Loading…</div></div>
+        <form id="paperForm" class="form-grid">
+          <label>Buy amount (USDT)<input type="number" step="any" min="0" id="ppUsd" value="1000"></label>
+          <label>Stop (optional)<input type="number" step="any" min="0" id="ppStop"></label>
+          <label>Target (optional)<input type="number" step="any" min="0" id="ppTarget"></label>
+          <div class="form-actions">
+            <button class="btn" type="submit">Simulated buy</button>
+            <button class="btn ghost" type="button" id="ppSell">Simulated sell all</button>
+            <button class="btn ghost" type="button" id="ppReset">Reset account</button></div>
+        </form>
+        <p class="kpi-warn" id="paperMsg"></p>
+        <div class="table-wrap"><table class="table stack" id="paperOrders"><thead><tr><th>Time</th><th>Side</th><th>Qty BTC</th><th>Price</th><th>Fee</th><th>P/L</th><th>Reason</th></tr></thead><tbody></tbody></table></div>
+      </article>
+    </section>
+
+    <!-- ============================================================ Alerts -->
+    <section id="alerts" class="card" data-views="alerts" data-state="loading">
+      <div class="card-head">
+        <div><h2>Alert centre</h2><p class="muted" id="alMeta">Checked every 60 s by the local alert monitor</p></div>
+        <div class="head-actions">
+          <div class="export" data-dataset="alerts"></div>
+          <button class="btn ghost small-btn" id="alNotify">Enable browser notifications</button>
+          <button class="btn ghost small-btn" id="alTest">Send test alert</button>
+          <button class="btn ghost small-btn" id="alAckAll">Acknowledge all</button>
+        </div>
+      </div>
+      <div class="al-filter"><label class="chk"><input type="checkbox" id="alUnread"> Unread only</label>
+        <span class="muted small" id="alNotifyState"></span></div>
+      <ul class="alert-list" id="alList"><li class="empty">Loading…</li></ul>
+      <details class="docs fold" id="alRulesBox"><summary>Alert rules</summary>
+        <form class="form-grid al-new" id="alNewForm">
+          <label>Type<select id="alKind">
+            <option value="price_above">Price above</option><option value="price_below">Price below</option>
+            <option value="big_move">Big move</option><option value="significant_news">Significant news</option>
+            <option value="high_volatility">High volatility</option><option value="signal_change">Signal change</option>
+            <option value="source_failure">Source failure</option><option value="risk_limit">Risk limit (SIMULATED)</option></select></label>
+          <label id="alPriceLbl">Price level<input type="number" step="any" min="1" id="alPrice"></label>
+          <label>Cooldown (min, optional)<input type="number" step="1" min="1" max="10080" id="alCooldown"></label>
+          <div class="form-actions"><button class="btn" type="submit">Add rule</button></div>
+        </form>
+        <p class="kpi-warn" id="alRuleMsg"></p>
+        <div class="table-wrap"><table class="table stack" id="alRules"><thead><tr><th>#</th><th>Rule</th><th>Cooldown</th><th>On</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+      </details>
+    </section>
+
+    <!-- ============================================================ Assistant -->
+    <section id="assistant" class="card assistant" data-views="assistant" data-state="loading" data-chat="idle">
+      <div class="card-head">
+        <div><h2>Ask the data</h2>
+          <p class="muted">Answers come only from this app's data. Not financial advice. No predictions.</p></div>
+        <span class="tag ai-badge" id="aiBadge">Checking local AI…</span>
+      </div>
+      <p class="muted small" id="aiHint" hidden></p>
+      <div class="chat-log" id="chatLog" aria-live="polite"><div class="empty">Ask a question about the app's data, or pick a suggestion.</div></div>
+      <div class="chat-chips" id="chatChips">
+        <button class="chip-btn" data-q="Why is the signal NO TRADE?">Why NO TRADE?</button>
+        <button class="chip-btn" data-explain="1">Explain the signal</button>
+        <button class="chip-btn" data-q="What did the backtest find?">What did the backtest find?</button>
+        <button class="chip-btn" data-q="Summarize the news.">Summarize the news</button>
+        <button class="chip-btn" data-q="What is my paper account balance?">Paper account</button>
+      </div>
+      <form class="chat-form" id="chatForm">
+        <textarea id="chatInput" rows="2" maxlength="1000" aria-label="Question for the assistant" placeholder="Ask about the price, signal, news, backtest, paper account…"></textarea>
+        <div class="chat-actions">
+          <span class="muted small" id="chatCount">0 / 1000</span>
+          <button type="button" class="btn ghost" id="chatClear">Clear</button>
+          <button type="button" class="btn ghost" id="chatExplain">Explain current signal</button>
+          <button type="submit" class="btn" id="chatSend">Send</button>
+        </div>
+      </form>
+      <div class="chat-wait" id="chatWait" hidden>
+        <span class="muted small chat-status" id="chatStatus"></span>
+        <button type="button" class="btn ghost" id="chatCancel" hidden>Cancel</button>
+      </div>
+      <p class="disclaimer">Answers come only from this app's data. Not financial advice. No predictions.</p>
+    </section>
+
+    <!-- ============================================================ System -->
+    <section id="sources" class="card" data-views="system">
+      <div class="card-head"><div><h2>Data-source health</h2><p class="muted">Free public endpoints, no API keys required</p></div>
+        <span class="tag live">Live</span></div>
+      <div class="table-wrap">
+        <table class="table stack" id="srcTable">
+          <thead><tr><th>Source</th><th>Status</th><th>Last success</th><th>Latency</th><th>Last error</th></tr></thead>
+          <tbody><tr><td colspan="5" class="empty">No requests yet.</td></tr></tbody>
+        </table>
+      </div>
+      <details class="docs"><summary>Source documentation (keys, limits, delay, failure behaviour)</summary>
+        <div class="table-wrap"><table class="table" id="docTable"><tbody></tbody></table></div>
+      </details>
+    </section>
+
+    <section id="system" class="card" data-views="system">
+      <div class="card-head"><div><h2>About this app</h2><p class="muted">Local single-user research tool</p></div></div>
+      <dl class="sum-facts">
+        <div><dt>App version</dt><dd class="mono" id="sysVersion">{{ version }}</dd></div>
+        <div><dt>Signal engine</dt><dd class="mono" id="sysEngine">Waiting for first refresh…</dd></div>
+        <div><dt>Display time zone</dt><dd>{{ display_tz }}</dd></div>
+        <div><dt>Server</dt><dd id="sysHealth">Waiting for first refresh…</dd></div>
+      </dl>
+      <ul class="link-list">
+        <li><a href="/settings">Settings</a> · time zone, refresh intervals, providers, risk, alerts, assistant, watchlist</li>
+        <li><a href="/docs/README.md" target="_blank" rel="noopener noreferrer">README</a> · setup, how it works, honest results, troubleshooting</li>
+        <li><a href="/docs/SECURITY.md" target="_blank" rel="noopener noreferrer">SECURITY</a> · threat model and review findings</li>
+        <li><a href="/docs/CHANGELOG.md" target="_blank" rel="noopener noreferrer">CHANGELOG</a> · what changed in each phase</li>
+      </ul>
+      <p class="disclaimer">Research tool only. It never places orders and has no exchange connection. Not financial advice.</p>
+    </section>
+
+  </main>
+</div>
+<script id="appConfig" type="application/json">{{ {"timeframes": timeframes, "displayTz": display_tz, "theme": theme, "version": version}|tojson }}</script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

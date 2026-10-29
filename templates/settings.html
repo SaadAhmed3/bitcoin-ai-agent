@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings · BTC Signal Lab</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="settings-page">
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <span class="brand-mark">₿</span>
+      <div><strong>BTC Signal Lab</strong><small>v{{ version }}</small></div>
+    </div>
+    <nav>
+      <p class="nav-label">Settings</p>
+      <a href="#general">General</a>
+      <a href="#market">Market data</a>
+      <a href="#signal">Signal</a>
+      <a href="#risk">Risk &amp; paper</a>
+      <a href="#alerts">Alerts</a>
+      <a href="#assistant">Assistant</a>
+      <a href="#watchlist">Watchlist</a>
+      <p class="nav-label">Back</p>
+      <a href="/">Dashboard</a>
+    </nav>
+    <p class="sidebar-foot">Values come from an env override (read-only), the settings database, or the default. Keys stay in .env.</p>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menuBtn" aria-label="Toggle menu">☰</button>
+      <div class="topbar-title"><h1>Settings</h1><span class="muted">Saved in the local SQLite settings table</span></div>
+      <div class="topbar-actions">
+        <a class="btn ghost settings-link" href="/">Dashboard</a>
+        <button class="icon-btn" id="themeBtn" aria-label="Toggle light/dark theme">◐</button>
+      </div>
+    </header>
+    <p class="muted small" id="loadState">Loading settings…</p>
+
+    {% for id, title, note in [
+      ("general", "General", "Display time zone, theme and dashboard refresh intervals."),
+      ("market", "Market data", "Price and candle providers. The CoinGecko key is only ever shown as set / not set."),
+      ("signal", "Signal", ""),
+      ("risk", "Risk & paper", "SIMULATED paper account limits - no real money, no real orders."),
+      ("alerts", "Alerts", "Rule defaults, cooldowns, the hourly cap and delivery channels."),
+      ("assistant", "Assistant", "Local AI explanations (Ollama). Factual questions are always answered instantly from the app's data."),
+      ("watchlist", "Watchlist", "Up to 10 Binance spot symbols, display only. Checked against Binance exchangeInfo when saved.")] %}
+    <section class="card set-section" id="{{ id }}" data-state="loading">
+      <div class="card-head"><div><h2>{{ title }}</h2>{% if note %}<p class="muted">{{ note }}</p>{% endif %}</div></div>
+      {% if id == "signal" %}<p class="set-warn" id="signalWarn">{{ signal_warning }}</p>{% endif %}
+      <form class="set-form" data-section="{{ id }}"><div class="set-fields"><p class="empty">Loading…</p></div>
+        <div class="set-actions">
+          <button class="btn" type="submit">Save</button>
+          <button class="btn ghost" type="button" data-reset="{{ id }}">Reset section to defaults</button>
+          <span class="muted small set-msg" role="status"></span>
+        </div>
+      </form>
+    </section>
+    {% endfor %}
+  </main>
+</div>
+<script id="appConfig" type="application/json">{{ {"displayTz": display_tz, "theme": theme}|tojson }}</script>
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+</body>
+</html>
