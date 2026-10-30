@@ -338,30 +338,27 @@ class Database:
     # ----------------------------------------------------------------- health
     def record_health(self, source: str, ok: bool, latency_ms: float | None = None, error: str | None = None) -> None:
         ts = now_ms()
+        # One UPSERT statement: a SELECT-then-INSERT let two requests both insert the first row for a source.
+        # On conflict, success keeps last_failure/last_error; failure keeps last_success/latency (as before).
         with self.connect() as conn:
-            existing = conn.execute("SELECT * FROM source_health WHERE source=?", (source,)).fetchone()
-            if existing is None:
-                conn.execute(
-                    """INSERT INTO source_health (source, status, last_success, last_failure, last_error,
-                                                  latency_ms, success_count, failure_count, updated_at, consecutive_failures)
-                       VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                    (source, "ok" if ok else "error", ts if ok else None, None if ok else ts,
-                     None if ok else (error or "unknown error")[:500], latency_ms,
-                     1 if ok else 0, 0 if ok else 1, ts, 0 if ok else 1),
-                )
-            elif ok:
-                conn.execute(
-                    """UPDATE source_health SET status='ok', last_success=?, latency_ms=?,
-                       success_count=success_count+1, consecutive_failures=0, updated_at=? WHERE source=?""",
-                    (ts, latency_ms, ts, source),
-                )
-            else:
-                conn.execute(
-                    """UPDATE source_health SET status='error', last_failure=?, last_error=?,
-                       failure_count=failure_count+1, consecutive_failures=consecutive_failures+1,
-                       updated_at=? WHERE source=?""",
-                    (ts, (error or "unknown error")[:500], ts, source),
-                )
+            conn.execute(
+                """INSERT INTO source_health (source, status, last_success, last_failure, last_error,
+                                              latency_ms, success_count, failure_count, updated_at, consecutive_failures)
+                   VALUES (?,?,?,?,?,?,?,?,?,?)
+                   ON CONFLICT(source) DO UPDATE SET
+                       status = excluded.status,
+                       last_success = COALESCE(excluded.last_success, last_success),
+                       last_failure = COALESCE(excluded.last_failure, last_failure),
+                       last_error = CASE WHEN excluded.status = 'ok' THEN last_error ELSE excluded.last_error END,
+                       latency_ms = CASE WHEN excluded.status = 'ok' THEN excluded.latency_ms ELSE latency_ms END,
+                       success_count = success_count + excluded.success_count,
+                       failure_count = failure_count + excluded.failure_count,
+                       consecutive_failures = CASE WHEN excluded.status = 'ok' THEN 0 ELSE consecutive_failures + 1 END,
+                       updated_at = excluded.updated_at""",
+                (source, "ok" if ok else "error", ts if ok else None, None if ok else ts,
+                 None if ok else (error or "unknown error")[:500], latency_ms,
+                 1 if ok else 0, 0 if ok else 1, ts, 0 if ok else 1),
+            )
 
     def get_health(self) -> list[dict]:
         with self.connect() as conn:

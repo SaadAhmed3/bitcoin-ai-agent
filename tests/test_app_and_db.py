@@ -53,6 +53,52 @@ def test_health_counters(db):
     assert h["status"] == "error" and h["success_count"] == 1 and h["failure_count"] == 1 and h["last_error"] == "boom"
 
 
+def test_first_health_records_from_two_threads_do_not_collide(db):
+    """Regression: two requests recording the FIRST health row of a source at once raised
+    'UNIQUE constraint failed: source_health.source' (a 500 on the first dashboard load)."""
+    import contextlib
+    import threading
+    barrier = threading.Barrier(2)
+    original = db.connect
+
+    class Synced:
+        def __init__(self, conn):
+            self.conn = conn
+
+        def execute(self, sql, *args):
+            cur = self.conn.execute(sql, *args)
+            if sql.lstrip().upper().startswith("SELECT"):
+                try:
+                    barrier.wait(timeout=1)   # both threads have looked for the row before either writes
+                except threading.BrokenBarrierError:
+                    pass
+            return cur
+
+    @contextlib.contextmanager
+    def synced_connect():
+        with original() as conn:
+            yield Synced(conn)
+
+    db.connect = synced_connect
+    errors = []
+
+    def record():
+        try:
+            db.record_health("newsource", True, latency_ms=5)
+        except Exception as exc:          # noqa: BLE001 - the test reports whatever escapes
+            errors.append(repr(exc))
+
+    threads = [threading.Thread(target=record) for _ in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    db.connect = original
+    assert errors == []
+    h = [r for r in db.get_health() if r["source"] == "newsource"][0]
+    assert h["success_count"] == 2 and h["status"] == "ok"
+
+
 def test_settings_roundtrip(db):
     db.set_setting("theme", {"mode": "dark"})
     assert db.get_setting("theme") == {"mode": "dark"} and db.get_setting("missing", 3) == 3
