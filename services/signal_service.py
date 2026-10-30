@@ -1,15 +1,19 @@
 """Collects inputs for the signal engine, stores signal history and manages engine settings."""
 from __future__ import annotations
 
+import logging
 import threading
-from dataclasses import fields
+from dataclasses import asdict, fields
 from typing import Callable
 
 from database import Database, now_ms
 from services.market_data import MarketDataService
 from services.backtest_service import effective_validation
-from services.signal_engine import ENTRY_MODES, EngineConfig, generate_signal, validate_weights
+from services.signal_engine import (ENGINE_VERSION, ENTRY_MODES, HOLD, NO_TRADE, EngineConfig, generate_signal,
+                                    validate_weights)
 from services.technical_analysis import analyze
+
+log = logging.getLogger("btc_agent.signal")
 
 SIGNAL_TIMEFRAMES = ("1h", "4h", "1d")
 RECORD_EVERY_MS = 60 * 60_000  # also store an unchanged signal at most once per hour, for the audit trail
@@ -139,24 +143,63 @@ class SignalService:
     # ------------------------------------------------------------------ signal
     def current(self) -> dict:
         with self._lock:
-            analyses, meta = {}, {}
-            for tf in SIGNAL_TIMEFRAMES:
-                res = self.market.get_candles(tf)
-                analyses[tf] = analyze(res.df, tf)
-                meta[tf] = res.meta()
-            price = self.market.get_price()
+            stage, price, cfg, validation = "market data", None, EngineConfig(), None
             try:
-                news = self.news_report() or {}
-            except Exception:
-                news = {}
-            cfg = self.config()
-            validation = effective_validation(self.db.get_setting("strategy_validation"), cfg)
-            sig = generate_signal(analyses, meta, price, news.get("summary"), news.get("events"),
-                                  cfg, validation, self.clock())
+                analyses, meta = {}, {}
+                for tf in SIGNAL_TIMEFRAMES:
+                    stage = f"market data ({tf})"
+                    res = self.market.get_candles(tf)
+                    stage = f"indicator analysis ({tf})"
+                    analyses[tf] = analyze(res.df, tf)
+                    meta[tf] = res.meta()
+                stage = "price"
+                price = self.market.get_price()
+                try:
+                    news = self.news_report() or {}
+                except Exception:
+                    news = {}
+                stage = "settings"
+                cfg = self.config()
+                validation = effective_validation(self.db.get_setting("strategy_validation"), cfg)
+                stage = "signal engine"
+                sig = generate_signal(analyses, meta, price, news.get("summary"), news.get("events"),
+                                      cfg, validation, self.clock())
+            except Exception as exc:   # a bug or bad data must never produce a signal, nor an HTTP 500
+                log.exception("Signal calculation failed in %s", stage)
+                sig = self._error_signal(stage, exc, price, cfg, validation)
             rec = self._record(sig)
             sig["id"] = rec["id"]
             sig["record"] = rec
             return sig
+
+    def _error_signal(self, stage: str, exc: Exception, price: dict | None, cfg: EngineConfig,
+                      validation: dict | None) -> dict:
+        """NO TRADE with the calculation error as the only reason. The shape comes from the engine's own no-data
+        path (so the dashboard renders it as usual); if the engine itself is what failed, a minimal copy is built."""
+        reason = (f"Calculation error in {stage}: {type(exc).__name__}: {str(exc)[:200]}. The signal is withheld; "
+                  "details are in the server console.")
+        now = self.clock()
+        try:
+            sig = generate_signal({}, {}, price, None, [], cfg, validation, now)
+        except Exception:
+            sig = {"setup": HOLD, "score": 0.0, "agreement": 0.0, "directional_weight": 0.0, "direction": "neutral",
+                   "strength": "weak", "generated_at": now, "horizon": cfg.horizon,
+                   "price": {"value": (price or {}).get("price"), "provider": (price or {}).get("provider"),
+                             "quote": (price or {}).get("quote"), "observed_at": (price or {}).get("observed_at"),
+                             "status": (price or {}).get("status")},
+                   "price_basis": {}, "components": [], "evidence_bullish": [], "evidence_bearish": [],
+                   "evidence_for": [], "evidence_against": [], "neutral_components": [], "setup_notes": [],
+                   "key_levels": {"resistance": [], "support": [], "current_zone": None, "basis": "n/a", "note": ""},
+                   "invalidation": [], "would_change": [], "risk": {},
+                   "news": {"bias_label": None, "bias_score": None, "top_events": []},
+                   "validation": validation or {"validated": False},
+                   "confidence": "Not calibrated. The score counts weighted evidence; it is not a probability of profit.",
+                   "data_warnings": [], "config": asdict(cfg), "engine": ENGINE_VERSION}
+        sig.update({"signal": NO_TRADE, "setup": HOLD, "actionable": False, "score": 0.0, "plan": None,
+                    "pending_order": None, "plan_status": None, "no_trade_reasons": [reason],
+                    "diagnostics": {"gate_keys": ["calculation_error"], "error_stage": stage,
+                                    "error_type": type(exc).__name__}})
+        return sig
 
     def _record(self, sig: dict) -> dict:
         """Store the signal when anything material changed; otherwise point at the last stored record.

@@ -269,6 +269,33 @@ def test_risk_pct_above_max_risk_is_rejected_by_the_api(config, db):
     assert "risk_pct" in c.get("/api/settings").get_json()["risk"]["ranges"]
 
 
+SIGNAL_KEYS = {"signal", "setup", "actionable", "score", "agreement", "direction", "strength", "generated_at", "horizon",
+               "price", "components", "evidence_bullish", "evidence_bearish", "evidence_for", "evidence_against",
+               "no_trade_reasons", "diagnostics", "setup_notes", "plan", "pending_order", "plan_status", "key_levels",
+               "invalidation", "would_change", "risk", "news", "validation", "confidence", "data_warnings", "config",
+               "engine", "id", "record"}
+
+
+@pytest.mark.parametrize("target", ["services.signal_service.analyze", "services.signal_service.generate_signal"])
+def test_calculation_error_becomes_no_trade_with_a_reason(config, db, monkeypatch, target):
+    """Regression (P1-5): an exception in the analysis or engine code was an HTTP 500 with no signal."""
+    def boom(*a, **k):
+        raise ZeroDivisionError("float division by zero")
+    monkeypatch.setattr(target, boom)
+    c = make_client(config, db, [FakeProvider("fake1")])
+    r = c.get("/api/signal")
+    assert r.status_code == 200
+    s = r.get_json()
+    assert s["signal"] == "NO TRADE" and s["actionable"] is False and s["plan"] is None
+    assert len(s["no_trade_reasons"]) == 1
+    reason = s["no_trade_reasons"][0]
+    assert reason.startswith("Calculation error") and "ZeroDivisionError" in reason
+    assert s["diagnostics"]["gate_keys"] == ["calculation_error"]
+    assert SIGNAL_KEYS <= set(s)                                              # the dashboard can render it
+    hist = c.get("/api/signal/history").get_json()["history"]
+    assert hist and hist[0]["signal"] == "NO TRADE"                            # kept in the audit trail
+
+
 def test_paper_day_open_price_uses_the_00_utc_candle_then_a_snapshot(config, db):
     c = make_client(config, db, [FakeProvider("fake1")])
     day_open = c.application.config["BTC_PAPER"].day_open_price
