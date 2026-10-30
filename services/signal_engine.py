@@ -589,20 +589,22 @@ def validation_reason(validation: dict | None, now_ms: int | None = None) -> str
     if now_ms is not None and in_forward_observation(v, now_ms):
         return (f"Validated on {_utc_date(v['as_of'])}; forward observation period until "
                 f"{_utc_date(v['observation_until'])}.")
+    # Records written before Phase 6.2 have no period / entry mode: those runs were full-period, standard entry.
+    period = v.get("period_kind") or (v.get("period") or {}).get("kind") or "full"
+    if v.get("run_id") and period != "holdout":
+        # 0.9.2: only a holdout run can validate, so a full or design run is not "the validation backtest" - stale
+        # or not (batch 2: the signal-1.8 bump made run #1 stale, and "re-run it" was wrong advice).
+        what = ("a full-period run (it includes design data)" if period == "full"
+                else f"a {period}-period run (in-sample for rule choices)")
+        return f"Not validated: no holdout run yet. Run #{v['run_id']} is {what} and cannot validate."
     if v.get("stale"):
-        return ("Not validated: the last backtest was run with different settings or engine version - re-run it "
-                "to validate the current settings.")
+        # Only holdout runs write validation records, so this holdout period is spent: re-running cannot validate.
+        return (f"Not validated: the rules changed since the holdout run (run #{v.get('run_id', '?')}): settings, "
+                "engine version or code. Validating the current rules needs a new holdout period.")
     if v.get("run_id"):
         failed = v.get("failed") or []
         why = f" Failed: {'; '.join(failed)}." if failed else ""
-        # Records written before Phase 6.2 have no period / entry mode: those runs were full-period, standard entry.
-        period = v.get("period_kind") or (v.get("period") or {}).get("kind") or "full"
         entry = v.get("entry_mode") or "standard"
-        if period != "holdout":
-            # 0.9.2: only a holdout run can validate, so a full or design run is not "the validation backtest".
-            what = ("a full-period run (it includes design data)" if period == "full"
-                    else f"a {period}-period run (in-sample for rule choices)")
-            return f"Not validated: no holdout run yet. Run #{v['run_id']} is {what} and cannot validate."
         return (f"Not validated: the validation backtest (run #{v['run_id']}, {period} period, {entry} entry, engine "
                 f"{v.get('engine', '?')}) found no demonstrated edge after costs.{why}")
     return "Not validated: no backtest has been run yet - run one from the Backtest & validation panel."

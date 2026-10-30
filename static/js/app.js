@@ -606,7 +606,7 @@
   const PLAIN_REASONS = [
     [/^Not validated: no backtest/i, "No proven edge yet: no validation backtest has been run"],
     [/^Not validated: no holdout run yet/i, "No proven edge yet: no holdout run has been made"],
-    [/^Not validated: the last backtest was run with different/i, "No proven edge for these settings: the validation backtest is out of date"],
+    [/^Not validated: the rules changed/i, "No proven edge for the current rules: they changed since the holdout run"],
     [/forward observation/i, "Validated, but still in the forward-observation period"],
     [/^Not validated/i, "No proven edge: the validation backtest didn't pass"],
     [/^No current BTC price/i, "No live price, so no decision can be made"],

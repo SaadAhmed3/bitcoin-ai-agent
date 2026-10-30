@@ -186,6 +186,17 @@ def test_gate_stale_or_gappy_1h_series():
     assert "gaps" not in run(meta=meta)["diagnostics"]["gate_keys"]
 
 
+def test_stale_validation_reasons_do_not_say_rerun():
+    """Batch 2: after the signal-1.8 bump the stored run #1 (full period) became 'stale' and the reason said
+    're-run it to validate' - but a full run can never validate, and a spent holdout cannot be re-run to validate."""
+    from services.signal_engine import validation_reason
+    full = validation_reason({"validated": False, "stale": True, "run_id": 1, "period_kind": "full"})
+    assert full == ("Not validated: no holdout run yet. Run #1 is a full-period run (it includes design data) "
+                    "and cannot validate.")
+    hold = validation_reason({"validated": False, "stale": True, "run_id": 4, "period_kind": "holdout"})
+    assert "re-run" not in hold and "new holdout period" in hold and "run #4" in hold
+
+
 def test_engine_version_is_signal_1_8():
     from services.signal_engine import ENGINE_VERSION
     assert ENGINE_VERSION == "signal-1.8"
@@ -552,7 +563,8 @@ def test_validation_reason_texts():
     h = validation_reason({"validated": False, "run_id": 2, "engine": "signal-1.7", "period_kind": "holdout",
                            "failed": ["Enough trades (9 trades (need >= 15))"]})
     assert "run #2" in h and "Enough trades" in h
-    assert "different settings" in validation_reason({"validated": False, "stale": True})
+    # batch 2 (deliberate): a stale record no longer says "re-run it" - it asks for a new holdout period
+    assert "rules changed" in validation_reason({"validated": False, "stale": True})
 
 
 def test_diagnostics_record_raw_setup_and_downgrade():
