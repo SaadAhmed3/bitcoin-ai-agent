@@ -404,6 +404,11 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     def backtest_runs():
         return jsonify({"runs": db.backtest_runs(20)})
 
+    @app.get("/api/backtest/holdout")
+    def backtest_holdout_registry():
+        """Every holdout run (newest first). Only the first run of a hypothesis counts for validation."""
+        return jsonify({"runs": db.holdout_runs(50)})
+
     @app.get("/api/backtest/latest")
     def backtest_latest():
         runs = db.backtest_runs(1)

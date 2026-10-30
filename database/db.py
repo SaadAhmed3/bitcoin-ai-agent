@@ -12,7 +12,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
-SCHEMA_VERSION = 6  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts
+SCHEMA_VERSION = 7  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
+                    # 7: holdout_runs (0.9.2). Migrations are additive; an upgrade backs the file up first.
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -173,6 +174,21 @@ CREATE TABLE IF NOT EXISTS alert_state (
     value       TEXT    NOT NULL,
     updated_at  INTEGER NOT NULL
 );
+
+-- Every holdout run, kept forever. Only the FIRST run of a hypothesis (same trading rules) may change the
+-- validation; later runs are stored with counts_for_validation = 0. The partial unique index enforces it.
+CREATE TABLE IF NOT EXISTS holdout_runs (
+    id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at             INTEGER NOT NULL,
+    hypothesis_hash        TEXT    NOT NULL,
+    config_hash            TEXT    NOT NULL,
+    engine                 TEXT    NOT NULL,
+    settings               TEXT    NOT NULL,
+    result                 TEXT    NOT NULL,
+    backtest_run_id        INTEGER,
+    counts_for_validation  INTEGER NOT NULL CHECK (counts_for_validation IN (0, 1))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_holdout_first ON holdout_runs (hypothesis_hash) WHERE counts_for_validation = 1;
 """
 
 
@@ -208,7 +224,38 @@ class Database:
     MIGRATIONS = [("paper_account", "avg_fill", "REAL"),  # columns added after a table first shipped
                   ("source_health", "consecutive_failures", "INTEGER NOT NULL DEFAULT 0")]
 
+    def _stored_schema_version(self) -> int | None:
+        """Schema version of an existing database file, or None for a new or empty file."""
+        p = Path(self.path)
+        if not p.exists() or p.stat().st_size == 0:
+            return None
+        conn = sqlite3.connect(p.resolve().as_uri() + "?mode=ro", uri=True, timeout=10)
+        try:
+            row = conn.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone()
+            return int(row[0]) if row else None
+        except sqlite3.Error:
+            return None
+        finally:
+            conn.close()
+
+    def backup(self, suffix: str) -> Path:
+        """Consistent copy (SQLite online backup API, safe while the app runs) next to the database file."""
+        stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+        dest = Path(f"{self.path}.backup-{stamp}-{suffix}")
+        src = sqlite3.connect(Path(self.path).resolve().as_uri() + "?mode=ro", uri=True, timeout=10)
+        dst = sqlite3.connect(dest)
+        try:
+            src.backup(dst)
+            dst.execute("PRAGMA journal_mode=DELETE")   # one self-contained file, no -wal/-shm sidecars
+        finally:
+            dst.close()
+            src.close()
+        return dest
+
     def init(self) -> None:
+        old = self._stored_schema_version()
+        if old is not None and old < SCHEMA_VERSION:
+            self.backup(f"schema-{old}")      # before any schema change; existing data is never dropped
         with self.connect() as conn:
             conn.executescript(SCHEMA)
             for table, column, ctype in self.MIGRATIONS:
@@ -295,6 +342,37 @@ class Database:
                    VALUES (?,?,?,?,?,?)""",
                 (created_at, engine, config_hash, int(validated), json.dumps(summary), json.dumps(payload)))
             return int(cur.lastrowid)
+
+    def register_holdout_run(self, created_at: int, hypothesis: str, config_hash: str, engine: str,
+                             settings: dict, result: dict, backtest_run_id: int | None) -> dict:
+        """Record a holdout run. One statement decides atomically whether it is the first run of this hypothesis
+        (the only one that counts for validation); the partial unique index backs that up.
+        Returns {"id", "counts_for_validation", "first_run_id"}."""
+        with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            cur = conn.execute(
+                """INSERT INTO holdout_runs (created_at, hypothesis_hash, config_hash, engine, settings, result,
+                                             backtest_run_id, counts_for_validation)
+                   VALUES (?,?,?,?,?,?,?, NOT EXISTS (SELECT 1 FROM holdout_runs
+                                                      WHERE hypothesis_hash=? AND counts_for_validation=1))""",
+                (created_at, hypothesis, config_hash, engine, json.dumps(settings), json.dumps(result),
+                 backtest_run_id, hypothesis))
+            rid = int(cur.lastrowid)
+            row = conn.execute("SELECT counts_for_validation FROM holdout_runs WHERE id=?", (rid,)).fetchone()
+            first = conn.execute("SELECT id FROM holdout_runs WHERE hypothesis_hash=? AND counts_for_validation=1",
+                                 (hypothesis,)).fetchone()
+        return {"id": rid, "counts_for_validation": bool(row[0]), "first_run_id": int(first[0])}
+
+    def link_holdout_run(self, holdout_id: int, backtest_run_id: int) -> None:
+        with self.connect() as conn:
+            conn.execute("UPDATE holdout_runs SET backtest_run_id=? WHERE id=? AND backtest_run_id IS NULL",
+                         (backtest_run_id, holdout_id))
+
+    def holdout_runs(self, limit: int = 50) -> list[dict]:
+        with self.connect() as conn:
+            rows = conn.execute("SELECT * FROM holdout_runs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+        return [{**dict(r), "settings": json.loads(r["settings"]), "result": json.loads(r["result"]),
+                 "counts_for_validation": bool(r["counts_for_validation"])} for r in rows]
 
     def backtest_runs(self, limit: int = 20) -> list[dict]:
         with self.connect() as conn:

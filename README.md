@@ -424,8 +424,10 @@ In the backtest a pending order counts only if no safeguard other than the valid
 - **holdout** = decisions from the cut-off to the end. Earlier candles are used only as indicator warm-up. The criteria are the same, except the minimum is **15 trades** (stated before any holdout run).
 - Walk-forward, baselines, random entries and the hit rate are all computed on the chosen period only.
 - Protocol: choose a rule using design runs only, then test it **once** on the holdout.
+- **full** (0.9.2) = the whole span. It includes the design data, so it is informational only: labelled "FULL PERIOD - includes design data, cannot validate" and it **never writes a validation**.
+- **Holdout registry** (0.9.2): every holdout run is recorded (time, engine version, settings, hypothesis hash, result; `GET /api/backtest/holdout`). The hypothesis hash covers the trading rules (engine version, weights, thresholds, costs, entry rule, candle window, time stop, exit on SELL) but not run length, seed, window sizes or criteria. Only the **first** run of a hypothesis can change the validation; later runs are stored, labelled "HOLDOUT ALREADY USED - not valid for validation", and change nothing. A failed first run cannot be retried into a pass. Validation records written before 0.9.2 never lift the gate.
 
-**Forward observation.** After a validation from a holdout or full run, the NO TRADE gate stays on for **56 days**, with the reason "Validated on <date>; forward observation period until <date>." Only then does the validation gate clear.
+**Forward observation.** After a validation from the first holdout run of a set of rules, the NO TRADE gate stays on for **56 days**, with the reason "Validated on <date>; forward observation period until <date>." Only then does the validation gate clear.
 
 Funnel changes in 6.2:
 - `share_negative` is renamed `share_no_room` (R/R ≤ 0).

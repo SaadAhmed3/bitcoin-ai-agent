@@ -328,7 +328,9 @@ def test_validation_record_unlocks_signal_only_for_matching_settings(config, db)
     from services.backtesting import config_hash
     from services.signal_engine import EngineConfig
     c = make_client(config, db, [FakeProvider("fake1")])
-    db.set_setting("strategy_validation", {"validated": True, "note": "test only",
+    # 0.9.2: only a first-holdout registry record can lift the gate
+    db.set_setting("strategy_validation", {"validated": True, "note": "test only", "period_kind": "holdout",
+                                           "counts_for_validation": True,
                                            "config_hash": config_hash(EngineConfig())})
     s = c.get("/api/signal").get_json()
     assert not any("validated" in r for r in s["no_trade_reasons"])
@@ -387,7 +389,7 @@ def fake_result(validated, engine_cfg):
 
 def test_backtest_service_records_validation_and_unlocks_signal(config, db):
     c, bt = make_client6(config, db, runner=lambda h, f, d, cfg, *a, **k: fake_result(True, cfg))
-    bt.start(years=1, download=False, background=False)
+    bt.start(years=1, download=False, background=False, period="holdout")   # 0.9.2: only a holdout validates
     st = c.get("/api/backtest/status").get_json()
     assert st["state"] == "done" and st["run_id"] and st["validation"]["validated"] is True
     assert c.get("/api/backtest/latest").get_json()["validated"] is True

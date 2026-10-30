@@ -857,7 +857,7 @@
     const kv = (o) => Object.entries(o || {}).filter(([, v]) => typeof v !== "object" || v === null)
       .map(([k, v]) => `<li><b>${esc(k.replaceAll("_", " "))}</b>: ${esc(plain(v, "not set"))}</li>`).join("");
     $("btResult").innerHTML = `
-      ${r.design_badge ? `<div class="verdict design">${esc(r.design_badge)}</div>` : ""}
+      ${r.period_badge || r.design_badge ? `<div class="verdict design">${esc(r.period_badge || r.design_badge)}</div>` : ""}
       <div class="verdict ${r.validated ? "ok" : "no"}">${esc(r.verdict)}
         <small>Run #${r.id} · entry rule <b>${esc(r.entry_mode || "standard")}</b> · period <b>${esc(r.period_kind || (r.period && r.period.kind) || "full")}</b> · ${fmtD(r.period.start)} → ${fmtD(r.period.end)} (${r.period.years} years, ${Number(r.period.bars).toLocaleString()} bars)</small></div>
       <div class="bt-tiles">

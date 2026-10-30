@@ -265,7 +265,7 @@
     <section id="backtest" class="card" data-views="research" data-state="idle">
       <div class="card-head">
         <div><h2>Backtest &amp; validation</h2>
-          <p class="muted">Replays the live signal engine on real Binance history, bar by bar, with no look-ahead. Only out-of-sample results can lift the NO TRADE gate.</p></div>
+          <p class="muted">Replays the live signal engine on real Binance history, bar by bar, with no look-ahead. Only the first holdout run of a set of rules can lift the NO TRADE gate.</p></div>
         <div class="head-actions"><span class="tag hyp">Hypothetical</span>
           <div class="export" data-dataset="backtest" id="btExport" hidden></div></div>
       </div>
@@ -282,7 +282,7 @@
       </div>
       <details class="help"><summary>What do these choices mean?</summary>
         <ul class="ev">
-          <li><b>Period:</b> <i>full</i> = the whole test span (it overlaps the reserved holdout year); <i>design</i> = up to 2025-10-29, in-sample for rule research, can never validate; <i>holdout</i> = from 2025-10-29, reserved for one pre-registered test.</li>
+          <li><b>Period:</b> <i>full</i> = the whole test span, informational only: it includes the design data, so it can never validate; <i>design</i> = up to 2025-10-29, in-sample for rule research, can never validate; <i>holdout</i> = from 2025-10-29, reserved for one pre-registered test. Every holdout run is recorded, and only the FIRST run of a given set of rules counts; repeats are stored but "not valid for validation".</li>
           <li><b>Entry rule:</b> <i>standard</i> = buy at the next open after a BUY setup; <i>breakout</i> / <i>pullback</i> = the pre-registered pending-order rules (Phase 6.2).</li>
           <li><b>Download:</b> refreshes 1h/4h/1d Binance history first (about 60-80 free requests). A 4-year run takes roughly 5-10 minutes.</li>
         </ul>
