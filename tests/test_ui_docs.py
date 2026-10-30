@@ -2,9 +2,11 @@
 from test_phase8 import make_app
 
 
-def test_docs_route_serves_only_the_three_documents_as_plain_text(config, db):
+def test_docs_route_serves_only_the_listed_documents_as_plain_text(config, db):
     c, _ = make_app(config, db)
-    for name, marker in (("README.md", "BTC Signal Lab"), ("SECURITY.md", "Threat model"), ("CHANGELOG.md", "Changelog")):
+    # batch 2: the User Guide joined the allow-list
+    for name, marker in (("README.md", "BTC Signal Lab"), ("SECURITY.md", "Threat model"), ("CHANGELOG.md", "Changelog"),
+                         ("USER_GUIDE.md", "User Guide")):
         r = c.get(f"/docs/{name}")
         assert r.status_code == 200 and r.mimetype == "text/plain", name
         assert marker in r.get_data(as_text=True)
@@ -18,3 +20,12 @@ def test_docs_route_serves_only_the_three_documents_as_plain_text(config, db):
 def test_app_version_is_the_batch_1b_release():
     import app
     assert app.APP_VERSION == "0.9.4 (batch 1b: single-use holdout)"   # deliberate bump from 0.9.3
+
+
+def test_user_guide_covers_the_beginner_topics_with_powershell_commands():
+    from pathlib import Path
+    text = Path(__file__).resolve().parent.parent.joinpath("USER_GUIDE.md").read_text(encoding="utf-8")
+    for topic in ("Installation", "Starting and stopping", "Understanding the signal", "Understanding NO TRADE",
+                  "Backtesting", "Paper trading", "risk calculator", "Troubleshooting", "Data-source limitations"):
+        assert topic in text, topic
+    assert "```powershell" in text and ".\.venv\Scripts\Activate.ps1" in text and "not a probability" in text
