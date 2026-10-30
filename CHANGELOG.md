@@ -44,6 +44,18 @@ the news weight, `min_rr` defaults or any live-signal rule. **The holdout was no
   backup (`<db>.backup-<UTC time>-schema-<old>`) before any schema upgrade. A manual backup of the local database was
   also made before this change.
 
+**Follow-up after manual checks (UI wording and visibility)**
+- The NO TRADE reason no longer calls a full-period run "the validation backtest": "Not validated: no holdout run
+  yet. Run #1 is a full-period run (it includes design data) and cannot validate." The Overview line reads "No proven
+  edge yet: no holdout run has been made". The assistant's fact says the same; its check that an AI answer names the
+  right validation run accepts both wordings (the new wording had briefly disabled it; a test caught that).
+  Holdout records keep their wording. Text only: no gate or rule changed, engine still signal-1.7.
+- The "FULL PERIOD - includes design data, cannot validate" badge now also shows for runs stored before 0.9.2 (the
+  API derives it when a stored payload has none; a missing period kind means a pre-6.2 full run).
+- Research view: "Holdout runs made: N" (and how many counted for validation), from `/api/backtest/status`.
+- Tests: a new browser test (old full run: badge, Signal reason, Overview line, holdout count) and 2 unit tests; three
+  wording tests updated deliberately. Unit 537, e2e 86, all pass.
+
 **Extra fix (not on the batch list)**
 - Source health is recorded with one atomic UPSERT. Two requests recording the first health row of a source at the same
   time raised `UNIQUE constraint failed` (HTTP 500 on a first dashboard load); it made one e2e test fail 2 runs out of 3,

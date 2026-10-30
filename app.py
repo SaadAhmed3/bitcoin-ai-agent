@@ -26,6 +26,7 @@ from services.news_service import NewsService
 from services.signal_engine import DEFAULT_WEIGHTS, ENGINE_VERSION, WEIGHT_RATIONALE
 from services.signal_service import RANGES as SIGNAL_RANGES, SignalService
 from services.backtest_service import BacktestService, effective_validation
+from services.backtesting import DESIGN_BADGE, FULL_BADGE
 from services.paper_trading import PaperTrading
 from services.risk_manager import RISK_RANGES, RiskSettings, position_size
 from services.technical_analysis import analyze, chart_series
@@ -398,6 +399,7 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     def backtest_status():
         st = backtests.status()
         st["validation"] = effective_validation(db.get_setting("strategy_validation"), signals.config())
+        st["holdout_runs"] = db.holdout_counts()
         return jsonify(st)
 
     @app.get("/api/backtest/runs")
@@ -414,14 +416,21 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         runs = db.backtest_runs(1)
         if not runs:
             return jsonify({"error": "No backtest has been run yet."}), 404
-        return jsonify(db.get_backtest(runs[0]["id"]))
+        return jsonify(_with_period_badge(db.get_backtest(runs[0]["id"])))
 
     @app.get("/api/backtest/<int:run_id>")
     def backtest_get(run_id: int):
         run = db.get_backtest(run_id)
         if run is None:
             return jsonify({"error": "Backtest not found"}), 404
-        return jsonify(run)
+        return jsonify(_with_period_badge(run))
+
+    def _with_period_badge(run: dict) -> dict:
+        """Runs stored before 0.9.2 have no period_badge; derive it (no period_kind = a pre-6.2 full run)."""
+        if "period_badge" not in run:
+            kind = run.get("period_kind") or (run.get("period") or {}).get("kind") or "full"
+            run["period_badge"] = {"design": DESIGN_BADGE, "full": FULL_BADGE}.get(kind)
+        return run
 
     # ---------------------------------------------------------------- risk & paper trading (Phase 6)
     def _num(body: dict, key: str, required: bool = True):

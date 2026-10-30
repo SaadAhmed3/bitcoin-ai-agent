@@ -116,6 +116,37 @@ def test_full_and_design_runs_never_touch_the_validation_or_the_registry(config,
     assert s["signal"] == "NO TRADE" and "not_validated" in s["diagnostics"]["gate_keys"]
 
 
+def test_runs_stored_before_0_9_2_get_their_period_badge_from_the_api(config, db):
+    """A 0.9.1 payload has no period_badge: the API derives it (a missing period_kind is a pre-6.2 full run)."""
+    c, _ = make_client6(config, db)
+    for kind in ("full", None, "design", "holdout"):
+        payload = {**fake_result(False, EngineConfig()), "period": {"years": 1}}
+        if kind:
+            payload["period_kind"] = kind
+        rid = db.save_backtest(FIXED_NOW, payload["engine"], payload["config_hash"], False, {}, payload)
+        badge = c.get(f"/api/backtest/{rid}").get_json().get("period_badge")
+        expected = {"full": "FULL PERIOD", None: "FULL PERIOD", "design": "DESIGN PERIOD", "holdout": None}[kind]
+        if expected is None:
+            assert badge is None, (kind, badge)
+        else:
+            assert badge and badge.startswith(expected), (kind, badge)
+    assert c.get("/api/backtest/latest").get_json()["period_badge"] is None          # the last one is a holdout
+
+
+def test_signal_reason_for_a_full_period_record_says_it_cannot_validate(config, db):
+    from services.signal_engine import validation_reason
+    full = {"validated": False, "run_id": 1, "engine": "signal-1.7", "period_kind": "full", "entry_mode": "standard",
+            "failed": ["Enough trades (6 trades (need >= 30))"]}
+    expected = ("Not validated: no holdout run yet. Run #1 is a full-period run (it includes design data) "
+                "and cannot validate.")
+    assert validation_reason(full) == expected
+    assert validation_reason({"validated": False, "run_id": 1, "engine": "signal-1.5"}) == expected   # pre-6.2 record
+    c, _ = make_client6(config, db)
+    db.set_setting("strategy_validation", {**full, "config_hash": config_hash(c.application.config["BTC_SIGNALS"].config())})
+    reasons = c.get("/api/signal").get_json()["no_trade_reasons"]
+    assert expected in reasons and not any("validation backtest" in r for r in reasons)
+
+
 # ------------------------------------------------------------------ effective_validation: only registry records lift
 @pytest.mark.parametrize("record", [
     {"validated": True, "period_kind": "full"},                                     # a full run (old versions)

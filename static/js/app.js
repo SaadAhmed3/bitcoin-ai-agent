@@ -605,6 +605,7 @@
   // One plain-language line from the first NO TRADE reason (the full reasons stay in the Signal view).
   const PLAIN_REASONS = [
     [/^Not validated: no backtest/i, "No proven edge yet: no validation backtest has been run"],
+    [/^Not validated: no holdout run yet/i, "No proven edge yet: no holdout run has been made"],
     [/^Not validated: the last backtest was run with different/i, "No proven edge for these settings: the validation backtest is out of date"],
     [/forward observation/i, "Validated, but still in the forward-observation period"],
     [/^Not validated/i, "No proven edge: the validation backtest didn't pass"],
@@ -794,6 +795,10 @@
       const st = await getJson("/api/backtest/status");
       const h = st.history || {};
       $("btHistory").textContent = "History stored: " + ["1d", "4h", "1h"].map((tf) => `${tf} ${(h[tf] || {}).count || 0}`).join(" · ") + " candles";
+      const ho = st.holdout_runs || { made: 0, counted: 0 };
+      $("btHoldout").textContent = `Holdout runs made: ${ho.made}` + (ho.made
+        ? ` · ${ho.counted} counted for validation (only the first run of a set of rules counts; repeats are stored, not valid for validation)`
+        : " · the reserved holdout period is untouched");
       if (!state.btDownloadSet) {
         // Tick "download" only when history is missing or more than a day old.
         const last = Math.min(...["1d", "4h", "1h"].map((tf) => (h[tf] || {}).last || 0));

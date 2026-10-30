@@ -368,6 +368,13 @@ class Database:
             conn.execute("UPDATE holdout_runs SET backtest_run_id=? WHERE id=? AND backtest_run_id IS NULL",
                          (backtest_run_id, holdout_id))
 
+    def holdout_counts(self) -> dict:
+        """{"made": every holdout run ever recorded, "counted": first runs (the only ones that count)}."""
+        with self.connect() as conn:
+            row = conn.execute("SELECT COUNT(*) made, COALESCE(SUM(counts_for_validation), 0) counted "
+                               "FROM holdout_runs").fetchone()
+        return {"made": int(row["made"]), "counted": int(row["counted"])}
+
     def holdout_runs(self, limit: int = 50) -> list[dict]:
         with self.connect() as conn:
             rows = conn.execute("SELECT * FROM holdout_runs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()

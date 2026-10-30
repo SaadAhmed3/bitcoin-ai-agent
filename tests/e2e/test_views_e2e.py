@@ -172,6 +172,56 @@ def test_research_empty_state_has_one_call_to_action(browser, fresh_server):
         p.context.close()
 
 
+FULL_REASON = "Not validated: no holdout run yet. Run #1 is a full-period run (it includes design data) and cannot validate."
+
+
+def test_legacy_full_run_shows_badge_reason_and_holdout_count(browser, fresh_server):
+    """0.9.2 follow-up: a full-period run stored by 0.9.1 (like the real run #1: no period_badge in its payload)
+    shows the FULL PERIOD badge, the Signal view no longer calls it 'the validation backtest', and the Research
+    view counts the holdout runs made."""
+    from database import now_ms
+    from e2e.conftest import seeded_backtest
+    a, db = fresh_server.app.config, fresh_server.db
+    res = seeded_backtest(a["BTC_SIGNALS"].config())
+    res.update({"period_kind": "full", "design_badge": None, "period": {**res["period"], "kind": "full"},
+                "verdict": "NOT VALIDATED: no demonstrated edge after costs - the live signal stays NO TRADE."})
+    summary = {"verdict": res["verdict"], "period": res["period"], "entry_mode": "standard", "period_kind": "full",
+               "strategy": {k: res["strategy"][k] for k in ("trades", "net_return_pct", "max_drawdown_pct",
+                                                            "profit_factor", "win_rate_pct")},
+               "buy_and_hold": 294.32, "criteria_passed": 4, "criteria_total": 7}
+    run_id = db.save_backtest(now_ms(), res["engine"], res["config_hash"], False, summary, res)
+    assert run_id == 1
+    db.set_setting("strategy_validation", {"validated": False, "run_id": run_id, "as_of": now_ms(), "engine": res["engine"],
+                                           "config_hash": res["config_hash"], "entry_mode": "standard",
+                                           "period_kind": "full", "period": res["period"], "note": res["verdict"],
+                                           "failed": ["Enough trades (6 trades (need >= 30))"]})
+    p = Page(browser, fresh_server.url, viewport={"width": 1280, "height": 900})
+    try:
+        page = p.goto("/#/research")
+        page.wait_for_selector("#btResult .verdict.design")
+        assert page.locator("#btResult .verdict.design").text_content() == "FULL PERIOD - includes design data, cannot validate"
+        assert page.locator("#btResult .verdict.design").is_visible()
+        page.wait_for_function("() => document.getElementById('btHoldout').textContent.startsWith('Holdout runs made')")
+        assert page.locator("#btHoldout").text_content().startswith("Holdout runs made: 0")
+
+        page = p.goto("/#/signal")
+        page.wait_for_selector("#sigGates li")
+        reasons = [li.text_content() for li in page.locator("#sigGates li").all()]
+        assert FULL_REASON in reasons and not any("validation backtest" in r for r in reasons)
+        page = p.goto("/")
+        page.wait_for_selector("#sigSummary[data-state='ready']")
+        assert page.locator("#sumReason").text_content().startswith("No proven edge yet: no holdout run has been made")
+
+        for _ in range(2):                                   # the same rules tested twice: 1 counts, 1 repeat
+            db.register_holdout_run(now_ms(), "h" * 16, res["config_hash"], res["engine"], {}, {}, None)
+        page = p.goto("/#/research")
+        page.wait_for_function("() => document.getElementById('btHoldout').textContent.startsWith('Holdout runs made: 2')")
+        assert "1 counted for validation" in page.locator("#btHoldout").text_content()
+        assert p.errors == []
+    finally:
+        p.context.close()
+
+
 # ------------------------------------------------------------------ placeholders, console, layout
 def visit_every_view(p: Page, open_details: bool = True) -> dict[str, list[str]]:
     page = p.goto("/")

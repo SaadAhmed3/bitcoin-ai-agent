@@ -159,8 +159,10 @@ def test_validation_run_and_latest_run_are_separate_facts(db):
     a = rich(db, validation_run=lambda: vrun)
     fs, _ = a.build_facts()
     v, latest = fs.first("validation"), fs.first("latest_run")
-    assert v["text"].startswith("Validation backtest run #3 (full period, standard entry, engine signal-1.7)")
-    assert "decides the NO TRADE gate" in v["text"] and "trades 6" in v["text"] and "Enough trades" in v["text"]
+    # 0.9.2 follow-up (deliberate): a full-period record no longer "decides the NO TRADE gate" - it cannot validate.
+    assert v["text"].startswith("Backtest run #3 (full period, standard entry, engine signal-1.7)")
+    assert "cannot validate" in v["text"] and "no holdout run" in v["text"]
+    assert "decides the NO TRADE gate" not in v["text"] and "trades 6" in v["text"] and "Enough trades" in v["text"]
     assert latest["text"].startswith("Latest run #6: DESIGN period, pullback entry - research only, cannot validate")
     assert "trades 86" in latest["text"]
     same = rich(db, validation_run=lambda: vrun, backtest=lambda: vrun)
@@ -173,11 +175,14 @@ def test_validation_run_and_latest_run_are_separate_facts(db):
 def test_validation_reason_wording_new_and_old_records():
     new = validation_reason({"validated": False, "run_id": 3, "engine": "signal-1.7", "period_kind": "full",
                              "entry_mode": "standard", "failed": ["Enough trades (6 trades (need >= 30))"]})
-    assert new == ("Not validated: the validation backtest (run #3, full period, standard entry, engine signal-1.7) found "
-                   "no demonstrated edge after costs. Failed: Enough trades (6 trades (need >= 30)).")
-    old = validation_reason({"validated": False, "run_id": 1, "engine": "signal-1.5"})       # pre-6.2 record
-    assert old == ("Not validated: the validation backtest (run #1, full period, standard entry, engine signal-1.5) found "
-                   "no demonstrated edge after costs.")
+    # 0.9.2 follow-up (deliberate): a full-period run is not "the validation backtest" - it cannot validate.
+    assert new == "Not validated: no holdout run yet. Run #3 is a full-period run (it includes design data) and cannot validate."
+    old = validation_reason({"validated": False, "run_id": 1, "engine": "signal-1.5"})       # pre-6.2 record = full
+    assert old == "Not validated: no holdout run yet. Run #1 is a full-period run (it includes design data) and cannot validate."
+    hold = validation_reason({"validated": False, "run_id": 5, "engine": "signal-1.7", "period_kind": "holdout",
+                              "failed": ["Enough trades (9 trades (need >= 15))"]})
+    assert hold == ("Not validated: the validation backtest (run #5, holdout period, standard entry, engine signal-1.7) "
+                    "found no demonstrated edge after costs. Failed: Enough trades (9 trades (need >= 15)).")
     via_period = validation_reason({"run_id": 4, "engine": "x", "period": {"kind": "holdout"}, "entry_mode": "breakout"})
     assert "(run #4, holdout period, breakout entry, engine x)" in via_period
     assert "latest backtest" not in new + old
