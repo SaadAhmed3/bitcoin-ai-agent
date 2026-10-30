@@ -8,7 +8,7 @@ from typing import Callable
 
 from database import Database, now_ms
 from services.market_data import MarketDataService
-from services.backtest_service import effective_validation
+from services.backtest_service import current_validation
 from services.signal_engine import (ENGINE_VERSION, ENTRY_MODES, HOLD, NO_TRADE, EngineConfig, generate_signal,
                                     validate_weights)
 from services.technical_analysis import analyze
@@ -160,7 +160,7 @@ class SignalService:
                     news = {}
                 stage = "settings"
                 cfg = self.config()
-                validation = effective_validation(self.db.get_setting("strategy_validation"), cfg)
+                validation = current_validation(self.db, cfg)
                 stage = "signal engine"
                 sig = generate_signal(analyses, meta, price, news.get("summary"), news.get("events"),
                                       cfg, validation, self.clock())

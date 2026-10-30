@@ -95,14 +95,16 @@ def test_a_failed_first_holdout_cannot_be_retried_into_a_pass(config, db):
     assert s["signal"] == "NO TRADE" and "not_validated" in s["diagnostics"]["gate_keys"]
 
 
-def test_new_settings_are_a_new_hypothesis_with_their_own_first_run(config, db):
+def test_new_settings_do_not_get_a_second_attempt_on_a_spent_holdout(config, db):
+    # 0.9.3 (owner's decision, deliberate change from 0.9.2): the holdout is single-use for ALL rule sets. New
+    # settings are a new hypothesis but get no counting run until a NEW holdout period is set.
     c, svc = make_client6(config, db, runner=_runner([False, True]))
     svc.start(years=1, download=False, background=False, period="holdout")
     assert c.put("/api/signal/config", json={"min_rr": 2}).status_code == 200
     svc.start(years=1, download=False, background=False, period="holdout")
     reg = c.get("/api/backtest/holdout").get_json()["runs"]
-    assert [r["counts_for_validation"] for r in reg] == [True, True] and reg[0]["hypothesis_hash"] != reg[1]["hypothesis_hash"]
-    assert db.get_setting("strategy_validation")["validated"] is True
+    assert [r["counts_for_validation"] for r in reg] == [False, True] and reg[0]["hypothesis_hash"] != reg[1]["hypothesis_hash"]
+    assert db.get_setting("strategy_validation")["validated"] is False      # still the failed first run
 
 
 def test_full_and_design_runs_never_touch_the_validation_or_the_registry(config, db):

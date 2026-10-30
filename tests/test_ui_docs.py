@@ -15,6 +15,6 @@ def test_docs_route_serves_only_the_three_documents_as_plain_text(config, db):
     assert c.post("/docs/README.md").status_code == 405
 
 
-def test_app_version_is_the_batch_1_release():
+def test_app_version_is_the_batch_1b_release():
     import app
-    assert app.APP_VERSION == "0.9.2 (batch 1: safety fixes)"   # deliberate bump from 0.9.1
+    assert app.APP_VERSION == "0.9.4 (batch 1b: single-use holdout)"   # deliberate bump from 0.9.3

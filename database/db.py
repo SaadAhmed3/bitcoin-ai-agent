@@ -12,8 +12,10 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
-SCHEMA_VERSION = 7  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
-                    # 7: holdout_runs (0.9.2). Migrations are additive; an upgrade backs the file up first.
+SCHEMA_VERSION = 9  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
+                    # 7: holdout_runs (0.9.2), 8: holdout_runs.holdout_start (0.9.3),
+                    # 9: holdout_runs.verdict + criteria, write-once triggers (0.9.4).
+                    # Migrations are additive; an upgrade backs the file up first.
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -175,8 +177,9 @@ CREATE TABLE IF NOT EXISTS alert_state (
     updated_at  INTEGER NOT NULL
 );
 
--- Every holdout run, kept forever. Only the FIRST run of a hypothesis (same trading rules) may change the
--- validation; later runs are stored with counts_for_validation = 0. The partial unique index enforces it.
+-- Every holdout run, kept forever. The holdout is SINGLE-USE (0.9.3): the first run in a holdout period, whatever
+-- its rule set, counts and spends the period; later runs are stored with counts_for_validation = 0.
+-- (The per-period unique index is created in init(), after the holdout_start column migration.)
 CREATE TABLE IF NOT EXISTS holdout_runs (
     id                     INTEGER PRIMARY KEY AUTOINCREMENT,
     created_at             INTEGER NOT NULL,
@@ -186,10 +189,14 @@ CREATE TABLE IF NOT EXISTS holdout_runs (
     settings               TEXT    NOT NULL,
     result                 TEXT    NOT NULL,
     backtest_run_id        INTEGER,
-    counts_for_validation  INTEGER NOT NULL CHECK (counts_for_validation IN (0, 1))
+    counts_for_validation  INTEGER NOT NULL CHECK (counts_for_validation IN (0, 1)),
+    holdout_start          INTEGER NOT NULL DEFAULT 1761696000000,
+    verdict                TEXT CHECK (verdict IN ('PASS', 'FAIL')),   -- decided at run time, never recalculated
+    criteria               TEXT                                         -- JSON: thresholds + each criterion's value
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_holdout_first ON holdout_runs (hypothesis_hash) WHERE counts_for_validation = 1;
 """
+DEFAULT_HOLDOUT_START = 1_761_696_000_000   # 2025-10-29 00:00 UTC = services.backtesting.HOLDOUT_START (asserted in tests)
 
 
 def now_ms() -> int:
@@ -222,7 +229,23 @@ class Database:
             conn.close()
 
     MIGRATIONS = [("paper_account", "avg_fill", "REAL"),  # columns added after a table first shipped
-                  ("source_health", "consecutive_failures", "INTEGER NOT NULL DEFAULT 0")]
+                  ("source_health", "consecutive_failures", "INTEGER NOT NULL DEFAULT 0"),
+                  ("holdout_runs", "holdout_start", f"INTEGER NOT NULL DEFAULT {DEFAULT_HOLDOUT_START}"),
+                  ("holdout_runs", "verdict", "TEXT CHECK (verdict IN ('PASS', 'FAIL'))"),
+                  ("holdout_runs", "criteria", "TEXT")]
+    # Holdout runs are write-once (0.9.4): a stored run - above all its verdict - can never be changed or deleted, so
+    # nothing done later (new pass criteria, a re-evaluation) can turn a spent FAIL into a PASS. The only allowed
+    # update is linking the stored backtest run once (backtest_run_id NULL -> id).
+    WRITE_ONCE_TRIGGERS = [
+        """CREATE TRIGGER IF NOT EXISTS holdout_runs_no_update BEFORE UPDATE OF created_at, hypothesis_hash, config_hash,
+               engine, settings, result, counts_for_validation, holdout_start, verdict, criteria ON holdout_runs
+           BEGIN SELECT RAISE(ABORT, 'holdout runs are write-once'); END""",
+        """CREATE TRIGGER IF NOT EXISTS holdout_runs_link_once BEFORE UPDATE OF backtest_run_id ON holdout_runs
+           WHEN OLD.backtest_run_id IS NOT NULL
+           BEGIN SELECT RAISE(ABORT, 'holdout runs are write-once'); END""",
+        """CREATE TRIGGER IF NOT EXISTS holdout_runs_no_delete BEFORE DELETE ON holdout_runs
+           BEGIN SELECT RAISE(ABORT, 'holdout runs are write-once'); END""",
+    ]
 
     def _stored_schema_version(self) -> int | None:
         """Schema version of an existing database file, or None for a new or empty file."""
@@ -262,6 +285,16 @@ class Database:
                 cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
                 if column not in cols:
                     conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ctype}")
+            # One counting holdout run per holdout period. A 0.9.2 database may already hold two counting runs in one
+            # period (it allowed one per rule set); the index is then skipped - data is never rewritten - and the
+            # EARLIEST counting run is the one that spent the period (holdout_state).
+            dup = conn.execute("SELECT 1 FROM holdout_runs WHERE counts_for_validation = 1 "
+                               "GROUP BY holdout_start HAVING COUNT(*) > 1 LIMIT 1").fetchone()
+            if dup is None:
+                conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_holdout_spent ON holdout_runs (holdout_start) "
+                             "WHERE counts_for_validation = 1")
+            for trigger in self.WRITE_ONCE_TRIGGERS:
+                conn.execute(trigger)
             conn.execute(
                 "INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('schema_version', ?)",
                 (str(SCHEMA_VERSION),),
@@ -344,41 +377,75 @@ class Database:
             return int(cur.lastrowid)
 
     def register_holdout_run(self, created_at: int, hypothesis: str, config_hash: str, engine: str,
-                             settings: dict, result: dict, backtest_run_id: int | None) -> dict:
-        """Record a holdout run. One statement decides atomically whether it is the first run of this hypothesis
-        (the only one that counts for validation); the partial unique index backs that up.
-        Returns {"id", "counts_for_validation", "first_run_id"}."""
+                             settings: dict, result: dict, backtest_run_id: int | None,
+                             holdout_start: int = DEFAULT_HOLDOUT_START, verdict: str | None = None,
+                             criteria: dict | None = None) -> dict:
+        """Record a holdout run. One statement decides atomically whether it is the first run in this holdout
+        PERIOD, whatever its rule set: only that run counts for validation, and it spends the period (0.9.3).
+        `verdict` (PASS / FAIL) and `criteria` (thresholds + each criterion's value) are the run-time outcome; the
+        row is write-once, so they are never recalculated (0.9.4).
+        Returns {"id", "counts_for_validation", "first_run_id", "spender"} - spender is the run that spent it."""
         with self.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
             cur = conn.execute(
                 """INSERT INTO holdout_runs (created_at, hypothesis_hash, config_hash, engine, settings, result,
-                                             backtest_run_id, counts_for_validation)
-                   VALUES (?,?,?,?,?,?,?, NOT EXISTS (SELECT 1 FROM holdout_runs
-                                                      WHERE hypothesis_hash=? AND counts_for_validation=1))""",
+                                             backtest_run_id, holdout_start, verdict, criteria, counts_for_validation)
+                   VALUES (?,?,?,?,?,?,?,?,?,?, NOT EXISTS (SELECT 1 FROM holdout_runs
+                                                            WHERE holdout_start=? AND counts_for_validation=1))""",
                 (created_at, hypothesis, config_hash, engine, json.dumps(settings), json.dumps(result),
-                 backtest_run_id, hypothesis))
+                 backtest_run_id, holdout_start, verdict, None if criteria is None else json.dumps(criteria),
+                 holdout_start))
             rid = int(cur.lastrowid)
             row = conn.execute("SELECT counts_for_validation FROM holdout_runs WHERE id=?", (rid,)).fetchone()
-            first = conn.execute("SELECT id FROM holdout_runs WHERE hypothesis_hash=? AND counts_for_validation=1",
-                                 (hypothesis,)).fetchone()
-        return {"id": rid, "counts_for_validation": bool(row[0]), "first_run_id": int(first[0])}
+            spender = self._spender(conn, holdout_start)
+        return {"id": rid, "counts_for_validation": bool(row[0]), "first_run_id": spender["id"], "spender": spender}
+
+    @staticmethod
+    def _spender(conn, holdout_start: int) -> dict | None:
+        """The run that spent a holdout period: its EARLIEST counting run (a 0.9.2 database may hold several)."""
+        row = conn.execute("""SELECT id, created_at, backtest_run_id, hypothesis_hash, verdict, result FROM holdout_runs
+                              WHERE holdout_start=? AND counts_for_validation=1 ORDER BY id LIMIT 1""",
+                           (holdout_start,)).fetchone()
+        if row is None:
+            return None
+        out = dict(row)
+        out["verdict"] = Database._verdict(out.pop("verdict"), out.pop("result"))
+        return out
+
+    @staticmethod
+    def _verdict(verdict: str | None, result_json: str | None) -> str | None:
+        """The verdict stored at run time. Rows from 0.9.2/0.9.3 have no verdict column value: their result JSON,
+        written at run time, holds all_criteria_passed. Nothing is recalculated from criteria."""
+        if verdict:
+            return verdict
+        passed = json.loads(result_json or "{}").get("all_criteria_passed")
+        return None if passed is None else ("PASS" if passed else "FAIL")
+
+    def holdout_state(self, holdout_start: int) -> dict:
+        """Status of one holdout period: untouched, or spent on <date> by run #N; plus the runs made in it."""
+        with self.connect() as conn:
+            spender = self._spender(conn, holdout_start)
+            row = conn.execute("""SELECT COUNT(*) made, COALESCE(SUM(counts_for_validation), 0) counted
+                                  FROM holdout_runs WHERE holdout_start=?""", (holdout_start,)).fetchone()
+        out = {"start": holdout_start, "status": "spent" if spender else "untouched",
+               "made": int(row["made"]), "counted": int(row["counted"]),
+               "spent_at": None, "spent_by_run": None, "spent_by_holdout_run": None, "verdict": None}
+        if spender:
+            out.update(spent_at=spender["created_at"], spent_by_holdout_run=spender["id"],
+                       spent_by_run=spender["backtest_run_id"], verdict=spender["verdict"])
+        return out
 
     def link_holdout_run(self, holdout_id: int, backtest_run_id: int) -> None:
         with self.connect() as conn:
             conn.execute("UPDATE holdout_runs SET backtest_run_id=? WHERE id=? AND backtest_run_id IS NULL",
                          (backtest_run_id, holdout_id))
 
-    def holdout_counts(self) -> dict:
-        """{"made": every holdout run ever recorded, "counted": first runs (the only ones that count)}."""
-        with self.connect() as conn:
-            row = conn.execute("SELECT COUNT(*) made, COALESCE(SUM(counts_for_validation), 0) counted "
-                               "FROM holdout_runs").fetchone()
-        return {"made": int(row["made"]), "counted": int(row["counted"])}
-
     def holdout_runs(self, limit: int = 50) -> list[dict]:
         with self.connect() as conn:
             rows = conn.execute("SELECT * FROM holdout_runs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
         return [{**dict(r), "settings": json.loads(r["settings"]), "result": json.loads(r["result"]),
+                 "criteria": json.loads(r["criteria"]) if r["criteria"] else None,
+                 "verdict": self._verdict(r["verdict"], r["result"]),
                  "counts_for_validation": bool(r["counts_for_validation"])} for r in rows]
 
     def backtest_runs(self, limit: int = 20) -> list[dict]:

@@ -328,9 +328,13 @@ def test_validation_record_unlocks_signal_only_for_matching_settings(config, db)
     from services.backtesting import config_hash
     from services.signal_engine import EngineConfig
     c = make_client(config, db, [FakeProvider("fake1")])
-    # 0.9.2: only a first-holdout registry record can lift the gate
+    # 0.9.3: only the record of the run that spent the holdout, with the current rule code, can lift the gate
+    from services.backtesting import code_fingerprint
+    spender = db.register_holdout_run(FIXED_NOW, "h" * 16, config_hash(EngineConfig()), "x", {}, {}, None,
+                                      verdict="PASS")    # 0.9.4: the gate reads the verdict stored at run time
     db.set_setting("strategy_validation", {"validated": True, "note": "test only", "period_kind": "holdout",
-                                           "counts_for_validation": True,
+                                           "counts_for_validation": True, "holdout_run_id": spender["id"],
+                                           "code_fingerprint": code_fingerprint(),
                                            "config_hash": config_hash(EngineConfig())})
     s = c.get("/api/signal").get_json()
     assert not any("validated" in r for r in s["no_trade_reasons"])

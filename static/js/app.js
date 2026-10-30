@@ -785,6 +785,30 @@
   let btTimer = null;
   const fmtD = (ms) => (has(ms) ? new Date(ms).toISOString().slice(0, 10) : "unknown date");
 
+  // The holdout is single-use (0.9.3): the first counting run of ANY rule set spends it; a later rule set needs a new
+  // holdout start after it (forward data only).
+  function renderHoldout(h) {
+    if (!h) return;
+    const spent = h.status === "spent";
+    $("btHoldoutStatus").textContent = `Holdout status: ${h.label}` + (spent ? "" : ` (reserved period from ${fmtD(h.start)})`);
+    $("btHoldout").textContent = `Holdout runs made: ${h.made}` + (h.made
+      ? ` · ${h.counted} counted for validation (only the first run in a holdout period counts, whatever its rules; later runs are stored, not valid for validation)`
+      : " · the reserved holdout period is untouched");
+    $("btPeriod").querySelector("option[value='holdout']").textContent = `holdout (from ${fmtD(h.start)})`;
+    $("btPeriod").querySelector("option[value='design']").textContent = `design (to ${fmtD(h.start)})`;
+    const box = $("btNewHoldout");
+    box.hidden = !spent;
+    if (spent) {
+      const earliest = fmtD(h.earliest_new_start);
+      $("btNewHoldoutText").textContent = `The holdout from ${fmtD(h.start)} is spent (${h.label}). To validate a different `
+        + `rule set you need fresh data: set a new holdout start on or after ${earliest}. Only data from that day on is `
+        + "used for the holdout; design runs then extend up to the new start.";
+      const input = $("btNewHoldoutDate");
+      input.min = earliest;
+      if (!input.value || input.value < earliest) input.value = earliest;
+    }
+  }
+
   async function loadBacktest() {
     const st = await loadBacktestStatus();
     if (st && !["starting", "downloading", "running"].includes(st.state)) await loadBacktestResult();
@@ -795,10 +819,7 @@
       const st = await getJson("/api/backtest/status");
       const h = st.history || {};
       $("btHistory").textContent = "History stored: " + ["1d", "4h", "1h"].map((tf) => `${tf} ${(h[tf] || {}).count || 0}`).join(" · ") + " candles";
-      const ho = st.holdout_runs || { made: 0, counted: 0 };
-      $("btHoldout").textContent = `Holdout runs made: ${ho.made}` + (ho.made
-        ? ` · ${ho.counted} counted for validation (only the first run of a set of rules counts; repeats are stored, not valid for validation)`
-        : " · the reserved holdout period is untouched");
+      renderHoldout(st.holdout);
       if (!state.btDownloadSet) {
         // Tick "download" only when history is missing or more than a day old.
         const last = Math.min(...["1d", "4h", "1h"].map((tf) => (h[tf] || {}).last || 0));
@@ -1017,6 +1038,14 @@
       } catch (err) { $("btMsg").textContent = err.message; }
     };
     $("btCancel").onclick = () => fetch("/api/backtest/cancel", { method: "POST" }).then(loadBacktestStatus);
+    $("btNewHoldoutSet").onclick = async () => {
+      const msg = $("btNewHoldoutMsg");
+      try {
+        const d = await sendJson("POST", "/api/backtest/holdout_start", { start: $("btNewHoldoutDate").value });
+        msg.textContent = `New holdout period from ${fmtD(d.holdout.start)}.`;
+        renderHoldout(d.holdout);
+      } catch (err) { msg.textContent = "Not set: " + err.message; }
+    };
     $("riskForm").addEventListener("submit", calcRisk);
     $("rkFromPlan").onclick = riskFromPlan;
     $("paperForm").addEventListener("submit", (e) => {
