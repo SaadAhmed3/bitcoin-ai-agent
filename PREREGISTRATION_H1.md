@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| Status | **PROPOSED** — becomes binding when the owner signs below. Nothing may change after the holdout run. |
+| Status | **FAILED ON DESIGN DATA (C3 84.7%), holdout NOT run.** Owner's decision, 2026-10-31: criteria kept as written (C3 stays at 90%); no criterion is changed after seeing results. H1 is closed as a hypothesis. |
 | Written | 2026-10-31, on branch `research-1`, before any holdout data was read for H1 |
-| Holdout | **Not run.** Reserved holdout (from 2025-10-29) untouched. |
+| Holdout | **Not run, and will not be run for H1.** The 2025-10-29 holdout is contaminated for trend-following hypotheses (see §9). |
 | Live signal | H1 is **not** wired into the live signal (engine signal-1.8 is unchanged). |
 
 ## 1. Hypothesis
@@ -117,7 +117,10 @@ every criterion's value and its own fingerprint. The result is kept whatever it 
 
 | | |
 |---|---|
-| Owner | ______________________ |
-| Date (UTC) | ______________________ |
-| Decisions in §6 | 1: ______ 2: A / B 3: ______ |
-| Criteria changed before signing? | no / yes (describe): ______________________ |
+| Owner decision | 2026-10-31 (UTC), recorded on the owner's instruction |
+| §6.1 | Keep C3 at 90%; do not change criteria after seeing results. **H1 FAILED ON DESIGN DATA (C3 84.7%).** |
+| §6.2 | Not applicable: the holdout is not run for H1 (contaminated, §9). |
+| §6.3 | EMA 50/200 becomes a separate hypothesis, H2 (`PREREGISTRATION_H2.md`), tested on forward data only. |
+| Criteria changed? | **No.** |
+
+H1 is still run by the forward paper tracker (Research → Forward tests), **for information only**: those results do not change this verdict.
