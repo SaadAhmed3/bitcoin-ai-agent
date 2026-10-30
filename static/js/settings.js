@@ -6,7 +6,7 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const SOURCE = { env: "env override (read-only)", settings: "settings DB", default: "default" };
   const SIGNAL_FIELDS = ["entry_mode", "strong_threshold", "buy_threshold", "sell_threshold", "min_agreement", "strong_min_agreement",
-    "counter_trend_limit", "min_rr", "fee_pct", "slippage_pct", "require_validated_edge"];
+    "counter_trend_limit", "min_rr", "fee_pct", "slippage_pct", "max_source_divergence_pct", "require_validated_edge"];
   const RISK_FIELDS = ["risk_pct", "max_exposure_pct", "daily_loss_limit_pct", "fee_pct", "slippage_pct", "loss_streak_reduce", "max_risk_pct"];
   let data = null;
 
@@ -73,7 +73,8 @@
       if (sec === "signal") {
         const c = data.signal.config;
         const v = data.signal.validation || {};
-        box.innerHTML = `<p class="muted small">Validation now: <b>${v.validated ? "validated" : v.stale ? "STALE (settings changed since the last backtest)" : "not validated"}</b>${v.note ? " - " + esc(v.note) : ""}</p>`
+        box.innerHTML = (data.signal.notice ? `<p class="set-warn" id="signalNotice">${esc(data.signal.notice)}</p>` : "")
+          + `<p class="muted small">Validation now: <b>${v.validated ? "validated" : v.stale ? "STALE (settings changed since the last backtest)" : "not validated"}</b>${v.note ? " - " + esc(v.note) : ""}</p>`
           + SIGNAL_FIELDS.map((k) => plainRow(k, c[k], rangeHelp((data.signal.ranges || {})[k]))).join("")
           + `<div class="set-row"><label>weights<span class="help">JSON object; normalised to sum 1</span></label><div><input type="text" name="weights" aria-label="weights" value="${esc(JSON.stringify(c.weights))}"></div></div>`;
       } else if (sec === "risk") {
@@ -132,7 +133,7 @@
 
   async function load() {
     try {
-      data = await call("GET", "/api/settings");
+      data = await call("GET", "/api/settings?ack_notice=1");
       render();
       $("loadState").textContent = "";
     } catch (err) {

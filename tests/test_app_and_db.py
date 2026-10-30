@@ -214,7 +214,10 @@ def test_signal_history_records_changes(config, db):
 def test_signal_config_api(config, db):
     c = make_client(config, db, [FakeProvider("fake1")])
     cfg = c.get("/api/signal/config").get_json()
-    assert sum(cfg["config"]["weights"].values()) == pytest.approx(1.0, abs=1e-3) and cfg["rationale"]
+    # signal-1.8 (deliberate): news weight 0, the other documented weights unchanged (sum 0.85; the engine rescales
+    # over the scored components exactly as the backtest always did)
+    assert sum(cfg["config"]["weights"].values()) == pytest.approx(0.85, abs=1e-3) and cfg["rationale"]
+    assert cfg["config"]["weights"]["news"] == 0
     r = c.put("/api/signal/config", json={"weights": {"news": 0}, "min_rr": 2})
     assert r.status_code == 200 and r.get_json()["config"]["weights"]["news"] == 0
     assert c.get("/api/signal/config").get_json()["config"]["min_rr"] == 2
@@ -223,7 +226,7 @@ def test_signal_config_api(config, db):
         assert c.put("/api/signal/config", json=bad).status_code == 400, bad
     assert c.put("/api/signal/config", data="not json", content_type="text/plain").status_code == 400
     r = c.put("/api/signal/config", json={"reset": True})
-    assert r.get_json()["config"]["weights"]["news"] == 0.15
+    assert r.get_json()["config"]["weights"]["news"] == 0.0          # signal-1.8: was 0.15
 
 
 @pytest.mark.parametrize("bad, field", [
@@ -307,9 +310,25 @@ def test_background_monitor_closes_a_paper_stop_without_the_paper_view(config, d
     assert len(sells) == 1 and sells[0]["reason"].startswith("SIMULATED stop hit")
     assert paper.state(None)["btc"] == 0
     st = c.get("/api/paper").get_json()
-    assert st["auto_exit"] is None and st["last_background_exit"]["message"].startswith("SIMULATED SELL")
+    # batch 2: GET /api/paper no longer has an auto_exit field (it never sells)
+    assert "auto_exit" not in st and st["last_background_exit"]["message"].startswith("SIMULATED SELL")
     c.application.config["BTC_MONITOR"].run_once()                          # nothing left to close
     assert len([o for o in paper.state(None)["orders"] if o["side"] == "SELL"]) == 1
+
+
+def test_get_paper_is_read_only_even_below_the_stop(config, db):
+    """Regression (B16): GET /api/paper executed a simulated stop/target exit (a side effect on a GET request).
+    Only the background monitor closes positions now."""
+    c = make_client(config, db, [FakeProvider("fake1", price=65_000.0)])
+    paper = c.application.config["BTC_PAPER"]
+    paper.buy({"price": 70_000.0, "is_stale": False}, 1000, stop=68_000.0)   # market now 65,000: below the stop
+    for _ in range(3):
+        st = c.get("/api/paper").get_json()
+    assert st["btc"] > 0 and not [o for o in st["orders"] if o["side"] == "SELL"]
+    assert "auto_exit" not in st and st["last_background_exit"] is None
+    c.application.config["BTC_MONITOR"].run_once()                          # the monitor closes it
+    st = c.get("/api/paper").get_json()
+    assert st["btc"] == 0 and st["last_background_exit"]["message"].startswith("SIMULATED SELL")
 
 
 def test_paper_day_open_price_uses_the_00_utc_candle_then_a_snapshot(config, db):

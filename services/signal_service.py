@@ -19,7 +19,8 @@ SIGNAL_TIMEFRAMES = ("1h", "4h", "1d")
 RECORD_EVERY_MS = 60 * 60_000  # also store an unchanged signal at most once per hour, for the audit trail
 SCORE_STEP = 0.10              # a score move this large is stored even if signal/setup did not change
 EDITABLE = {"strong_threshold", "buy_threshold", "sell_threshold", "min_agreement", "strong_min_agreement",
-            "counter_trend_limit", "min_rr", "fee_pct", "slippage_pct", "require_validated_edge", "entry_mode"}
+            "counter_trend_limit", "min_rr", "fee_pct", "slippage_pct", "require_validated_edge", "entry_mode",
+            "max_source_divergence_pct"}
 # Allowed numeric ranges (inclusive unless min_exclusive). The score lives in [-1, +1], so a threshold outside it
 # could never fire; costs below zero would make trades look cheaper than free.
 RANGES: dict[str, dict] = {
@@ -31,6 +32,8 @@ RANGES: dict[str, dict] = {
     "counter_trend_limit": {"min": 0.0, "max": 1.0, "help": "daily trend score, 0..1"},
     "min_rr": {"min": 0.0, "max": 10.0, "min_exclusive": True, "help": "reward/risk after costs, above 0"},
     "fee_pct": {"min": 0.0, "max": 1.0, "help": "% per side, 0..1"},
+    "max_source_divergence_pct": {"min": 0.1, "max": 5.0,
+                                  "help": "% two exchanges may differ before NO TRADE (signal-1.8), 0.1..5"},
     "slippage_pct": {"min": 0.0, "max": 1.0, "help": "% per side, 0..1"},
 }
 for _r in RANGES.values():
@@ -94,8 +97,39 @@ class SignalService:
             setattr(cfg, k, v)
         return cfg
 
+    NOTICE_KEY = "signal_config_notice"
+
+    def _stored(self) -> dict:
+        """The stored engine settings. signal-1.8: a stored news weight above 0 (allowed before) is set to 0 ONCE,
+        keeping the user's other weights in their proportions, with a one-time notice - never a silent reset."""
+        stored = self.db.get_setting("signal_config", {}) or {}
+        w = stored.get("weights")
+        if isinstance(w, dict):
+            try:
+                old = float(w.get("news") or 0)
+            except (TypeError, ValueError):
+                old = 0.0
+            if old > 0:
+                try:
+                    stored = {**stored, "weights": validate_weights({**w, "news": 0})}
+                except ValueError:
+                    stored = {k: v for k, v in stored.items() if k != "weights"}    # unusable either way: defaults
+                self.db.set_setting("signal_config", stored)
+                self.db.set_setting(self.NOTICE_KEY, (
+                    f"Your stored news weight ({old:g}) was set to 0: since signal-1.8 news is not part of the score "
+                    "(no backtest ever included it) and can only block. Your other weights were kept in their "
+                    "proportions."))
+        return stored
+
+    def notice(self, consume: bool = False) -> str | None:
+        """The one-time settings notice; `consume` (the Settings page showing it) clears it."""
+        text = self.db.get_setting(self.NOTICE_KEY)
+        if text and consume:
+            self.db.set_setting(self.NOTICE_KEY, None)
+        return text or None
+
     def config(self) -> EngineConfig:
-        values = self._valid_stored(self.db.get_setting("signal_config", {}) or {})
+        values = self._valid_stored(self._stored())
         cfg = self._build(values)
         try:
             check_thresholds(cfg)
@@ -107,7 +141,7 @@ class SignalService:
     def update_config(self, payload: dict) -> EngineConfig:
         if not isinstance(payload, dict):
             raise ValueError("Body must be a JSON object")
-        stored = self._valid_stored(self.db.get_setting("signal_config", {}) or {})
+        stored = self._valid_stored(self._stored())
         if "weights" in payload:
             stored["weights"] = validate_weights(payload["weights"])
         types = {f.name: f.type for f in fields(EngineConfig)}
@@ -154,6 +188,8 @@ class SignalService:
                     meta[tf] = res.meta()
                 stage = "price"
                 price = self.market.get_price()
+                stage = "price cross-check"
+                price = {**price, "cross_check": self.market.cross_check(price)}
                 try:
                     news = self.news_report() or {}
                 except Exception:

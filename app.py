@@ -42,8 +42,8 @@ from services import security
 from services.security import MAX_BODY_BYTES
 from werkzeug.exceptions import HTTPException
 
-APP_VERSION = "0.9.4 (batch 1b: single-use holdout)"
-DOC_FILES = ("README.md", "SECURITY.md", "CHANGELOG.md")      # served read-only at /docs/<name>
+APP_VERSION = "0.9.5 (batch 2: data checks)"
+DOC_FILES = ("README.md", "USER_GUIDE.md", "SECURITY.md", "CHANGELOG.md")   # served read-only at /docs/<name>
 SIGNAL_STALE_WARNING = ("Changing these makes the current validation stale; the signal stays NO TRADE until a new "
                         "backtest validates the new settings.")
 log = logging.getLogger("btc_agent")
@@ -207,7 +207,7 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
 
     def paper_levels_check():
         """SIMULATED stop/target check every monitor cycle, whether or not the Paper view is open. Same atomic
-        close path as GET /api/paper, so the two can never sell the same position twice."""
+        close path as a manual SELL. GET /api/paper is read-only (batch 2): this is the only automatic exit."""
         res = paper.check_levels(market.get_price())
         if res:
             last_background_exit.update(res, at=now_ms())
@@ -468,10 +468,8 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
 
     @app.get("/api/paper")
     def paper_state():
-        price = market.get_price()
-        auto = paper.check_levels(price)
-        st = paper.state(price)
-        st["auto_exit"] = auto
+        """Read-only (batch 2, B16). Simulated stop/target exits happen only in the background monitor."""
+        st = paper.state(market.get_price())
         st["last_background_exit"] = dict(last_background_exit) or None
         return jsonify(st)
 
@@ -534,7 +532,10 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         out = settings.all()
         out["signal"] = {"config": asdict(signals.config()), "warning": SIGNAL_STALE_WARNING,
                          "validation": current_validation(db, signals.config()),
-                         "ranges": SIGNAL_RANGES}
+                         "ranges": SIGNAL_RANGES,
+                         # one-time notice (e.g. a stored news weight set to 0 by signal-1.8); the Settings page
+                         # consumes it with ?ack_notice=1, other readers (the dashboard's timers) do not
+                         "notice": signals.notice(consume=request.args.get("ack_notice") == "1")}
         out["risk"] = {"settings": asdict(paper.settings()), "defaults": asdict(RiskSettings()),
                        "label": "SIMULATED paper account settings", "ranges": RISK_RANGES}
         return jsonify(out)

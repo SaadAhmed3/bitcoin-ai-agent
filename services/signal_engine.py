@@ -30,7 +30,7 @@ import math
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-ENGINE_VERSION = "signal-1.7"
+ENGINE_VERSION = "signal-1.8"   # batch 2: 1h data check, cross-source price check, news only blocks
 
 STRONG_BUY, BUY, HOLD, SELL, NO_TRADE = "STRONG BUY SETUP", "BUY SETUP", "HOLD", "SELL / REDUCE EXPOSURE", "NO TRADE"
 
@@ -47,7 +47,7 @@ DEFAULT_WEIGHTS = {
     "volume": 0.10,
     "structure": 0.10,
     "overextension": 0.10,
-    "news": 0.15,
+    "news": 0.0,   # signal-1.8: not in the score (no backtest ever included it); news can only block
 }
 WEIGHT_RATIONALE = {
     "trend": "Largest weight: higher-timeframe trend is the most persistent technical feature; signals against it fail more often.",
@@ -55,7 +55,8 @@ WEIGHT_RATIONALE = {
     "volume": "Moves on above-average volume are more likely to be genuine participation.",
     "structure": "Breakouts, failed breakouts and nearby levels change the immediate odds and the room to move.",
     "overextension": "Brake against chasing stretched moves (RSI extremes, closes outside the Bollinger Bands).",
-    "news": "Headline sentiment can move price but is noisy and often already priced in, so it is kept secondary.",
+    "news": "Not part of the score since signal-1.8: headline sentiment was never in any backtest, so it may only block "
+            "(confirmed, unverified or speculative high-impact news against the setup - see the NO TRADE rules).",
 }
 
 
@@ -76,6 +77,7 @@ class EngineConfig:
     require_validated_edge: bool = True
     horizon: str = "1-3 days (4h primary, 1d trend filter, 1h confirmation)"
     entry_mode: str = "standard"       # "standard" | "breakout" | "pullback" (see ENTRY_MODES)
+    max_source_divergence_pct: float = 0.5   # signal-1.8: two exchanges disagreeing by more -> NO TRADE
 
     def __post_init__(self):
         if self.entry_mode not in ENTRY_MODES:
@@ -101,6 +103,9 @@ def validate_weights(weights: dict[str, Any]) -> dict[str, float]:
     total = sum(out.values())
     if total <= 0:
         raise ValueError("At least one weight must be positive")
+    if out["news"] > 0:
+        raise ValueError("'news' must be 0: since signal-1.8 news is not part of the score (no backtest ever included "
+                         "it); news can only block")
     if out["trend"] == 0 and out["momentum"] == 0:
         raise ValueError("Trend and momentum cannot both be zero")
     return {k: round(v / total, 4) for k, v in out.items()}
@@ -322,14 +327,66 @@ def score_overextension(a4h: dict, a1h: dict) -> Component:
 
 def score_news(news_summary: dict | None) -> Component:
     if not news_summary or news_summary.get("bias_label") in (None, "insufficient_news"):
-        return Component("news", None, [("Not enough recent directional news", 0)])
+        return Component("news", None, [("Not enough recent directional news. News is not in the score since "
+                                         "signal-1.8: it can only block.", 0)])
     coverage = min(1.0, float(news_summary.get("weight_total", 0)) / 3.0)
     b = float(news_summary.get("bias_score", 0))
     v = _clip(b * coverage)
     return Component("news", v,
                      [(f"News bias {news_summary['bias_label']} ({b:+.2f}); news coverage {coverage:.0%} of full weight "
-                       f"({news_summary.get('directional_active', 0)} directional events). Coverage is not a confidence level.",
+                       f"({news_summary.get('directional_active', 0)} directional events). Coverage is not a confidence level. "
+                       "Not in the score since signal-1.8: news can only block.",
                        _pol(v))])
+
+
+def _divergence_reason(xc: dict, limit: float) -> str:
+    """The cross-check NO TRADE reason: raw prices, and for USDT vs USD the rate, the converted price and the raw gap."""
+    a, b, conv = xc["primary"], xc["reference"], xc.get("conversion")
+    if not conv:
+        return (f"Price sources disagree by {xc['diff_pct']:.2f}% (limit {limit:g}%): {a['provider']} {a['price']:,.2f} "
+                f"{a['quote']} vs {b['provider']} {b['price']:,.2f} {b['quote']}. One of them may be wrong or delayed.")
+
+    def leg(x: dict) -> str:
+        if x["quote"] == "USDT":
+            return (f"{x['provider']} {x['price']:,.2f} USDT x {conv['rate']:.4f} {conv['pair']} = "
+                    f"{x['price_usd']:,.2f} USD")
+        return f"{x['provider']} {x['price']:,.2f} {x['quote']}"
+    return (f"Price sources disagree by {xc['diff_pct']:.2f}% after USDT-to-USD conversion (limit {limit:g}%): "
+            f"{leg(a)} vs {leg(b)} (raw gap {xc['raw_diff_pct']:.2f}%). One of them may be wrong or delayed.")
+
+
+def news_blocks(events: list[dict] | None, against: str | None) -> tuple[str | None, list[str]]:
+    """signal-1.8: news can only BLOCK. High-impact news against the setup (bearish vs a BUY setup, bullish vs a
+    SELL setup; a HOLD is never blocked):
+      confirmed            new (< 2 h) or recent (< 24 h, not priced in)  -> block
+      unverified / rumour  new (< 2 h)                                     -> block ("unverified, short block")
+      speculative          new (< 2 h)                                     -> block ("speculative, short block")
+      speculative          recent                                          -> warning only
+    signal-1.7 blocked any verification within 2 h only; nothing it blocked is unblocked here.
+    An event without a verification level is treated as unverified. Returns (reason or None, warnings)."""
+    if not against:
+        return None, []
+
+    def text(e: dict, label: str) -> str:
+        age = e.get("age_hours")
+        when = f"{age:.1f} h ago" if isinstance(age, (int, float)) else e.get("freshness", "recent")
+        return (f"high-impact {against} news ({label}, {when}): \"{e.get('title')}\" - "
+                f"{e.get('publisher') or 'unknown publisher'} {e.get('link') or ''}".rstrip())
+
+    warnings = []
+    for e in events or []:
+        if e.get("impact") != "high" or e.get("sentiment") != against:
+            continue
+        verification, fresh = e.get("verification") or "unverified", e.get("freshness")
+        if verification == "confirmed" and fresh in ("new", "recent"):
+            lead = "Fresh" if fresh == "new" else "Recent"
+            return f"{lead} {text(e, 'confirmed')}. News can only block; it is not in the score.", warnings
+        if verification in ("unverified", "speculative") and fresh == "new":
+            return (f"Fresh {text(e, verification + ', short block')}. Blocks for 2 h until it is confirmed or "
+                    "digested.", warnings)
+        if verification == "speculative" and fresh == "recent":
+            warnings.append(f"Speculative {text(e, 'speculative')}: warning only, not a block.")
+    return None, warnings
 
 
 # --------------------------------------------------------------------------- trade plan
@@ -548,20 +605,22 @@ def validation_reason(validation: dict | None, now_ms: int | None = None) -> str
     if now_ms is not None and in_forward_observation(v, now_ms):
         return (f"Validated on {_utc_date(v['as_of'])}; forward observation period until "
                 f"{_utc_date(v['observation_until'])}.")
+    # Records written before Phase 6.2 have no period / entry mode: those runs were full-period, standard entry.
+    period = v.get("period_kind") or (v.get("period") or {}).get("kind") or "full"
+    if v.get("run_id") and period != "holdout":
+        # 0.9.2: only a holdout run can validate, so a full or design run is not "the validation backtest" - stale
+        # or not (batch 2: the signal-1.8 bump made run #1 stale, and "re-run it" was wrong advice).
+        what = ("a full-period run (it includes design data)" if period == "full"
+                else f"a {period}-period run (in-sample for rule choices)")
+        return f"Not validated: no holdout run yet. Run #{v['run_id']} is {what} and cannot validate."
     if v.get("stale"):
-        return ("Not validated: the last backtest was run with different settings or engine version - re-run it "
-                "to validate the current settings.")
+        # Only holdout runs write validation records, so this holdout period is spent: re-running cannot validate.
+        return (f"Not validated: the rules changed since the holdout run (run #{v.get('run_id', '?')}): settings, "
+                "engine version or code. Validating the current rules needs a new holdout period.")
     if v.get("run_id"):
         failed = v.get("failed") or []
         why = f" Failed: {'; '.join(failed)}." if failed else ""
-        # Records written before Phase 6.2 have no period / entry mode: those runs were full-period, standard entry.
-        period = v.get("period_kind") or (v.get("period") or {}).get("kind") or "full"
         entry = v.get("entry_mode") or "standard"
-        if period != "holdout":
-            # 0.9.2: only a holdout run can validate, so a full or design run is not "the validation backtest".
-            what = ("a full-period run (it includes design data)" if period == "full"
-                    else f"a {period}-period run (in-sample for rule choices)")
-            return f"Not validated: no holdout run yet. Run #{v['run_id']} is {what} and cannot validate."
         return (f"Not validated: the validation backtest (run #{v['run_id']}, {period} period, {entry} entry, engine "
                 f"{v.get('engine', '?')}) found no demonstrated edge after costs.{why}")
     return "Not validated: no backtest has been run yet - run one from the Backtest & validation panel."
@@ -629,16 +688,24 @@ def generate_signal(analyses: dict[str, dict], data_meta: dict[str, dict], price
         keyed.append(("no_price", "No current BTC price available."))
     elif price.get("is_stale"):
         keyed.append(("stale_price", f"BTC price is stale ({price.get('age_seconds')}s old)."))
+    # signal-1.8: a second exchange's price (live only; the backtest has none). Unavailable = a warning, not a block.
+    xc = (price or {}).get("cross_check") or {}
+    if xc.get("status") == "checked" and xc["diff_pct"] > cfg.max_source_divergence_pct:
+        keyed.append(("price_divergence", _divergence_reason(xc, cfg.max_source_divergence_pct)))
     if not _ok(a4h) or a4h.get("bars", 0) < cfg.min_primary_bars:
         keyed.append(("insufficient_data", f"Primary 4h timeframe has too little data (need {cfg.min_primary_bars} closed candles)."))
     if trend.score is None or comps[1].score is None:
         keyed.append(("insufficient_data", "Trend or momentum could not be calculated."))
-    for tf in ("4h", "1d"):
+    # signal-1.8: 1h is checked too - it drives 40% of momentum and half of overextension.
+    used_for = {"1h": "momentum and overextension", "4h": "every component", "1d": "the daily trend"}
+    for tf in ("1h", "4h", "1d"):
         m = data_meta.get(tf) or {}
         if m.get("is_stale"):
-            keyed.append(("stale_candles", f"{tf} candles are stale."))
+            keyed.append(("stale_candles", f"{tf} candles are stale (the latest closed candle is more than two "
+                                           f"intervals old); {used_for[tf]} would use old data."))
         if (m.get("gaps") or 0) > cfg.max_gaps:
-            keyed.append(("gaps", f"{tf} series has {m['gaps']} missing candles."))
+            keyed.append(("gaps", f"{tf} series has {m['gaps']} missing candles (more than {cfg.max_gaps}); "
+                                  f"{used_for[tf]} would be computed over holes in the data."))
     extreme_vol = False
     for a, tf in ((a4h, "4h"), (a1h, "1h")):
         if (a.get("volatility") or {}).get("regime") == "extreme":
@@ -657,10 +724,9 @@ def generate_signal(analyses: dict[str, dict], data_meta: dict[str, dict], price
         against = "bearish"
     elif setup == SELL:
         against = "bullish"
-    fresh_against = [e for e in (news_events or []) if against and e.get("impact") == "high"
-                     and e.get("freshness") == "new" and e.get("sentiment") == against]
-    if fresh_against:
-        keyed.append(("fresh_news", f"Fresh high-impact {against} news within 2h: \"{fresh_against[0]['title']}\" - let the market digest it."))
+    news_block, news_warn = news_blocks(news_events, against)
+    if news_block:
+        keyed.append(("fresh_news", news_block))
     # A validation only lifts the gate after the forward-observation period (FORWARD_OBSERVATION_DAYS).
     validated = bool(validation and validation.get("validated")) and not in_forward_observation(validation, now_ms)
     if cfg.require_validated_edge and not validated:
@@ -684,7 +750,7 @@ def generate_signal(analyses: dict[str, dict], data_meta: dict[str, dict], price
     if setup in (STRONG_BUY, BUY) and plan:
         invalidation.append(f"4h close below the stop reference {plan['stop']:,.0f}.")
         invalidation.append("Daily structure turning into lower highs and lower lows.")
-        changes.append(f"News bias falling below {-0.15:+.2f} or a fresh high-impact bearish event.")
+        changes.append("A confirmed high-impact bearish news event (it blocks the signal; news is not in the score).")
     elif setup == SELL:
         if res:
             invalidation.append(f"4h close back above resistance {res['price']:,.0f}.")
@@ -725,6 +791,19 @@ def generate_signal(analyses: dict[str, dict], data_meta: dict[str, dict], price
         warnings += [f"{tf}: {w}" for w in (m.get("warnings") or [])]
     if price:
         warnings += price.get("warnings") or []
+    if xc.get("status") == "unavailable":
+        warnings.insert(0, f"Price not cross-checked: {xc.get('reason')}. This does not block the signal.")
+    elif xc.get("status") == "raw_only":
+        a, b = xc["primary"], xc["reference"]
+        warnings.insert(0, f"Price cross-check not converted to USD ({xc.get('reason')}): raw gap "
+                           f"{xc['raw_diff_pct']:.2f}% ({a['provider']} {a['price']:,.2f} {a['quote']} vs {b['provider']} "
+                           f"{b['price']:,.2f} {b['quote']}), shown for information - not blocking.")
+    stable = xc.get("stablecoin") or {}
+    if stable.get("warning"):
+        warnings.insert(0, f"Stablecoin deviation: {stable['pair']} is {stable['rate']:.4f} "
+                           f"({stable['deviation_pct']:+.2f}% from 1.00). USDT prices are converted with this rate; "
+                           "this is a warning, not a block by itself.")
+    warnings[:0] = news_warn        # older speculative news against the setup: shown, never blocking
 
     return {
         "signal": final,
@@ -741,7 +820,8 @@ def generate_signal(analyses: dict[str, dict], data_meta: dict[str, dict], price
         "generated_at": now_ms,
         "horizon": cfg.horizon,
         "price": {"value": price_now, "provider": (price or {}).get("provider"), "quote": (price or {}).get("quote"),
-                  "observed_at": (price or {}).get("observed_at"), "status": (price or {}).get("status")},
+                  "observed_at": (price or {}).get("observed_at"), "status": (price or {}).get("status"),
+                  "cross_check": xc or None},
         "components": [c.as_dict(round(eff_w.get(c.name, 0.0), 4)) for c in comps],
         "evidence_bullish": bullish_ev[:10],
         "evidence_bearish": bearish_ev[:10],

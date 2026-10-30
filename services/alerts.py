@@ -453,6 +453,27 @@ class AlertService:
                                 "Source returned to OK after a failure alert", 0.0, float(FAILURES_IN_A_ROW), src, ["/#sources"])
                 out.append(a)
                 self._set_state(key, False)
+        # Batch 2: the live price could not be compared with a second exchange. A warning (it never blocks the
+        # signal), throttled by the rule's own cooldown key; a single-source setup is a choice, not a failure.
+        xc = ((data("signal") or {}).get("price") or {}).get("cross_check") or {}
+        if xc.get("status") == "unavailable" and xc.get("reference_configured"):
+            a = self.emit(rule, "warning", "Price not cross-checked",
+                          f"The BTC price could not be compared with a second exchange: {xc.get('reason')}. "
+                          "Signals are not blocked by this (a disagreement between exchanges would block them).",
+                          "Second price source unavailable or not comparable", None, None, "price cross-check",
+                          ["/#sources"], cooldown_key=f"cooldown:{rule['id']}:price_cross_check")
+            if a:
+                out.append(a)
+        # USDT more than 1% away from 1.00 (batch 2 follow-up): its own alert and cooldown; never a block by itself.
+        stable = xc.get("stablecoin") or {}
+        if stable.get("warning"):
+            a = self.emit(rule, "warning", f"Stablecoin deviation: {stable['pair']} {stable['rate']:.4f}",
+                          f"{stable['pair']} is {stable['rate']:.4f}, {stable['deviation_pct']:+.2f}% from 1.00. USDT "
+                          "prices (Binance) are converted with this rate before the exchanges are compared.",
+                          "Stablecoin more than 1% away from its 1.00 peg", stable["rate"], 1.0, "price cross-check",
+                          ["/#sources"], cooldown_key=f"cooldown:{rule['id']}:stablecoin_deviation")
+            if a:
+                out.append(a)
         p = data("price") or {}
         if p:
             key = f"src:{rule['id']}:price_stale"

@@ -606,7 +606,7 @@
   const PLAIN_REASONS = [
     [/^Not validated: no backtest/i, "No proven edge yet: no validation backtest has been run"],
     [/^Not validated: no holdout run yet/i, "No proven edge yet: no holdout run has been made"],
-    [/^Not validated: the last backtest was run with different/i, "No proven edge for these settings: the validation backtest is out of date"],
+    [/^Not validated: the rules changed/i, "No proven edge for the current rules: they changed since the holdout run"],
     [/forward observation/i, "Validated, but still in the forward-observation period"],
     [/^Not validated/i, "No proven edge: the validation backtest didn't pass"],
     [/^No current BTC price/i, "No live price, so no decision can be made"],
@@ -614,10 +614,11 @@
     [/too little data|could not be calculated/i, "Not enough data to judge the market"],
     [/candles are stale/i, "Chart data is stale: waiting for fresh candles"],
     [/missing candles/i, "Gaps in the price history"],
+    [/^Price sources disagree/i, "Exchanges disagree on the price: waiting until they agree"],
     [/volatility is extreme/i, "Volatility is extreme: too risky to judge"],
     [/contradictory/i, "The evidence is mixed: indicators disagree"],
     [/fights the daily/i, "The setup fights the daily trend"],
-    [/Fresh high-impact/i, "Fresh high-impact news: letting the market digest it"],
+    [/^(Fresh|Recent) high-impact (bearish|bullish) news/i, "High-impact news against this setup: letting the market digest it"],
   ];
   const plainReason = (r) => {
     for (const [re, text] of PLAIN_REASONS) if (re.test(r)) return text;
@@ -1011,8 +1012,7 @@
       <td class="mono ${!has(o.realized_pnl) ? "" : o.realized_pnl >= 0 ? "up" : "down"}">${esc(money(o.realized_pnl, "open"))}</td>
       <td class="muted">${esc(o.reason)}</td></tr>`).join("") : '<tr><td colspan="7" class="empty">No simulated orders yet.</td></tr>';
     labelCells($("paperOrders"));
-    if (st.auto_exit) $("paperMsg").textContent = st.auto_exit.message;
-    else if (st.last_background_exit && !$("paperMsg").textContent) $("paperMsg").textContent = "Background check: " + st.last_background_exit.message;
+    if (st.last_background_exit && !$("paperMsg").textContent) $("paperMsg").textContent = "Background check: " + st.last_background_exit.message;
   }
 
   async function paperPost(url, body) {

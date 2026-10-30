@@ -5,7 +5,7 @@
 * Every order is stored with simulated = 1 (enforced by a database constraint) and
   every response is labelled SIMULATED.
 * Optional stop / target per position; they are checked every 60 s by the background monitor (while
-  `python app.py` runs, whatever view is open) and whenever the account is refreshed. Fills use the price at
+  `python app.py` runs, whatever view is open); reading the account never sells (batch 2). Fills use the price at
   that check, so they can be later and worse than the level - like real stops.
 * Limits: exposure cap and daily loss limit from the risk settings; buys are blocked
   when the price is stale or the daily loss limit is reached.

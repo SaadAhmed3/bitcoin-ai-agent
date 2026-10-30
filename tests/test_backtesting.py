@@ -122,7 +122,8 @@ def test_config_hash_changes_with_weights_and_costs():
     a = config_hash(EngineConfig())
     assert a == config_hash(EngineConfig())
     assert a != config_hash(EngineConfig(fee_pct=0.2))
-    assert a != config_hash(EngineConfig(weights={**EngineConfig().weights, "news": 0.0}))
+    # signal-1.8: news is already 0 by default, so another weight is changed here (same intent as before)
+    assert a != config_hash(EngineConfig(weights={**EngineConfig().weights, "trend": 0.4}))
     assert a == config_hash(EngineConfig(require_validated_edge=False))   # the gate itself is not part of the hash
 
 

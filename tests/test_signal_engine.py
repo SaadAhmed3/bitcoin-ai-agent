@@ -92,11 +92,13 @@ def test_missing_news_redistributes_weight():
     assert news["score"] is None and news["weight"] == 0
 
 
-def test_news_moves_the_score():
+def test_news_does_not_move_the_score():
+    # signal-1.8 (owner's decision, deliberate change from "news moves the score"): news is not part of the score,
+    # as in every backtest; it can only block (tests/test_news_blocking.py).
     base = run()["score"]
     bull_news = {"bias_label": "bullish", "bias_score": 0.6, "weight_total": 5, "directional_active": 4}
     bear_news = {"bias_label": "bearish", "bias_score": -0.6, "weight_total": 5, "directional_active": 4}
-    assert run(news=bull_news)["score"] > base > run(news=bear_news)["score"]
+    assert run(news=bull_news)["score"] == base == run(news=bear_news)["score"]
 
 
 # ------------------------------------------------------------------ trade plan
@@ -165,6 +167,39 @@ def test_gate_stale_candles_and_gaps():
     meta = deepcopy(META_OK)
     meta["1d"]["gaps"] = 12
     _gate(run(meta=meta), "missing candles")
+
+
+def test_gate_stale_or_gappy_1h_series():
+    """Batch 2 (signal-1.8): 1h drives 40% of momentum and half of overextension; before, a stale or gappy 1h
+    series fed the signal silently (only 4h and 1d were checked)."""
+    meta = deepcopy(META_OK)
+    meta["1h"]["is_stale"] = True
+    s = run(meta=meta)
+    assert s["signal"] == NO_TRADE and "stale_candles" in s["diagnostics"]["gate_keys"]
+    assert any(r.startswith("1h candles are stale") and "momentum" in r for r in s["no_trade_reasons"])
+    meta = deepcopy(META_OK)
+    meta["1h"]["gaps"] = 6
+    s = run(meta=meta)
+    assert s["signal"] == NO_TRADE and "gaps" in s["diagnostics"]["gate_keys"]
+    assert any(r.startswith("1h series has 6 missing candles") for r in s["no_trade_reasons"])
+    meta["1h"]["gaps"] = 5                                         # the limit itself (max_gaps = 5) still passes
+    assert "gaps" not in run(meta=meta)["diagnostics"]["gate_keys"]
+
+
+def test_stale_validation_reasons_do_not_say_rerun():
+    """Batch 2: after the signal-1.8 bump the stored run #1 (full period) became 'stale' and the reason said
+    're-run it to validate' - but a full run can never validate, and a spent holdout cannot be re-run to validate."""
+    from services.signal_engine import validation_reason
+    full = validation_reason({"validated": False, "stale": True, "run_id": 1, "period_kind": "full"})
+    assert full == ("Not validated: no holdout run yet. Run #1 is a full-period run (it includes design data) "
+                    "and cannot validate.")
+    hold = validation_reason({"validated": False, "stale": True, "run_id": 4, "period_kind": "holdout"})
+    assert "re-run" not in hold and "new holdout period" in hold and "run #4" in hold
+
+
+def test_engine_version_is_signal_1_8():
+    from services.signal_engine import ENGINE_VERSION
+    assert ENGINE_VERSION == "signal-1.8"
 
 
 def test_gate_insufficient_primary_data():
@@ -528,7 +563,8 @@ def test_validation_reason_texts():
     h = validation_reason({"validated": False, "run_id": 2, "engine": "signal-1.7", "period_kind": "holdout",
                            "failed": ["Enough trades (9 trades (need >= 15))"]})
     assert "run #2" in h and "Enough trades" in h
-    assert "different settings" in validation_reason({"validated": False, "stale": True})
+    # batch 2 (deliberate): a stale record no longer says "re-run it" - it asks for a new holdout period
+    assert "rules changed" in validation_reason({"validated": False, "stale": True})
 
 
 def test_diagnostics_record_raw_setup_and_downgrade():

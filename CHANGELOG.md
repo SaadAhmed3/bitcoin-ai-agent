@@ -2,6 +2,75 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## 0.9.5 (batch 2: data checks, signal-1.8) — 2026-10-31
+
+Changes **live signal behaviour**. **Engine signal-1.7 → signal-1.8.** **The holdout was not run**; the full 4-year
+window was not re-run. Each fix was written test-first (shown failing on the previous code) and is its own commit.
+
+### Exactly what signal-1.8 changed
+
+**Score**
+| | signal-1.7 | signal-1.8 |
+|---|---|---|
+| News in the weighted score | yes, 15%, whenever there was enough directional news | **no** (weight 0) |
+| Other weights (settings) | 0.30 / 0.25 / 0.10 / 0.10 / 0.10 | unchanged |
+| Effective weights live | 30 / 25 / 10 / 10 / 10 / news 15% with news; 35.29 / 29.41 / 11.76 ×3 without | **always 35.29 / 29.41 / 11.76 / 11.76 / 11.76%** |
+| Thresholds, agreement, min_rr, costs | +0.25 / +0.50 / −0.25, 60% / 75%, 1.5, 0.10% + 0.05% | unchanged |
+
+The signal-1.8 live formula is the one every backtest used: the backtest never had news (it passes no news summary,
+so news was excluded and the rest rescaled). Proof on the design period (decisions 2022-10-30 → 2025-10-28, no
+candle at or after the 2025-10-29 holdout start loaded): **6,566 of 6,566 bars identical** between 0.9.4 and
+signal-1.8 (setup, raw setup, tradable, unrounded score, stop, target, downgrade, gate keys), and the same **5 trades,
++9.08%**. The golden synthetic replay test passes unchanged.
+
+**NO TRADE gates** (nothing was loosened)
+| Gate | signal-1.7 | signal-1.8 |
+|---|---|---|
+| Stale candles (> 2 intervals) | 4h, 1d | **1h, 4h, 1d** (stricter) |
+| Missing candles (> 5) | 4h, 1d | **1h, 4h, 1d** (stricter) |
+| Exchanges disagree | — | **new**: second exchange differs by more than `max_source_divergence_pct` (default 0.5%, setting 0.1-5) **after converting USDT to USD with Coinbase's USDT-USD rate** → NO TRADE showing raw prices, the rate, the converted price and the raw gap. Quotes and the rate observed > 15 s apart are not compared; no usable rate → raw gap as a warning only; a missing/stale/unreachable second source → warning only |
+| News against the setup, high impact, **confirmed** | blocks < 2 h | blocks < 2 h **and 2-24 h if not priced in** (stricter) |
+| … **unverified** (incl. "reportedly"/rumour wording) | blocks < 2 h | blocks < 2 h ("unverified, short block") — unchanged |
+| … **speculative** (opinion, forecast, question) | blocks < 2 h | blocks < 2 h ("speculative, short block") — unchanged; 2-24 h: **new warning** |
+| Direction | bearish blocks BUY/STRONG BUY, bullish blocks SELL; HOLD never | unchanged |
+| All other gates (price, data, volatility, contradiction, daily trend, calculation error, validation) | — | unchanged |
+
+Reason texts now name what is affected (e.g. "1h candles are stale …; momentum and overextension would use old
+data") and news reasons show headline, publisher, age and link.
+
+### Other changes
+- **GET /api/paper is read-only (B16).** Simulated stop/target exits happen only in the 60-second background monitor,
+  through the shared atomic close path. The response no longer has `auto_exit`.
+- **Settings:** a news weight above 0 is rejected ("news can only block"). A stored news weight above 0 from an older
+  version is set to 0 once, keeping the other weights in their proportions, with a one-time notice on the Settings page.
+  New range-checked setting `max_source_divergence_pct`.
+- **Stablecoin deviation:** USDT-USD more than 1% away from 1.00 → a separate warning and a "Stablecoin deviation"
+  alert (own cooldown key); never a block by itself.
+- **Alerts:** "Price not cross-checked" (from the existing source-failure rule) uses its own cooldown key and the
+  duplicate check; no alert when no second source is configured. A failing second source also counts toward the
+  existing "source failing 3 times in a row" alert.
+- **Validation reason wording:** a stale record no longer says "re-run it to validate": a full run is described as
+  "no holdout run yet … cannot validate", and a stale holdout record asks for a new holdout period.
+- **Docs:** README rewritten (~260 lines, current behaviour only); new USER_GUIDE.md for beginners (PowerShell
+  commands, every screen, signal, NO TRADE, backtests, paper trading, risk example, troubleshooting, data limits),
+  linked from the System view.
+
+### Live signal before/after (same inputs, 2026-10-30 21:11 UTC, BTC 76,733.56 USDT)
+| | 0.9.4 / signal-1.7 | 0.9.5 / signal-1.8 |
+|---|---|---|
+| Signal | NO TRADE | NO TRADE |
+| Setup | SELL / REDUCE EXPOSURE | SELL / REDUCE EXPOSURE |
+| Score | −0.306 | −0.290 |
+| News | bearish −0.394, counted at 15% | bearish −0.394, not counted |
+| NO TRADE reasons | 4h volatility extreme; not validated | 4h volatility extreme; not validated |
+| Cross-check (live, normal caching) | — | raw Binance vs Coinbase gap 0.22-0.27% (mostly USDT vs USD); after converting with USDT-USD 0.9986 (measured 22:39 UTC): **0.08-0.10%**, well within the 0.5% limit |
+
+### Tests
+554 → 592 unit (coverage 94.0%) (+ `tests/test_price_cross_check.py`, `tests/test_news_blocking.py`), 87 → 88 e2e. Updated
+deliberately (old rules, listed in each commit): the export test's engine pin; `test_news_moves_the_score` →
+`…does_not_move…`; the config API test (default weights sum 0.85, reset gives news 0); the config-hash test changes
+trend instead of news; the stale-reason assertion; the docs-route test (4 documents).
+
 ## 0.9.4 (batch 1b follow-up: stored holdout verdict) — 2026-10-31
 
 **Signal engine unchanged: signal-1.7. The holdout was not run** (synthetic data and fake runners only). Regression
