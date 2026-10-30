@@ -37,8 +37,13 @@ def test_size_never_increases_after_losses():
 
 
 def test_risk_ceiling_and_validation():
-    r = position_size(10_000, 100, 95, RiskSettings(risk_pct=5, max_risk_pct=2, max_exposure_pct=100, fee_pct=0, slippage_pct=0))
+    # Batch 1 (0.9.2): a risk % above the ceiling is REJECTED instead of silently capped (owner's requirement:
+    # risk % must lie in (0, max_risk_pct]). The ceiling itself is still the most a trade can risk.
+    r = position_size(10_000, 100, 95, RiskSettings(risk_pct=2, max_risk_pct=2, max_exposure_pct=100, fee_pct=0, slippage_pct=0))
     assert r["risk_pct_used"] == 2 and r["max_loss_at_stop"] == pytest.approx(200)
+    for risk in (5, 2.01, 0, -1):
+        with pytest.raises(ValueError, match="risk_pct"):
+            RiskSettings(risk_pct=risk, max_risk_pct=2).validate()
     for bad in ((10_000, 100, 105), (0, 100, 95), (10_000, -1, 95)):
         with pytest.raises(ValueError):
             position_size(*bad, RiskSettings())
@@ -97,6 +102,17 @@ def test_buy_blocked_when_stale_or_no_cash_or_exposure(paper, db):
         pt.buy(P(100.0), 3000)
 
 
+def test_sell_blocked_when_price_is_stale(paper):
+    """Regression (B5): a manual SELL filled at a stale cached price when every price source was down."""
+    pt, _ = paper
+    pt.buy(P(100.0), 1000)
+    with pytest.raises(ValueError, match="stale"):
+        pt.sell(P(90.0, stale=True))
+    st = pt.state(P(100.0))
+    assert st["btc"] == pytest.approx(10.0) and not [o for o in st["orders"] if o["side"] == "SELL"]
+    assert pt.sell(P(101.0))["simulated"]                       # a fresh price sells normally
+
+
 def test_no_short_selling(paper):
     pt, _ = paper
     with pytest.raises(ValueError, match="no short"):
@@ -112,6 +128,63 @@ def test_stop_and_target_checks(paper):
     pt.buy(P(100.0), 1000, stop=95.0, target=120.0)
     pt.check_levels(P(121.0))
     assert "target hit" in pt.state(P(121.0))["orders"][0]["reason"]
+
+
+def _concurrently(pt, fn, n=2):
+    """Run fn() in n threads that all read the account before any of them writes (two tabs polling at once)."""
+    import threading
+    barrier = threading.Barrier(n)
+    original = pt._account
+
+    def synced():
+        acc = original()
+        try:
+            barrier.wait(timeout=2)
+        except threading.BrokenBarrierError:
+            pass                       # a correct implementation may serialise the threads: don't deadlock
+        return acc
+
+    pt._account = synced
+    results, errors = [], []
+
+    def run():
+        try:
+            results.append(fn())
+        except ValueError as exc:
+            errors.append(str(exc))
+
+    threads = [threading.Thread(target=run) for _ in range(n)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    pt._account = original
+    return results, errors
+
+
+def test_concurrent_stop_checks_sell_once(paper):
+    """Regression (B1): two simultaneous stop checks recorded two SELLs for one position."""
+    pt, _ = paper
+    pt.buy(P(100.0), 4000, stop=95.0)               # 40 BTC at 100, fee 4 -> cost basis 100.1
+    results, errors = _concurrently(pt, lambda: pt.check_levels(P(90.0)))
+    st = pt.state(P(90.0))
+    sells = [o for o in st["orders"] if o["side"] == "SELL"]
+    assert len(sells) == 1 and not errors
+    assert sells[0]["qty"] == pytest.approx(40.0)
+    # (90 - 100.1) * 40 - sell fee 3.6 = -407.6
+    assert sells[0]["realized_pnl"] == pytest.approx(-407.6, abs=0.01)
+    assert st["btc"] == 0 and st["cash"] == pytest.approx(10_000 - 4004 + 3600 - 3.6, abs=0.01)
+    assert st["loss_streak"] == 1
+    assert sum(1 for r in results if r) == 1         # exactly one caller reports the exit
+
+
+def test_concurrent_manual_sells_sell_once(paper):
+    pt, _ = paper
+    pt.buy(P(100.0), 4000)
+    results, errors = _concurrently(pt, lambda: pt.sell(P(90.0)))
+    sells = [o for o in pt.state(P(90.0))["orders"] if o["side"] == "SELL"]
+    assert len(sells) == 1 and len(results) == 1
+    assert len(errors) == 1 and "no short" in errors[0].lower()
 
 
 def test_invalid_stop_target(paper):
@@ -130,6 +203,52 @@ def test_daily_loss_limit_blocks_new_buys(paper):
     assert pt.state(P(96.0))["daily_limit_reached"]
     with pytest.raises(ValueError, match="Daily loss limit"):
         pt.buy(P(96.0), 100)
+
+
+DAY_MS = 86_400_000
+DAY0 = FIXED_NOW - FIXED_NOW % DAY_MS          # 00:00 UTC of the fixed "today"
+
+
+def _older_position(db, day_open):
+    """50 BTC bought yesterday at 100 (cost basis 100.1 incl. fee); now it is 01:00 UTC today."""
+    t = {"now": DAY0 - 3_600_000}
+    pt = PaperTrading(db, clock=lambda: t["now"], day_open_price=day_open)
+    pt.reset(10_000)
+    pt.update_settings({"fee_pct": 0.1, "slippage_pct": 0.0, "max_exposure_pct": 100, "daily_loss_limit_pct": 3.0})
+    pt.buy(P(100.0), 5000)
+    t["now"] = DAY0 + 3_600_000
+    return pt, t
+
+
+def test_daily_loss_counts_only_todays_move_of_an_older_position(db):
+    """Regression (B11): the whole unrealised loss since entry counted as TODAY's loss."""
+    pt, _ = _older_position(db, lambda ts: 90.0 if ts == DAY0 else None)
+    st = pt.state(P(89.0))
+    # Since entry: (89 - 100.1) * 50 = -555 (5.6%). Today: (89 - 90) * 50 = -50 on the 00:00 equity 4995 + 50 * 90.
+    assert st["daily_pnl"] == pytest.approx(-50.0, abs=0.01)
+    assert st["daily_loss_pct"] == pytest.approx(50 / 9495 * 100, abs=0.001)
+    assert st["daily_loss_basis"] == "since 00:00 UTC" and not st["daily_limit_reached"]
+    assert st["unrealized_pnl"] == pytest.approx(-555.0, abs=0.01)     # the since-entry figure is still shown
+    pt.buy(P(89.0), 100)                                                # not blocked by yesterday's loss
+
+
+def test_daily_loss_without_a_day_open_price_stays_conservative(db):
+    pt, _ = _older_position(db, lambda ts: None)
+    st = pt.state(P(89.0))
+    assert st["daily_loss_basis"].startswith("since entry") and st["daily_limit_reached"]
+    with pytest.raises(ValueError, match="Daily loss limit"):
+        pt.buy(P(89.0), 100)
+
+
+def test_daily_loss_reverses_todays_orders_exactly(db):
+    pt, _ = _older_position(db, lambda ts: 90.0 if ts == DAY0 else None)
+    pt.sell(P(95.0), 0.5)                           # sell 25 BTC today: +5 vs 00:00 each, fee 2.375
+    pt.buy(P(95.0), 950)                            # 10 BTC, fee 0.95
+    st = pt.state(P(95.0))
+    # Equity at 00:00 = 4995 + 50 * 90 = 9495. Now: cash 4995 + 2375 - 2.375 - 950 - 0.95, BTC 35 * 95.
+    now_equity = 4995 + 2375 - 2.375 - 950 - 0.95 + 35 * 95
+    assert st["daily_pnl"] == pytest.approx(now_equity - 9495, abs=0.01)
+    assert st["daily_loss_pct"] == 0
 
 
 def test_reset_and_db_rejects_non_simulated_orders(paper, db):

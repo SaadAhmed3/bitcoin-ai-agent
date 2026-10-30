@@ -53,6 +53,52 @@ def test_health_counters(db):
     assert h["status"] == "error" and h["success_count"] == 1 and h["failure_count"] == 1 and h["last_error"] == "boom"
 
 
+def test_first_health_records_from_two_threads_do_not_collide(db):
+    """Regression: two requests recording the FIRST health row of a source at once raised
+    'UNIQUE constraint failed: source_health.source' (a 500 on the first dashboard load)."""
+    import contextlib
+    import threading
+    barrier = threading.Barrier(2)
+    original = db.connect
+
+    class Synced:
+        def __init__(self, conn):
+            self.conn = conn
+
+        def execute(self, sql, *args):
+            cur = self.conn.execute(sql, *args)
+            if sql.lstrip().upper().startswith("SELECT"):
+                try:
+                    barrier.wait(timeout=1)   # both threads have looked for the row before either writes
+                except threading.BrokenBarrierError:
+                    pass
+            return cur
+
+    @contextlib.contextmanager
+    def synced_connect():
+        with original() as conn:
+            yield Synced(conn)
+
+    db.connect = synced_connect
+    errors = []
+
+    def record():
+        try:
+            db.record_health("newsource", True, latency_ms=5)
+        except Exception as exc:          # noqa: BLE001 - the test reports whatever escapes
+            errors.append(repr(exc))
+
+    threads = [threading.Thread(target=record) for _ in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    db.connect = original
+    assert errors == []
+    h = [r for r in db.get_health() if r["source"] == "newsource"][0]
+    assert h["success_count"] == 2 and h["status"] == "ok"
+
+
 def test_settings_roundtrip(db):
     db.set_setting("theme", {"mode": "dark"})
     assert db.get_setting("theme") == {"mode": "dark"} and db.get_setting("missing", 3) == 3
@@ -180,11 +226,111 @@ def test_signal_config_api(config, db):
     assert r.get_json()["config"]["weights"]["news"] == 0.15
 
 
+@pytest.mark.parametrize("bad, field", [
+    ({"fee_pct": -0.1}, "fee_pct"), ({"slippage_pct": -0.01}, "slippage_pct"), ({"fee_pct": 1.5}, "fee_pct"),
+    ({"min_rr": 0}, "min_rr"), ({"min_rr": -1}, "min_rr"),
+    ({"buy_threshold": 1.5}, "buy_threshold"), ({"strong_threshold": 1.2}, "strong_threshold"),
+    ({"sell_threshold": -1.5}, "sell_threshold"),
+    ({"strong_threshold": 0.25}, "strong"),                       # strong == buy
+    ({"strong_threshold": 0.2, "buy_threshold": 0.3}, "strong"),  # strong < buy
+    ({"sell_threshold": 0}, "sell"), ({"sell_threshold": 0.1}, "sell"),
+    ({"min_agreement": 5}, "min_agreement"), ({"strong_min_agreement": -0.1}, "strong_min_agreement"),
+    ({"counter_trend_limit": 2}, "counter_trend_limit"),
+])
+def test_signal_config_rejects_out_of_range_values(config, db, bad, field):
+    """Regression (B2): negative costs, min R/R <= 0 and unreachable or inverted thresholds were accepted."""
+    c = make_client(config, db, [FakeProvider("fake1")])
+    r = c.put("/api/signal/config", json=bad)
+    assert r.status_code == 400, bad
+    assert field in r.get_json()["error"]
+    assert c.get("/api/signal/config").get_json()["config"]["fee_pct"] == 0.10     # nothing was stored
+
+
+def test_signal_config_accepts_edges_and_ignores_stored_out_of_range_values(config, db):
+    c = make_client(config, db, [FakeProvider("fake1")])
+    for ok in ({"fee_pct": 0, "slippage_pct": 0}, {"min_rr": 0.5}, {"strong_threshold": 1.0},
+               {"sell_threshold": -1.0}, {"min_agreement": 1.0}):
+        assert c.put("/api/signal/config", json=ok).status_code == 200, ok
+    c.put("/api/signal/config", json={"reset": True})
+    db.set_setting("signal_config", {"fee_pct": -1, "min_rr": 2, "buy_threshold": 9})   # written by an older version
+    cfg = c.get("/api/signal/config").get_json()["config"]
+    assert cfg["fee_pct"] == 0.10 and cfg["buy_threshold"] == 0.25 and cfg["min_rr"] == 2
+    ranges = c.get("/api/settings").get_json()["signal"]["ranges"]
+    assert ranges["fee_pct"]["min"] == 0 and ranges["min_rr"]["min_exclusive"] is True
+
+
+def test_risk_pct_above_max_risk_is_rejected_by_the_api(config, db):
+    c = make_client(config, db, [FakeProvider("fake1")])
+    r = c.post("/api/paper/settings", json={"risk_pct": 2.5})
+    assert r.status_code == 400 and "max_risk_pct" in r.get_json()["error"]
+    r = c.post("/api/risk/size", json={"portfolio_value": 10_000, "entry": 100, "stop": 95, "settings": {"risk_pct": 3}})
+    assert r.status_code == 400 and "risk_pct" in r.get_json()["error"]
+    assert c.post("/api/paper/settings", json={"risk_pct": 2}).status_code == 200
+    assert "risk_pct" in c.get("/api/settings").get_json()["risk"]["ranges"]
+
+
+SIGNAL_KEYS = {"signal", "setup", "actionable", "score", "agreement", "direction", "strength", "generated_at", "horizon",
+               "price", "components", "evidence_bullish", "evidence_bearish", "evidence_for", "evidence_against",
+               "no_trade_reasons", "diagnostics", "setup_notes", "plan", "pending_order", "plan_status", "key_levels",
+               "invalidation", "would_change", "risk", "news", "validation", "confidence", "data_warnings", "config",
+               "engine", "id", "record"}
+
+
+@pytest.mark.parametrize("target", ["services.signal_service.analyze", "services.signal_service.generate_signal"])
+def test_calculation_error_becomes_no_trade_with_a_reason(config, db, monkeypatch, target):
+    """Regression (P1-5): an exception in the analysis or engine code was an HTTP 500 with no signal."""
+    def boom(*a, **k):
+        raise ZeroDivisionError("float division by zero")
+    monkeypatch.setattr(target, boom)
+    c = make_client(config, db, [FakeProvider("fake1")])
+    r = c.get("/api/signal")
+    assert r.status_code == 200
+    s = r.get_json()
+    assert s["signal"] == "NO TRADE" and s["actionable"] is False and s["plan"] is None
+    assert len(s["no_trade_reasons"]) == 1
+    reason = s["no_trade_reasons"][0]
+    assert reason.startswith("Calculation error") and "ZeroDivisionError" in reason
+    assert s["diagnostics"]["gate_keys"] == ["calculation_error"]
+    assert SIGNAL_KEYS <= set(s)                                              # the dashboard can render it
+    hist = c.get("/api/signal/history").get_json()["history"]
+    assert hist and hist[0]["signal"] == "NO TRADE"                            # kept in the audit trail
+
+
+def test_background_monitor_closes_a_paper_stop_without_the_paper_view(config, db):
+    """Regression (B6): stops were only checked by GET /api/paper, i.e. while the Paper view was open."""
+    c = make_client(config, db, [FakeProvider("fake1", price=65_000.0)])
+    paper = c.application.config["BTC_PAPER"]
+    paper.buy({"price": 70_000.0, "is_stale": False}, 1000, stop=68_000.0)   # market now 65,000: below the stop
+    c.application.config["BTC_MONITOR"].run_once()                          # one 60 s background cycle
+    orders = paper.state(None)["orders"]
+    sells = [o for o in orders if o["side"] == "SELL"]
+    assert len(sells) == 1 and sells[0]["reason"].startswith("SIMULATED stop hit")
+    assert paper.state(None)["btc"] == 0
+    st = c.get("/api/paper").get_json()
+    assert st["auto_exit"] is None and st["last_background_exit"]["message"].startswith("SIMULATED SELL")
+    c.application.config["BTC_MONITOR"].run_once()                          # nothing left to close
+    assert len([o for o in paper.state(None)["orders"] if o["side"] == "SELL"]) == 1
+
+
+def test_paper_day_open_price_uses_the_00_utc_candle_then_a_snapshot(config, db):
+    c = make_client(config, db, [FakeProvider("fake1")])
+    day_open = c.application.config["BTC_PAPER"].day_open_price
+    day0 = FIXED_NOW - FIXED_NOW % 86_400_000
+    assert day_open(day0) is None
+    db.save_price("fake1", "BTCUSDT", "USDT", 91.5, day0 + 60_000, day0 + 60_000)
+    assert day_open(day0) == 91.5                                            # snapshot within 10 minutes
+    db.upsert_candles("fake1", "BTCUSDT", "1h", [{"open_time": day0, "open": 90.0, "high": 92.0, "low": 89.0,
+                                                  "close": 91.0, "volume": 1.0, "close_time": day0 + 3_599_999}], day0)
+    assert day_open(day0) == 90.0                                            # the candle open wins
+
+
 def test_validation_record_unlocks_signal_only_for_matching_settings(config, db):
     from services.backtesting import config_hash
     from services.signal_engine import EngineConfig
     c = make_client(config, db, [FakeProvider("fake1")])
-    db.set_setting("strategy_validation", {"validated": True, "note": "test only",
+    # 0.9.2: only a first-holdout registry record can lift the gate
+    db.set_setting("strategy_validation", {"validated": True, "note": "test only", "period_kind": "holdout",
+                                           "counts_for_validation": True,
                                            "config_hash": config_hash(EngineConfig())})
     s = c.get("/api/signal").get_json()
     assert not any("validated" in r for r in s["no_trade_reasons"])
@@ -243,7 +389,7 @@ def fake_result(validated, engine_cfg):
 
 def test_backtest_service_records_validation_and_unlocks_signal(config, db):
     c, bt = make_client6(config, db, runner=lambda h, f, d, cfg, *a, **k: fake_result(True, cfg))
-    bt.start(years=1, download=False, background=False)
+    bt.start(years=1, download=False, background=False, period="holdout")   # 0.9.2: only a holdout validates
     st = c.get("/api/backtest/status").get_json()
     assert st["state"] == "done" and st["run_id"] and st["validation"]["validated"] is True
     assert c.get("/api/backtest/latest").get_json()["validated"] is True

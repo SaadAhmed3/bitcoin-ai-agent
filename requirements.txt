@@ -15,4 +15,5 @@ scikit-learn==1.9.1    # optional ML (Phase 6)
 
 # Testing
 pytest==9.2.0
+pytest-cov==7.1.0      # coverage report (0.9.2): python -m pytest --cov=app --cov=services --cov=database
 playwright==1.64.1     # UI tests (Phase 9); run `python -m playwright install chromium` once

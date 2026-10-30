@@ -605,6 +605,7 @@
   // One plain-language line from the first NO TRADE reason (the full reasons stay in the Signal view).
   const PLAIN_REASONS = [
     [/^Not validated: no backtest/i, "No proven edge yet: no validation backtest has been run"],
+    [/^Not validated: no holdout run yet/i, "No proven edge yet: no holdout run has been made"],
     [/^Not validated: the last backtest was run with different/i, "No proven edge for these settings: the validation backtest is out of date"],
     [/forward observation/i, "Validated, but still in the forward-observation period"],
     [/^Not validated/i, "No proven edge: the validation backtest didn't pass"],
@@ -794,6 +795,10 @@
       const st = await getJson("/api/backtest/status");
       const h = st.history || {};
       $("btHistory").textContent = "History stored: " + ["1d", "4h", "1h"].map((tf) => `${tf} ${(h[tf] || {}).count || 0}`).join(" · ") + " candles";
+      const ho = st.holdout_runs || { made: 0, counted: 0 };
+      $("btHoldout").textContent = `Holdout runs made: ${ho.made}` + (ho.made
+        ? ` · ${ho.counted} counted for validation (only the first run of a set of rules counts; repeats are stored, not valid for validation)`
+        : " · the reserved holdout period is untouched");
       if (!state.btDownloadSet) {
         // Tick "download" only when history is missing or more than a day old.
         const last = Math.min(...["1d", "4h", "1h"].map((tf) => (h[tf] || {}).last || 0));
@@ -857,7 +862,7 @@
     const kv = (o) => Object.entries(o || {}).filter(([, v]) => typeof v !== "object" || v === null)
       .map(([k, v]) => `<li><b>${esc(k.replaceAll("_", " "))}</b>: ${esc(plain(v, "not set"))}</li>`).join("");
     $("btResult").innerHTML = `
-      ${r.design_badge ? `<div class="verdict design">${esc(r.design_badge)}</div>` : ""}
+      ${r.period_badge || r.design_badge ? `<div class="verdict design">${esc(r.period_badge || r.design_badge)}</div>` : ""}
       <div class="verdict ${r.validated ? "ok" : "no"}">${esc(r.verdict)}
         <small>Run #${r.id} · entry rule <b>${esc(r.entry_mode || "standard")}</b> · period <b>${esc(r.period_kind || (r.period && r.period.kind) || "full")}</b> · ${fmtD(r.period.start)} → ${fmtD(r.period.end)} (${r.period.years} years, ${Number(r.period.bars).toLocaleString()} bars)</small></div>
       <div class="bt-tiles">
@@ -978,7 +983,7 @@
       <div class="fact"><small>Simulated equity</small><b class="mono">${esc(usd(st.equity, 2, "No price yet"))}</b><div class="${(st.total_pnl || 0) >= 0 ? "up" : "down"}">${esc(fmtPct(st.total_pnl_pct, "0.00%"))} since start (${esc(usd(st.start_balance, 0))})</div></div>
       <div class="fact"><small>Cash · BTC</small><b class="mono">${esc(usd(st.cash))} · ${esc(st.btc)}</b><div class="muted">exposure ${esc(st.exposure_pct)}%</div></div>
       <div class="fact"><small>Position</small><b class="mono">${st.btc > 0 ? "avg fill " + esc(usd(st.avg_fill ?? st.avg_entry)) : "flat"}</b>${st.btc > 0 ? `<div class="muted">cost basis incl. fees ${esc(usd(st.cost_basis ?? st.avg_entry))}</div>` : ""}<div class="muted">${st.btc > 0 ? `stop ${esc(usd(st.stop, 0, "none"))} · target ${esc(usd(st.target, 0, "none"))} · unrealised ${esc(money(st.unrealized_pnl))}` : "no open position"}</div></div>
-      <div class="fact"><small>Today · limits</small><b class="mono ${st.daily_limit_reached ? "down" : ""}">loss ${esc(st.daily_loss_pct)}% / ${esc(st.settings.daily_loss_limit_pct)}%</b><div class="muted">${st.daily_limit_reached ? "Daily limit reached: buys blocked" : `max exposure ${esc(st.settings.max_exposure_pct)}%`}${st.loss_streak ? ` · ${st.loss_streak} losses in a row` : ""}</div></div>`;
+      <div class="fact"><small>Today · limits</small><b class="mono ${st.daily_limit_reached ? "down" : ""}">loss ${esc(st.daily_loss_pct)}% / ${esc(st.settings.daily_loss_limit_pct)}%</b><div class="muted">${st.daily_limit_reached ? "Daily limit reached: buys blocked" : `max exposure ${esc(st.settings.max_exposure_pct)}%`}${st.loss_streak ? ` · ${st.loss_streak} losses in a row` : ""}${st.daily_loss_basis ? ` · loss measured ${esc(st.daily_loss_basis)}` : ""}</div></div>`;
     $("paperOrders").querySelector("tbody").innerHTML = st.orders.length ? st.orders.slice(0, 20).map((o) => `<tr>
       <td>${esc(localTime(o.created_at))}</td><td><span class="sig-pill ${o.side === "BUY" ? "buy" : "sell"}">SIM ${esc(o.side)}</span></td>
       <td class="mono">${Number(o.qty).toFixed(6)}</td><td class="mono">${esc(usd(o.price))}</td><td class="mono">${esc(usd(o.fee))}</td>
@@ -986,6 +991,7 @@
       <td class="muted">${esc(o.reason)}</td></tr>`).join("") : '<tr><td colspan="7" class="empty">No simulated orders yet.</td></tr>';
     labelCells($("paperOrders"));
     if (st.auto_exit) $("paperMsg").textContent = st.auto_exit.message;
+    else if (st.last_background_exit && !$("paperMsg").textContent) $("paperMsg").textContent = "Background check: " + st.last_background_exit.message;
   }
 
   async function paperPost(url, body) {

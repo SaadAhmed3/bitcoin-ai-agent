@@ -2,6 +2,74 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## 0.9.2 (batch 1: safety fixes) — 2026-10-30
+
+Bug fixes and stricter safeguards from the 2026-10-30 audit ([PROJECT_AUDIT.md](PROJECT_AUDIT.md),
+[BUGS_AND_RISKS.md](BUGS_AND_RISKS.md)). **Signal engine unchanged: signal-1.7.** No change to weights, thresholds,
+the news weight, `min_rr` defaults or any live-signal rule. **The holdout was not run.** Each fix was written test-first
+(the regression test was shown failing on the old code) and is its own commit.
+
+**Paper trading (SIMULATED account)**
+- **Atomic orders (B1).** Every buy and sell is one SQLite transaction (`BEGIN IMMEDIATE`). The account row is re-read
+  inside it and written with a compare-and-set (`UPDATE … WHERE cash=<read> AND btc=<read>`); the order is recorded only
+  if exactly one row changed. Before, two simultaneous refreshes recorded **two SELL orders for one position**
+  (reproduced: 79.96 BTC "sold" from a 39.98 BTC holding), doubling realised P/L and the loss streak.
+- **Daily loss = today's move (B11).** Today's P/L is now equity now minus equity at 00:00 UTC (today's orders reversed
+  exactly; a carried-over position is marked at the 00:00 price from the stored 1h candle or a price snapshot). Before,
+  the whole loss since entry counted as today's: a position bought yesterday at 100, worth 90 at midnight and 89 now,
+  showed a 5.55% daily loss and blocked buys; the real move today is 0.53%. Without a 00:00 price the old,
+  conservative rule applies and the Paper view says which basis was used.
+- **No SELL at a stale price (B5).** A manual SELL is refused when the price is stale, like a BUY already was.
+- **Stops and targets checked in the background (B6).** The 60-second background monitor now checks the simulated
+  stop/target whatever view is open (before: only while the Paper view was open), through the same atomic close path.
+
+**Signal and settings**
+- **Range-checked settings (B2).** The server rejects fees or slippage below 0 or above 1%, `min_rr` ≤ 0, thresholds
+  outside the score's −1…+1 range or not ordered `−1 ≤ sell < 0 < buy < strong ≤ 1`, and agreement / counter-trend values
+  outside 0…1. Messages name the field, the allowed range and the value. Out-of-range values stored by older versions
+  are ignored (defaults apply). Risk per trade must lie in (0, `max_risk_pct`]: it used to be capped silently and is
+  now rejected. The Settings page shows each allowed range and the server's message.
+- **Calculation errors → NO TRADE (P1-5).** An exception in data fetching, indicator analysis or the engine now gives
+  NO TRADE with the reason "Calculation error in <stage>: …" (stored in signal history) instead of an HTTP 500.
+
+**Validation protocol**
+- **Only the holdout can validate (B3).** Full-period runs include the design data the rules were developed on; they
+  are now labelled "FULL PERIOD - includes design data, cannot validate" and never write a validation.
+- **Holdout run registry (B4).** Every holdout run is recorded (time, engine version, settings, hypothesis hash,
+  result; `GET /api/backtest/holdout`). Only the **first** run of a hypothesis can change the validation; repeats are
+  stored and labelled "HOLDOUT ALREADY USED - not valid for validation". A failed first run cannot be retried into a
+  pass. The hypothesis hash covers the trading rules but not run length, seed, window sizes or pass criteria.
+  Validation records written before 0.9.2 never lift NO TRADE.
+- **Database schema 7** (new table `holdout_runs`, additive; existing runs kept). The app now makes a consistent
+  backup (`<db>.backup-<UTC time>-schema-<old>`) before any schema upgrade. A manual backup of the local database was
+  also made before this change.
+
+**Follow-up after manual checks (UI wording and visibility)**
+- The NO TRADE reason no longer calls a full-period run "the validation backtest": "Not validated: no holdout run
+  yet. Run #1 is a full-period run (it includes design data) and cannot validate." The Overview line reads "No proven
+  edge yet: no holdout run has been made". The assistant's fact says the same; its check that an AI answer names the
+  right validation run accepts both wordings (the new wording had briefly disabled it; a test caught that).
+  Holdout records keep their wording. Text only: no gate or rule changed, engine still signal-1.7.
+- The "FULL PERIOD - includes design data, cannot validate" badge now also shows for runs stored before 0.9.2 (the
+  API derives it when a stored payload has none; a missing period kind means a pre-6.2 full run).
+- Research view: "Holdout runs made: N" (and how many counted for validation), from `/api/backtest/status`.
+- Tests: a new browser test (old full run: badge, Signal reason, Overview line, holdout count) and 2 unit tests; three
+  wording tests updated deliberately. Unit 537, e2e 86, all pass.
+
+**Extra fix (not on the batch list)**
+- Source health is recorded with one atomic UPSERT. Two requests recording the first health row of a source at the same
+  time raised `UNIQUE constraint failed` (HTTP 500 on a first dashboard load); it made one e2e test fail 2 runs out of 3,
+  on the unchanged 0.9.1 code too.
+
+**Tests:** 493 → 535 unit, 81 → 85 e2e; all pass. Tests changed deliberately for the new rules (not weakened):
+`test_risk_ceiling_and_validation` (risk above the ceiling is now rejected instead of capped); three tests that wrote a
+validated record without the registry fields, or validated through a full run, now use a first-holdout record; the
+schema-version test expects 7. Coverage (pytest-cov, new dev dependency): 93.5% → 93.9% of statements (details in TEST_RESULTS.md).
+
+**Audit documents added:** PROJECT_AUDIT, BUGS_AND_RISKS, QUANTITATIVE_AUDIT (incl. the reconciliation of buy & hold
++294.32% in run #1 with the +281.87% quoted from an earlier run #3), BACKTEST_VALIDATION_REPORT, SIGNAL_ENGINE_REPORT,
+SECURITY_AUDIT, TEST_RESULTS, IMPLEMENTATION_ROADMAP.
+
 ## 0.9.1 (Phases 1-9, UI polish) — 2026-10-30
 
 Presentation only. No change to signal rules, weights, thresholds, `min_rr`, ENGINE_VERSION (still signal-1.7), API response formats, the database schema or any calculation. No holdout run.

@@ -24,10 +24,11 @@ from services.market_data import SOURCE_DOCS, MarketDataService
 from services.news_collector import FEEDS, NewsCollector
 from services.news_service import NewsService
 from services.signal_engine import DEFAULT_WEIGHTS, ENGINE_VERSION, WEIGHT_RATIONALE
-from services.signal_service import SignalService
+from services.signal_service import RANGES as SIGNAL_RANGES, SignalService
 from services.backtest_service import BacktestService, effective_validation
+from services.backtesting import DESIGN_BADGE, FULL_BADGE
 from services.paper_trading import PaperTrading
-from services.risk_manager import RiskSettings, position_size
+from services.risk_manager import RISK_RANGES, RiskSettings, position_size
 from services.technical_analysis import analyze, chart_series
 from services.assistant import Assistant, AssistantBusy, load_study
 from services.ollama_service import OllamaService, _model_matches
@@ -41,7 +42,7 @@ from services import security
 from services.security import MAX_BODY_BYTES
 from werkzeug.exceptions import HTTPException
 
-APP_VERSION = "0.9.1 (Phases 1-9, UI polish)"
+APP_VERSION = "0.9.2 (batch 1: safety fixes)"
 DOC_FILES = ("README.md", "SECURITY.md", "CHANGELOG.md")      # served read-only at /docs/<name>
 SIGNAL_STALE_WARNING = ("Changing these makes the current validation stale; the signal stays NO TRADE until a new "
                         "backtest validates the new settings.")
@@ -86,7 +87,16 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         http_factory=lambda: HttpClient(timeout=config.request_timeout, retries=3, backoff=1.0,
                                         min_interval=0.3, user_agent=config.user_agent))
     app.config["BTC_BACKTESTS"] = backtests
-    paper = PaperTrading(db)
+    def _price_at_day_open(ts: int) -> float | None:
+        """BTC price at 00:00 UTC: the stored 1h candle opening then, else a price snapshot within 10 minutes."""
+        for p in market.providers:
+            rows = db.get_candles_range(p.name, p.symbol, "1h", ts, ts)
+            if rows:
+                return float(rows[0]["open"])
+        snap = db.price_near(ts)
+        return float(snap["price"]) if snap else None
+
+    paper = PaperTrading(db, day_open_price=_price_at_day_open)
     app.config["BTC_PAPER"] = paper
 
     # Local AI assistant (Phase 7). Every provider reads the app's own data; Ollama is optional.
@@ -193,7 +203,16 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     }, clock=now_ms, notifiers=alert_notifiers)
     alerts.seed_defaults()
     app.config["BTC_ALERTS"] = alerts
-    monitor = AlertMonitor(alerts, interval=60.0)
+    last_background_exit: dict = {}
+
+    def paper_levels_check():
+        """SIMULATED stop/target check every monitor cycle, whether or not the Paper view is open. Same atomic
+        close path as GET /api/paper, so the two can never sell the same position twice."""
+        res = paper.check_levels(market.get_price())
+        if res:
+            last_background_exit.update(res, at=now_ms())
+
+    monitor = AlertMonitor(alerts, interval=60.0, jobs=[paper_levels_check])
     app.config["BTC_MONITOR"] = monitor
     if start_monitor:
         monitor.start()
@@ -380,25 +399,38 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     def backtest_status():
         st = backtests.status()
         st["validation"] = effective_validation(db.get_setting("strategy_validation"), signals.config())
+        st["holdout_runs"] = db.holdout_counts()
         return jsonify(st)
 
     @app.get("/api/backtest/runs")
     def backtest_runs():
         return jsonify({"runs": db.backtest_runs(20)})
 
+    @app.get("/api/backtest/holdout")
+    def backtest_holdout_registry():
+        """Every holdout run (newest first). Only the first run of a hypothesis counts for validation."""
+        return jsonify({"runs": db.holdout_runs(50)})
+
     @app.get("/api/backtest/latest")
     def backtest_latest():
         runs = db.backtest_runs(1)
         if not runs:
             return jsonify({"error": "No backtest has been run yet."}), 404
-        return jsonify(db.get_backtest(runs[0]["id"]))
+        return jsonify(_with_period_badge(db.get_backtest(runs[0]["id"])))
 
     @app.get("/api/backtest/<int:run_id>")
     def backtest_get(run_id: int):
         run = db.get_backtest(run_id)
         if run is None:
             return jsonify({"error": "Backtest not found"}), 404
-        return jsonify(run)
+        return jsonify(_with_period_badge(run))
+
+    def _with_period_badge(run: dict) -> dict:
+        """Runs stored before 0.9.2 have no period_badge; derive it (no period_kind = a pre-6.2 full run)."""
+        if "period_badge" not in run:
+            kind = run.get("period_kind") or (run.get("period") or {}).get("kind") or "full"
+            run["period_badge"] = {"design": DESIGN_BADGE, "full": FULL_BADGE}.get(kind)
+        return run
 
     # ---------------------------------------------------------------- risk & paper trading (Phase 6)
     def _num(body: dict, key: str, required: bool = True):
@@ -435,6 +467,7 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         auto = paper.check_levels(price)
         st = paper.state(price)
         st["auto_exit"] = auto
+        st["last_background_exit"] = dict(last_background_exit) or None
         return jsonify(st)
 
     @app.post("/api/paper/reset")
@@ -495,9 +528,10 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         from dataclasses import asdict
         out = settings.all()
         out["signal"] = {"config": asdict(signals.config()), "warning": SIGNAL_STALE_WARNING,
-                         "validation": effective_validation(db.get_setting("strategy_validation"), signals.config())}
+                         "validation": effective_validation(db.get_setting("strategy_validation"), signals.config()),
+                         "ranges": SIGNAL_RANGES}
         out["risk"] = {"settings": asdict(paper.settings()), "defaults": asdict(RiskSettings()),
-                       "label": "SIMULATED paper account settings"}
+                       "label": "SIMULATED paper account settings", "ranges": RISK_RANGES}
         return jsonify(out)
 
     @app.put("/api/settings/<section>")

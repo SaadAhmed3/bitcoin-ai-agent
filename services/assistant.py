@@ -188,7 +188,8 @@ def check_ai_answer(text: str, draft: str, facts: "FactSheet") -> list[str]:
     # A run named in a sentence about the validation / NO TRADE gate must be THE validation run
     # (live failure: "NO TRADE due to the latest backtest run #6" when the gate comes from run #3).
     vfact = facts.first("validation")
-    vm = re.search(r"Validation backtest run #(\d+)", vfact["text"]) if vfact else None
+    # Both wordings of the validation fact (a holdout record, or a full/design record that cannot validate).
+    vm = re.match(r"(?:Validation backtest|Backtest) run #(\d+)", vfact["text"]) if vfact else None
     if vm:
         for sent in re.split(r"(?<=[.!?])\s+", text):
             if re.search(r"\b(validat\w*|no trade|gate)\b", sent, re.I):
@@ -385,8 +386,13 @@ class Assistant:
             entry = v.get("entry_mode") or "standard"
             if v.get("run_id"):
                 engine = v.get("engine") or (vrun or {}).get("engine") or "?"
-                text = (f"Validation backtest run #{v['run_id']} ({period} period, {entry} entry, engine {engine}) "
-                        f"- the run that decides the NO TRADE gate: {state}.")
+                if period == "holdout":
+                    text = (f"Validation backtest run #{v['run_id']} ({period} period, {entry} entry, engine {engine}) "
+                            f"- the run that decides the NO TRADE gate: {state}.")
+                else:   # 0.9.2: only a holdout run can validate
+                    text = (f"Backtest run #{v['run_id']} ({period} period, {entry} entry, engine {engine}) is a "
+                            f"{period}-period run that includes design data, so it cannot validate; no holdout run has "
+                            f"decided the NO TRADE gate yet: {state}.")
                 if vrun:
                     text += f" {_run_summary(vrun)}."
                 failed = [c["name"] for c in (vrun or {}).get("criteria") or [] if not c.get("passed")]

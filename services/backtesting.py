@@ -54,6 +54,8 @@ HOLDOUT_START = 1_761_696_000_000      # 2025-10-29 00:00 UTC
 HOLDOUT_MIN_TRADES = 15
 PERIODS = ("full", "design", "holdout")
 DESIGN_BADGE = "DESIGN PERIOD - in-sample for rule choices, cannot validate"
+# 0.9.2: a full run overlaps the design data the rules were developed on, so it is informational only.
+FULL_BADGE = "FULL PERIOD - includes design data, cannot validate"
 
 WEIGHT_CANDIDATES = {
     "default": None,  # filled from the engine config at run time
@@ -99,6 +101,17 @@ def config_hash(engine_cfg: EngineConfig) -> str:
     d.pop("require_validated_edge", None)
     d.pop("horizon", None)
     blob = json.dumps({"engine": ENGINE_VERSION, **d}, sort_keys=True)
+    return hashlib.sha256(blob.encode()).hexdigest()[:16]
+
+
+def hypothesis_hash(engine_cfg: EngineConfig, cfg: BacktestConfig) -> str:
+    """What a holdout run is a test OF: the trading rules (config_hash: engine version, weights, thresholds, costs,
+    entry rule), the trade management (candle window, time stop, exit on SELL) and the fixed holdout start.
+
+    Run length, random seed / runs, walk-forward window sizes and the pass criteria are deliberately left out:
+    changing them must not buy a second holdout attempt for the same rules."""
+    blob = json.dumps({"config": config_hash(engine_cfg), "window": cfg.window, "max_hold_bars": cfg.max_hold_bars,
+                       "exit_on_sell": cfg.exit_on_sell, "holdout_start": HOLDOUT_START}, sort_keys=True)
     return hashlib.sha256(blob.encode()).hexdigest()[:16]
 
 
@@ -656,11 +669,15 @@ def run_backtest(c1h_rows: list[dict], c4h_rows: list[dict], c1d_rows: list[dict
 
     criteria = evaluate_criteria(m, ema_m, rnd, pos_share, criteria_cfg)
     all_passed = all(c["passed"] for c in criteria)
-    # The design period is in-sample for rule choices: it can never validate, whatever its numbers.
-    validated = all_passed and cfg.period != "design"
+    # Only the holdout is out-of-sample for the rules: design and full runs can never validate, whatever their
+    # numbers. (Whether THIS holdout run counts - only the first run of a hypothesis does - is decided by the
+    # backtest service's holdout registry.)
+    validated = all_passed and cfg.period == "holdout"
+    passed_txt = f"{'All' if all_passed else sum(c['passed'] for c in criteria)} of {len(criteria)} criteria passed"
     if cfg.period == "design":
-        verdict = (f"{DESIGN_BADGE}. {'All' if all_passed else sum(c['passed'] for c in criteria)} of "
-                   f"{len(criteria)} criteria passed on design data.")
+        verdict = f"{DESIGN_BADGE}. {passed_txt} on design data."
+    elif cfg.period == "full":
+        verdict = f"{FULL_BADGE}. {passed_txt}."
     elif validated:
         verdict = "VALIDATED: every criterion passed on out-of-sample data."
     else:
@@ -681,6 +698,8 @@ def run_backtest(c1h_rows: list[dict], c4h_rows: list[dict], c1d_rows: list[dict
         "entry_mode": engine_cfg.entry_mode,
         "period_kind": cfg.period,
         "design_badge": DESIGN_BADGE if cfg.period == "design" else None,
+        "period_badge": {"design": DESIGN_BADGE, "full": FULL_BADGE}.get(cfg.period),
+        "hypothesis_hash": hypothesis_hash(engine_cfg, cfg),
         "holdout_start": HOLDOUT_START,
         "period": {"kind": cfg.period, "start": times[0], "end": times[-1], "bars": len(bars),
                    "years": round(len(bars) / BARS_PER_YEAR, 2)},

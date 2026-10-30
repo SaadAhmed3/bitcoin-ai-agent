@@ -557,6 +557,11 @@ def validation_reason(validation: dict | None, now_ms: int | None = None) -> str
         # Records written before Phase 6.2 have no period / entry mode: those runs were full-period, standard entry.
         period = v.get("period_kind") or (v.get("period") or {}).get("kind") or "full"
         entry = v.get("entry_mode") or "standard"
+        if period != "holdout":
+            # 0.9.2: only a holdout run can validate, so a full or design run is not "the validation backtest".
+            what = ("a full-period run (it includes design data)" if period == "full"
+                    else f"a {period}-period run (in-sample for rule choices)")
+            return f"Not validated: no holdout run yet. Run #{v['run_id']} is {what} and cannot validate."
         return (f"Not validated: the validation backtest (run #{v['run_id']}, {period} period, {entry} entry, engine "
                 f"{v.get('engine', '?')}) found no demonstrated edge after costs.{why}")
     return "Not validated: no backtest has been run yet - run one from the Backtest & validation panel."

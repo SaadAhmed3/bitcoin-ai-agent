@@ -520,9 +520,14 @@ from services.signal_engine import validation_reason
 
 def test_validation_reason_texts():
     assert validation_reason(None).startswith("Not validated: no backtest")
+    # 0.9.2 follow-up (deliberate): a pre-6.2 (= full-period) record cannot validate, so its failed criteria are not
+    # the reason; a holdout record still lists them.
     r = validation_reason({"validated": False, "run_id": 1, "engine": "signal-1.5",
                            "failed": ["Enough trades (6 trades (need >= 30))"]})
-    assert "run #1" in r and "Enough trades" in r
+    assert "Run #1" in r and "cannot validate" in r and "no holdout run yet" in r
+    h = validation_reason({"validated": False, "run_id": 2, "engine": "signal-1.7", "period_kind": "holdout",
+                           "failed": ["Enough trades (9 trades (need >= 15))"]})
+    assert "run #2" in h and "Enough trades" in h
     assert "different settings" in validation_reason({"validated": False, "stale": True})
 
 
