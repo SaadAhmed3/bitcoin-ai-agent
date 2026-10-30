@@ -1,0 +1,302 @@
+{
+ "hypothesis": "H1: hold BTC while the daily close > SMA200, else cash; decide at the close, act at the next open",
+ "data": {
+  "source": "Binance BTCUSDT 1d (local database, read-only)",
+  "candles_loaded": 1641,
+  "first_candle_open": "2021-05-02T00:00:00+00:00",
+  "last_candle_close": "2025-10-28T23:59:59.999000+00:00",
+  "holdout_start": "2025-10-29T00:00:00+00:00",
+  "first_decision_close": "2022-01-06T23:59:59.999000+00:00",
+  "window_days": 1391
+ },
+ "costs": {
+  "fee_pct_per_side": 0.1,
+  "slippage_pct_per_side": 0.05
+ },
+ "metrics": {
+  "h1_sma200": {
+   "net_return_pct": 209.81,
+   "cagr_pct": 34.54,
+   "max_drawdown_pct": 31.9,
+   "return_over_max_dd": 6.578,
+   "trades": 15,
+   "time_in_market_pct": 61.0,
+   "worst_year": {
+    "year": "2025 (Jan 01-Oct 28)",
+    "return_pct": -11.42
+   },
+   "calendar_years_pct": {
+    "2022": 0.0,
+    "2023": 93.46,
+    "2024": 80.79,
+    "2025": -11.42
+   },
+   "days": 1391
+  },
+  "buy_and_hold": {
+   "net_return_pct": 161.27,
+   "cagr_pct": 28.66,
+   "max_drawdown_pct": 66.73,
+   "return_over_max_dd": 2.417,
+   "trades": 1,
+   "time_in_market_pct": 100.0,
+   "worst_year": {
+    "year": "2022 (Jan 06-Dec 31)",
+    "return_pct": -61.72
+   },
+   "calendar_years_pct": {
+    "2022": -61.72,
+    "2023": 155.61,
+    "2024": 121.31,
+    "2025": 20.65
+   },
+   "days": 1391
+  },
+  "ema_50_200": {
+   "net_return_pct": 336.03,
+   "cagr_pct": 47.17,
+   "max_drawdown_pct": 28.1,
+   "return_over_max_dd": 11.96,
+   "trades": 2,
+   "time_in_market_pct": 70.0,
+   "worst_year": {
+    "year": "2022 (Jan 06-Dec 31)",
+    "return_pct": 0.0
+   },
+   "calendar_years_pct": {
+    "2022": 0.0,
+    "2023": 63.3,
+    "2024": 121.31,
+    "2025": 20.65
+   },
+   "days": 1391
+  }
+ },
+ "random_entries": {
+  "runs": 1000,
+  "median_pct": 72.71,
+  "p10_pct": -8.35,
+  "p90_pct": 270.71,
+  "h1_percentile": 84.7
+ },
+ "design_check": {
+  "verdict": "FAIL",
+  "criteria": [
+   {
+    "name": "Drawdown at most 60% of buy & hold",
+    "passed": true,
+    "detail": "31.90% vs limit 40.04% (buy & hold 66.73%)"
+   },
+   {
+    "name": "Return/drawdown at least buy & hold's",
+    "passed": true,
+    "detail": "6.577 vs 2.417"
+   },
+   {
+    "name": "Beats >= 90% of random entries",
+    "passed": false,
+    "detail": "better than 84.7% of runs"
+   }
+  ],
+  "note": "The pre-registered criteria applied to DESIGN data: a check of the rule's history, not a test (the rule was not tuned on it)."
+ },
+ "regimes": {
+  "definition": "trailing 90-day return at the previous close: > +15% bull, < -15% bear, otherwise sideways",
+  "table": {
+   "bull": {
+    "days": 512,
+    "h1_return_pct": 186.28,
+    "h1_in_market_pct": 100.0,
+    "buy_and_hold_return_pct": 186.28,
+    "ema_return_pct": 174.17,
+    "ema_in_market_pct": 96.7
+   },
+   "sideways": {
+    "days": 603,
+    "h1_return_pct": 14.23,
+    "h1_in_market_pct": 55.4,
+    "buy_and_hold_return_pct": 14.93,
+    "ema_return_pct": 24.69,
+    "ema_in_market_pct": 72.5
+   },
+   "bear": {
+    "days": 276,
+    "h1_return_pct": -5.26,
+    "h1_in_market_pct": 1.1,
+    "buy_and_hold_return_pct": -20.59,
+    "ema_return_pct": 27.54,
+    "ema_in_market_pct": 15.2
+   }
+  }
+ },
+ "sensitivity": [
+  {
+   "sma": 150,
+   "band_pct": 0.0,
+   "net_return_pct": 216.47,
+   "max_drawdown_pct": 24.8,
+   "return_over_max_dd": 8.728,
+   "trades": 18,
+   "time_in_market_pct": 58.7,
+   "worst_year_pct": -7.68
+  },
+  {
+   "sma": 150,
+   "band_pct": 1.0,
+   "net_return_pct": 180.44,
+   "max_drawdown_pct": 28.52,
+   "return_over_max_dd": 6.328,
+   "trades": 13,
+   "time_in_market_pct": 57.4,
+   "worst_year_pct": -12.49
+  },
+  {
+   "sma": 150,
+   "band_pct": 2.0,
+   "net_return_pct": 203.05,
+   "max_drawdown_pct": 28.48,
+   "return_over_max_dd": 7.131,
+   "trades": 8,
+   "time_in_market_pct": 57.0,
+   "worst_year_pct": -6.79
+  },
+  {
+   "sma": 200,
+   "band_pct": 0.0,
+   "net_return_pct": 209.81,
+   "max_drawdown_pct": 31.9,
+   "return_over_max_dd": 6.578,
+   "trades": 15,
+   "time_in_market_pct": 61.0,
+   "worst_year_pct": -11.42
+  },
+  {
+   "sma": 200,
+   "band_pct": 1.0,
+   "net_return_pct": 214.34,
+   "max_drawdown_pct": 33.13,
+   "return_over_max_dd": 6.469,
+   "trades": 9,
+   "time_in_market_pct": 61.1,
+   "worst_year_pct": -2.19
+  },
+  {
+   "sma": 200,
+   "band_pct": 2.0,
+   "net_return_pct": 225.84,
+   "max_drawdown_pct": 30.74,
+   "return_over_max_dd": 7.347,
+   "trades": 7,
+   "time_in_market_pct": 60.8,
+   "worst_year_pct": -1.39
+  },
+  {
+   "sma": 250,
+   "band_pct": 0.0,
+   "net_return_pct": 174.93,
+   "max_drawdown_pct": 36.2,
+   "return_over_max_dd": 4.832,
+   "trades": 18,
+   "time_in_market_pct": 67.8,
+   "worst_year_pct": 0.0
+  },
+  {
+   "sma": 250,
+   "band_pct": 1.0,
+   "net_return_pct": 184.86,
+   "max_drawdown_pct": 35.81,
+   "return_over_max_dd": 5.162,
+   "trades": 11,
+   "time_in_market_pct": 68.2,
+   "worst_year_pct": 0.0
+  },
+  {
+   "sma": 250,
+   "band_pct": 2.0,
+   "net_return_pct": 209.58,
+   "max_drawdown_pct": 34.25,
+   "return_over_max_dd": 6.12,
+   "trades": 6,
+   "time_in_market_pct": 68.7,
+   "worst_year_pct": 0.0
+  }
+ ],
+ "h1_trades": [
+  {
+   "entry": "2023-01-14",
+   "exit": "2023-08-18",
+   "days": 216
+  },
+  {
+   "entry": "2023-08-30",
+   "exit": "2023-08-31",
+   "days": 1
+  },
+  {
+   "entry": "2023-10-17",
+   "exit": "2024-07-05",
+   "days": 262
+  },
+  {
+   "entry": "2024-07-14",
+   "exit": "2024-08-04",
+   "days": 21
+  },
+  {
+   "entry": "2024-08-24",
+   "exit": "2024-08-27",
+   "days": 3
+  },
+  {
+   "entry": "2024-09-25",
+   "exit": "2024-09-26",
+   "days": 1
+  },
+  {
+   "entry": "2024-09-27",
+   "exit": "2024-10-01",
+   "days": 4
+  },
+  {
+   "entry": "2024-10-15",
+   "exit": "2025-03-10",
+   "days": 146
+  },
+  {
+   "entry": "2025-03-13",
+   "exit": "2025-03-14",
+   "days": 1
+  },
+  {
+   "entry": "2025-03-15",
+   "exit": "2025-03-17",
+   "days": 2
+  },
+  {
+   "entry": "2025-03-20",
+   "exit": "2025-03-21",
+   "days": 1
+  },
+  {
+   "entry": "2025-03-24",
+   "exit": "2025-03-29",
+   "days": 5
+  },
+  {
+   "entry": "2025-04-23",
+   "exit": "2025-10-18",
+   "days": 178
+  },
+  {
+   "entry": "2025-10-20",
+   "exit": "2025-10-23",
+   "days": 3
+  },
+  {
+   "entry": "2025-10-24",
+   "exit": "open",
+   "days": 5
+  }
+ ],
+ "script_sha256": "10ff4f3aa012ff491491f3012a1aa8eb62865073ca61429414213e9e7385cd18"
+}
