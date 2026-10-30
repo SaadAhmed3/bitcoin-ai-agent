@@ -268,6 +268,28 @@ def test_research_shows_holdout_status_and_a_new_start_once_it_is_spent(browser,
         p.context.close()
 
 
+def test_settings_shows_the_news_weight_notice_once(browser, fresh_server):
+    """signal-1.8: a stored news weight above 0 is set to 0 (other weights kept) and the Settings page says so once."""
+    fresh_server.db.set_setting("signal_config", {"weights": {"trend": 0.4, "momentum": 0.2, "volume": 0.1,
+                                                              "structure": 0.1, "overextension": 0.1, "news": 0.1}})
+    p = Page(browser, fresh_server.url, viewport={"width": 1280, "height": 900})
+    try:
+        page = p.goto("/#/overview")                                   # the dashboard reads settings first
+        page.wait_for_selector("#sigSummary[data-state='ready']")
+        page = p.goto("/settings")
+        page.wait_for_selector("#signal[data-state='ready']")
+        notice = page.locator("#signalNotice").text_content()
+        assert "news weight (0.1) was set to 0" in notice and "other weights were kept" in notice
+        weights = page.locator("#signal input[name='weights']").input_value()
+        assert '"news":0' in weights and '"trend":0.4444' in weights
+        page.reload()
+        page.wait_for_selector("#signal[data-state='ready']")
+        assert page.locator("#signalNotice").count() == 0              # one-time
+        assert p.errors == []
+    finally:
+        p.context.close()
+
+
 # ------------------------------------------------------------------ placeholders, console, layout
 def visit_every_view(p: Page, open_details: bool = True) -> dict[str, list[str]]:
     page = p.goto("/")

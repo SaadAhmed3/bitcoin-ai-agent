@@ -618,7 +618,7 @@
     [/volatility is extreme/i, "Volatility is extreme: too risky to judge"],
     [/contradictory/i, "The evidence is mixed: indicators disagree"],
     [/fights the daily/i, "The setup fights the daily trend"],
-    [/Fresh high-impact/i, "Fresh high-impact news: letting the market digest it"],
+    [/^(Fresh|Recent) high-impact (bearish|bullish) news/i, "High-impact news against this setup: letting the market digest it"],
   ];
   const plainReason = (r) => {
     for (const [re, text] of PLAIN_REASONS) if (re.test(r)) return text;

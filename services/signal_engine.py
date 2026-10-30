@@ -47,7 +47,7 @@ DEFAULT_WEIGHTS = {
     "volume": 0.10,
     "structure": 0.10,
     "overextension": 0.10,
-    "news": 0.15,
+    "news": 0.0,   # signal-1.8: not in the score (no backtest ever included it); news can only block
 }
 WEIGHT_RATIONALE = {
     "trend": "Largest weight: higher-timeframe trend is the most persistent technical feature; signals against it fail more often.",
@@ -55,7 +55,8 @@ WEIGHT_RATIONALE = {
     "volume": "Moves on above-average volume are more likely to be genuine participation.",
     "structure": "Breakouts, failed breakouts and nearby levels change the immediate odds and the room to move.",
     "overextension": "Brake against chasing stretched moves (RSI extremes, closes outside the Bollinger Bands).",
-    "news": "Headline sentiment can move price but is noisy and often already priced in, so it is kept secondary.",
+    "news": "Not part of the score since signal-1.8: headline sentiment was never in any backtest, so it may only block "
+            "(confirmed, unverified or speculative high-impact news against the setup - see the NO TRADE rules).",
 }
 
 
@@ -102,6 +103,9 @@ def validate_weights(weights: dict[str, Any]) -> dict[str, float]:
     total = sum(out.values())
     if total <= 0:
         raise ValueError("At least one weight must be positive")
+    if out["news"] > 0:
+        raise ValueError("'news' must be 0: since signal-1.8 news is not part of the score (no backtest ever included "
+                         "it); news can only block")
     if out["trend"] == 0 and out["momentum"] == 0:
         raise ValueError("Trend and momentum cannot both be zero")
     return {k: round(v / total, 4) for k, v in out.items()}
@@ -323,14 +327,50 @@ def score_overextension(a4h: dict, a1h: dict) -> Component:
 
 def score_news(news_summary: dict | None) -> Component:
     if not news_summary or news_summary.get("bias_label") in (None, "insufficient_news"):
-        return Component("news", None, [("Not enough recent directional news", 0)])
+        return Component("news", None, [("Not enough recent directional news. News is not in the score since "
+                                         "signal-1.8: it can only block.", 0)])
     coverage = min(1.0, float(news_summary.get("weight_total", 0)) / 3.0)
     b = float(news_summary.get("bias_score", 0))
     v = _clip(b * coverage)
     return Component("news", v,
                      [(f"News bias {news_summary['bias_label']} ({b:+.2f}); news coverage {coverage:.0%} of full weight "
-                       f"({news_summary.get('directional_active', 0)} directional events). Coverage is not a confidence level.",
+                       f"({news_summary.get('directional_active', 0)} directional events). Coverage is not a confidence level. "
+                       "Not in the score since signal-1.8: news can only block.",
                        _pol(v))])
+
+
+def news_blocks(events: list[dict] | None, against: str | None) -> tuple[str | None, list[str]]:
+    """signal-1.8: news can only BLOCK. High-impact news against the setup (bearish vs a BUY setup, bullish vs a
+    SELL setup; a HOLD is never blocked):
+      confirmed            new (< 2 h) or recent (< 24 h, not priced in)  -> block
+      unverified / rumour  new (< 2 h)                                     -> block ("unverified, short block")
+      speculative          new (< 2 h)                                     -> block ("speculative, short block")
+      speculative          recent                                          -> warning only
+    signal-1.7 blocked any verification within 2 h only; nothing it blocked is unblocked here.
+    An event without a verification level is treated as unverified. Returns (reason or None, warnings)."""
+    if not against:
+        return None, []
+
+    def text(e: dict, label: str) -> str:
+        age = e.get("age_hours")
+        when = f"{age:.1f} h ago" if isinstance(age, (int, float)) else e.get("freshness", "recent")
+        return (f"high-impact {against} news ({label}, {when}): \"{e.get('title')}\" - "
+                f"{e.get('publisher') or 'unknown publisher'} {e.get('link') or ''}".rstrip())
+
+    warnings = []
+    for e in events or []:
+        if e.get("impact") != "high" or e.get("sentiment") != against:
+            continue
+        verification, fresh = e.get("verification") or "unverified", e.get("freshness")
+        if verification == "confirmed" and fresh in ("new", "recent"):
+            lead = "Fresh" if fresh == "new" else "Recent"
+            return f"{lead} {text(e, 'confirmed')}. News can only block; it is not in the score.", warnings
+        if verification in ("unverified", "speculative") and fresh == "new":
+            return (f"Fresh {text(e, verification + ', short block')}. Blocks for 2 h until it is confirmed or "
+                    "digested.", warnings)
+        if verification == "speculative" and fresh == "recent":
+            warnings.append(f"Speculative {text(e, 'speculative')}: warning only, not a block.")
+    return None, warnings
 
 
 # --------------------------------------------------------------------------- trade plan
@@ -670,10 +710,9 @@ def generate_signal(analyses: dict[str, dict], data_meta: dict[str, dict], price
         against = "bearish"
     elif setup == SELL:
         against = "bullish"
-    fresh_against = [e for e in (news_events or []) if against and e.get("impact") == "high"
-                     and e.get("freshness") == "new" and e.get("sentiment") == against]
-    if fresh_against:
-        keyed.append(("fresh_news", f"Fresh high-impact {against} news within 2h: \"{fresh_against[0]['title']}\" - let the market digest it."))
+    news_block, news_warn = news_blocks(news_events, against)
+    if news_block:
+        keyed.append(("fresh_news", news_block))
     # A validation only lifts the gate after the forward-observation period (FORWARD_OBSERVATION_DAYS).
     validated = bool(validation and validation.get("validated")) and not in_forward_observation(validation, now_ms)
     if cfg.require_validated_edge and not validated:
@@ -697,7 +736,7 @@ def generate_signal(analyses: dict[str, dict], data_meta: dict[str, dict], price
     if setup in (STRONG_BUY, BUY) and plan:
         invalidation.append(f"4h close below the stop reference {plan['stop']:,.0f}.")
         invalidation.append("Daily structure turning into lower highs and lower lows.")
-        changes.append(f"News bias falling below {-0.15:+.2f} or a fresh high-impact bearish event.")
+        changes.append("A confirmed high-impact bearish news event (it blocks the signal; news is not in the score).")
     elif setup == SELL:
         if res:
             invalidation.append(f"4h close back above resistance {res['price']:,.0f}.")
@@ -740,6 +779,7 @@ def generate_signal(analyses: dict[str, dict], data_meta: dict[str, dict], price
         warnings += price.get("warnings") or []
     if xc.get("status") == "unavailable":
         warnings.insert(0, f"Price not cross-checked: {xc.get('reason')}. This does not block the signal.")
+    warnings[:0] = news_warn        # older speculative news against the setup: shown, never blocking
 
     return {
         "signal": final,

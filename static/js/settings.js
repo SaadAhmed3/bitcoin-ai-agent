@@ -73,7 +73,8 @@
       if (sec === "signal") {
         const c = data.signal.config;
         const v = data.signal.validation || {};
-        box.innerHTML = `<p class="muted small">Validation now: <b>${v.validated ? "validated" : v.stale ? "STALE (settings changed since the last backtest)" : "not validated"}</b>${v.note ? " - " + esc(v.note) : ""}</p>`
+        box.innerHTML = (data.signal.notice ? `<p class="set-warn" id="signalNotice">${esc(data.signal.notice)}</p>` : "")
+          + `<p class="muted small">Validation now: <b>${v.validated ? "validated" : v.stale ? "STALE (settings changed since the last backtest)" : "not validated"}</b>${v.note ? " - " + esc(v.note) : ""}</p>`
           + SIGNAL_FIELDS.map((k) => plainRow(k, c[k], rangeHelp((data.signal.ranges || {})[k]))).join("")
           + `<div class="set-row"><label>weights<span class="help">JSON object; normalised to sum 1</span></label><div><input type="text" name="weights" aria-label="weights" value="${esc(JSON.stringify(c.weights))}"></div></div>`;
       } else if (sec === "risk") {
@@ -132,7 +133,7 @@
 
   async function load() {
     try {
-      data = await call("GET", "/api/settings");
+      data = await call("GET", "/api/settings?ack_notice=1");
       render();
       $("loadState").textContent = "";
     } catch (err) {

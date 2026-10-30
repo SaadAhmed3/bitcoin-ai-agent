@@ -532,7 +532,10 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         out = settings.all()
         out["signal"] = {"config": asdict(signals.config()), "warning": SIGNAL_STALE_WARNING,
                          "validation": current_validation(db, signals.config()),
-                         "ranges": SIGNAL_RANGES}
+                         "ranges": SIGNAL_RANGES,
+                         # one-time notice (e.g. a stored news weight set to 0 by signal-1.8); the Settings page
+                         # consumes it with ?ack_notice=1, other readers (the dashboard's timers) do not
+                         "notice": signals.notice(consume=request.args.get("ack_notice") == "1")}
         out["risk"] = {"settings": asdict(paper.settings()), "defaults": asdict(RiskSettings()),
                        "label": "SIMULATED paper account settings", "ranges": RISK_RANGES}
         return jsonify(out)

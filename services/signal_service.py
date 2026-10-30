@@ -97,8 +97,39 @@ class SignalService:
             setattr(cfg, k, v)
         return cfg
 
+    NOTICE_KEY = "signal_config_notice"
+
+    def _stored(self) -> dict:
+        """The stored engine settings. signal-1.8: a stored news weight above 0 (allowed before) is set to 0 ONCE,
+        keeping the user's other weights in their proportions, with a one-time notice - never a silent reset."""
+        stored = self.db.get_setting("signal_config", {}) or {}
+        w = stored.get("weights")
+        if isinstance(w, dict):
+            try:
+                old = float(w.get("news") or 0)
+            except (TypeError, ValueError):
+                old = 0.0
+            if old > 0:
+                try:
+                    stored = {**stored, "weights": validate_weights({**w, "news": 0})}
+                except ValueError:
+                    stored = {k: v for k, v in stored.items() if k != "weights"}    # unusable either way: defaults
+                self.db.set_setting("signal_config", stored)
+                self.db.set_setting(self.NOTICE_KEY, (
+                    f"Your stored news weight ({old:g}) was set to 0: since signal-1.8 news is not part of the score "
+                    "(no backtest ever included it) and can only block. Your other weights were kept in their "
+                    "proportions."))
+        return stored
+
+    def notice(self, consume: bool = False) -> str | None:
+        """The one-time settings notice; `consume` (the Settings page showing it) clears it."""
+        text = self.db.get_setting(self.NOTICE_KEY)
+        if text and consume:
+            self.db.set_setting(self.NOTICE_KEY, None)
+        return text or None
+
     def config(self) -> EngineConfig:
-        values = self._valid_stored(self.db.get_setting("signal_config", {}) or {})
+        values = self._valid_stored(self._stored())
         cfg = self._build(values)
         try:
             check_thresholds(cfg)
@@ -110,7 +141,7 @@ class SignalService:
     def update_config(self, payload: dict) -> EngineConfig:
         if not isinstance(payload, dict):
             raise ValueError("Body must be a JSON object")
-        stored = self._valid_stored(self.db.get_setting("signal_config", {}) or {})
+        stored = self._valid_stored(self._stored())
         if "weights" in payload:
             stored["weights"] = validate_weights(payload["weights"])
         types = {f.name: f.type for f in fields(EngineConfig)}

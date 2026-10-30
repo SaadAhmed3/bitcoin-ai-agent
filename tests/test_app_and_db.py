@@ -214,7 +214,10 @@ def test_signal_history_records_changes(config, db):
 def test_signal_config_api(config, db):
     c = make_client(config, db, [FakeProvider("fake1")])
     cfg = c.get("/api/signal/config").get_json()
-    assert sum(cfg["config"]["weights"].values()) == pytest.approx(1.0, abs=1e-3) and cfg["rationale"]
+    # signal-1.8 (deliberate): news weight 0, the other documented weights unchanged (sum 0.85; the engine rescales
+    # over the scored components exactly as the backtest always did)
+    assert sum(cfg["config"]["weights"].values()) == pytest.approx(0.85, abs=1e-3) and cfg["rationale"]
+    assert cfg["config"]["weights"]["news"] == 0
     r = c.put("/api/signal/config", json={"weights": {"news": 0}, "min_rr": 2})
     assert r.status_code == 200 and r.get_json()["config"]["weights"]["news"] == 0
     assert c.get("/api/signal/config").get_json()["config"]["min_rr"] == 2
@@ -223,7 +226,7 @@ def test_signal_config_api(config, db):
         assert c.put("/api/signal/config", json=bad).status_code == 400, bad
     assert c.put("/api/signal/config", data="not json", content_type="text/plain").status_code == 400
     r = c.put("/api/signal/config", json={"reset": True})
-    assert r.get_json()["config"]["weights"]["news"] == 0.15
+    assert r.get_json()["config"]["weights"]["news"] == 0.0          # signal-1.8: was 0.15
 
 
 @pytest.mark.parametrize("bad, field", [

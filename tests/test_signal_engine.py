@@ -92,11 +92,13 @@ def test_missing_news_redistributes_weight():
     assert news["score"] is None and news["weight"] == 0
 
 
-def test_news_moves_the_score():
+def test_news_does_not_move_the_score():
+    # signal-1.8 (owner's decision, deliberate change from "news moves the score"): news is not part of the score,
+    # as in every backtest; it can only block (tests/test_news_blocking.py).
     base = run()["score"]
     bull_news = {"bias_label": "bullish", "bias_score": 0.6, "weight_total": 5, "directional_active": 4}
     bear_news = {"bias_label": "bearish", "bias_score": -0.6, "weight_total": 5, "directional_active": 4}
-    assert run(news=bull_news)["score"] > base > run(news=bear_news)["score"]
+    assert run(news=bull_news)["score"] == base == run(news=bear_news)["score"]
 
 
 # ------------------------------------------------------------------ trade plan
