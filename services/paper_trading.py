@@ -4,8 +4,9 @@
 * Fills use the latest price plus slippage, and pay the configured fee.
 * Every order is stored with simulated = 1 (enforced by a database constraint) and
   every response is labelled SIMULATED.
-* Optional stop / target per position; they are checked whenever the account is refreshed
-  (the dashboard polls), so fills can be later and worse than the level - like real stops.
+* Optional stop / target per position; they are checked every 60 s by the background monitor (while
+  `python app.py` runs, whatever view is open) and whenever the account is refreshed. Fills use the price at
+  that check, so they can be later and worse than the level - like real stops.
 * Limits: exposure cap and daily loss limit from the risk settings; buys are blocked
   when the price is stale or the daily loss limit is reached.
 * Every order is one SQLite transaction (BEGIN IMMEDIATE): the account row is re-read inside it and

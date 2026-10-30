@@ -986,6 +986,7 @@
       <td class="muted">${esc(o.reason)}</td></tr>`).join("") : '<tr><td colspan="7" class="empty">No simulated orders yet.</td></tr>';
     labelCells($("paperOrders"));
     if (st.auto_exit) $("paperMsg").textContent = st.auto_exit.message;
+    else if (st.last_background_exit && !$("paperMsg").textContent) $("paperMsg").textContent = "Background check: " + st.last_background_exit.message;
   }
 
   async function paperPost(url, body) {

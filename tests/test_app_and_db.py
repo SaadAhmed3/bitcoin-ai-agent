@@ -296,6 +296,22 @@ def test_calculation_error_becomes_no_trade_with_a_reason(config, db, monkeypatc
     assert hist and hist[0]["signal"] == "NO TRADE"                            # kept in the audit trail
 
 
+def test_background_monitor_closes_a_paper_stop_without_the_paper_view(config, db):
+    """Regression (B6): stops were only checked by GET /api/paper, i.e. while the Paper view was open."""
+    c = make_client(config, db, [FakeProvider("fake1", price=65_000.0)])
+    paper = c.application.config["BTC_PAPER"]
+    paper.buy({"price": 70_000.0, "is_stale": False}, 1000, stop=68_000.0)   # market now 65,000: below the stop
+    c.application.config["BTC_MONITOR"].run_once()                          # one 60 s background cycle
+    orders = paper.state(None)["orders"]
+    sells = [o for o in orders if o["side"] == "SELL"]
+    assert len(sells) == 1 and sells[0]["reason"].startswith("SIMULATED stop hit")
+    assert paper.state(None)["btc"] == 0
+    st = c.get("/api/paper").get_json()
+    assert st["auto_exit"] is None and st["last_background_exit"]["message"].startswith("SIMULATED SELL")
+    c.application.config["BTC_MONITOR"].run_once()                          # nothing left to close
+    assert len([o for o in paper.state(None)["orders"] if o["side"] == "SELL"]) == 1
+
+
 def test_paper_day_open_price_uses_the_00_utc_candle_then_a_snapshot(config, db):
     c = make_client(config, db, [FakeProvider("fake1")])
     day_open = c.application.config["BTC_PAPER"].day_open_price

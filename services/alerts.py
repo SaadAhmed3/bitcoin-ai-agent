@@ -506,16 +506,26 @@ class AlertService:
 class AlertMonitor:
     """Background thread: evaluate the alert rules every `interval` seconds. Never dies on an error."""
 
-    def __init__(self, service: AlertService, interval: float = 60.0, first_delay: float = 10.0):
+    def __init__(self, service: AlertService, interval: float = 60.0, first_delay: float = 10.0,
+                 jobs: list[Callable[[], Any]] | None = None):
+        """`jobs` run before the alert rules in every cycle (e.g. the SIMULATED paper stop/target check);
+        each is isolated, so a failing job never stops the others or the alerts."""
         self.service = service
         self.interval = interval
         self.first_delay = first_delay
+        self.jobs = list(jobs or [])
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self.runs = 0
         self.errors = 0
 
     def run_once(self) -> None:
+        for job in self.jobs:
+            try:
+                job()
+            except Exception:
+                self.errors += 1
+                log.exception("Monitor job %s failed", getattr(job, "__name__", job))
         try:
             self.service.evaluate()
         except Exception:     # evaluate() already isolates rules; this is the last line of defence

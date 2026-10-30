@@ -202,7 +202,16 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     }, clock=now_ms, notifiers=alert_notifiers)
     alerts.seed_defaults()
     app.config["BTC_ALERTS"] = alerts
-    monitor = AlertMonitor(alerts, interval=60.0)
+    last_background_exit: dict = {}
+
+    def paper_levels_check():
+        """SIMULATED stop/target check every monitor cycle, whether or not the Paper view is open. Same atomic
+        close path as GET /api/paper, so the two can never sell the same position twice."""
+        res = paper.check_levels(market.get_price())
+        if res:
+            last_background_exit.update(res, at=now_ms())
+
+    monitor = AlertMonitor(alerts, interval=60.0, jobs=[paper_levels_check])
     app.config["BTC_MONITOR"] = monitor
     if start_monitor:
         monitor.start()
@@ -444,6 +453,7 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         auto = paper.check_levels(price)
         st = paper.state(price)
         st["auto_exit"] = auto
+        st["last_background_exit"] = dict(last_background_exit) or None
         return jsonify(st)
 
     @app.post("/api/paper/reset")

@@ -311,6 +311,22 @@ def test_failing_rule_does_not_stop_others(db):
     assert [a["kind"] for a in out] == ["price_above"]
 
 
+def test_monitor_runs_jobs_before_alerts_and_isolates_their_errors():
+    order = []
+
+    class Svc:
+        def evaluate(self):
+            order.append("alerts")
+
+    def bad_job():
+        order.append("bad")
+        raise RuntimeError("job failed")
+
+    m = AlertMonitor(Svc(), jobs=[bad_job, lambda: order.append("good")])
+    m.run_once()
+    assert order == ["bad", "good", "alerts"] and m.errors == 1
+
+
 def test_monitor_survives_exceptions_and_stops_cleanly(db):
     calls = []
 
