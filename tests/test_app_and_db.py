@@ -269,6 +269,18 @@ def test_risk_pct_above_max_risk_is_rejected_by_the_api(config, db):
     assert "risk_pct" in c.get("/api/settings").get_json()["risk"]["ranges"]
 
 
+def test_paper_day_open_price_uses_the_00_utc_candle_then_a_snapshot(config, db):
+    c = make_client(config, db, [FakeProvider("fake1")])
+    day_open = c.application.config["BTC_PAPER"].day_open_price
+    day0 = FIXED_NOW - FIXED_NOW % 86_400_000
+    assert day_open(day0) is None
+    db.save_price("fake1", "BTCUSDT", "USDT", 91.5, day0 + 60_000, day0 + 60_000)
+    assert day_open(day0) == 91.5                                            # snapshot within 10 minutes
+    db.upsert_candles("fake1", "BTCUSDT", "1h", [{"open_time": day0, "open": 90.0, "high": 92.0, "low": 89.0,
+                                                  "close": 91.0, "volume": 1.0, "close_time": day0 + 3_599_999}], day0)
+    assert day_open(day0) == 90.0                                            # the candle open wins
+
+
 def test_validation_record_unlocks_signal_only_for_matching_settings(config, db):
     from services.backtesting import config_hash
     from services.signal_engine import EngineConfig

@@ -33,9 +33,13 @@ def _day_start(ts_ms: int) -> int:
 
 
 class PaperTrading:
-    def __init__(self, db: Database, clock: Callable[[], int] = now_ms):
+    def __init__(self, db: Database, clock: Callable[[], int] = now_ms,
+                 day_open_price: Callable[[int], float | None] | None = None):
+        """day_open_price(ms) -> BTC price at that 00:00 UTC, used to measure today's loss on a position
+        carried over from a previous day (see _daily)."""
         self.db = db
         self.clock = clock
+        self.day_open_price = day_open_price
 
     # ------------------------------------------------------------------ storage
     def _account(self) -> dict:
@@ -101,15 +105,39 @@ class PaperTrading:
         return {"simulated": True, "message": f"SIMULATED account reset to {start_balance:,.2f} USDT."}
 
     # ------------------------------------------------------------------ views
-    def _today_pnl(self, acc: dict, price: float | None) -> tuple[float, float]:
-        """(realized today, unrealized now) in USDT."""
+    def _daily(self, acc: dict, px: float | None) -> dict:
+        """Today's P/L in USDT = equity now - equity at 00:00 UTC.
+
+        Cash and BTC at 00:00 are rebuilt exactly by reversing today's orders. BTC held at 00:00 is marked at the
+        00:00 price (`day_open_price`). Without that price, the old conservative rule applies: today's loss
+        includes the whole unrealised loss since entry. The basis is reported either way."""
         start = _day_start(self.clock())
         with self.db.connect() as conn:
-            r = conn.execute("SELECT COALESCE(SUM(realized_pnl), 0) s FROM paper_orders WHERE created_at >= ?",
-                             (start,)).fetchone()
-        realized = float(r["s"])
-        unreal = (price - acc["avg_entry"]) * acc["btc"] if price and acc["btc"] > 0 and acc["avg_entry"] else 0.0
-        return realized, unreal
+            rows = conn.execute("SELECT side, qty, price, fee, realized_pnl FROM paper_orders WHERE created_at >= ?",
+                                (start,)).fetchall()
+        cash0, btc0 = acc["cash"], acc["btc"]
+        for o in rows:
+            gross = o["qty"] * o["price"]
+            if o["side"] == "BUY":
+                cash0, btc0 = cash0 + gross + o["fee"], btc0 - o["qty"]
+            else:
+                cash0, btc0 = cash0 - (gross - o["fee"]), btc0 + o["qty"]
+        btc0 = 0.0 if btc0 < 1e-12 else btc0
+        realized = sum(o["realized_pnl"] or 0.0 for o in rows)
+        unreal = (px - acc["avg_entry"]) * acc["btc"] if px and acc["btc"] > 0 and acc["avg_entry"] else 0.0
+        if px is None and acc["btc"] > 0:
+            pnl, basis = realized, "realised only (no current price)"
+            start_equity = cash0 + btc0 * (acc["avg_entry"] or 0.0)
+        else:
+            equity = acc["cash"] + acc["btc"] * (px or 0.0)
+            p0 = self.day_open_price(start) if btc0 > 0 and self.day_open_price else None
+            if btc0 == 0 or p0:
+                start_equity = cash0 + btc0 * (p0 or 0.0)
+                pnl, basis = equity - start_equity, "since 00:00 UTC"
+            else:
+                pnl, basis = realized + unreal, "since entry (no 00:00 UTC price)"
+                start_equity = equity - pnl
+        return {"pnl": pnl, "start_equity": start_equity, "basis": basis, "realized": realized, "unrealized": unreal}
 
     def state(self, price: dict | None) -> dict:
         acc = self._account()
@@ -117,8 +145,9 @@ class PaperTrading:
         settings = RiskSettings.from_dict(acc["settings"])
         btc_value = acc["btc"] * px if px else None
         equity = acc["cash"] + (btc_value or 0.0)
-        realized_today, unreal = self._today_pnl(acc, px)
-        day_loss_pct = max(0.0, -(realized_today + unreal)) / max(1e-9, equity - realized_today - unreal) * 100
+        day = self._daily(acc, px)
+        realized_today, unreal = day["realized"], day["unrealized"]
+        day_loss_pct = max(0.0, -day["pnl"]) / max(1e-9, day["start_equity"]) * 100
         sells = [o["realized_pnl"] for o in reversed(self._orders(50)) if o["side"] == "SELL" and o["realized_pnl"] is not None]
         return {
             "simulated": True,
@@ -134,6 +163,7 @@ class PaperTrading:
             "total_pnl_pct": round((equity / acc["start_balance"] - 1) * 100, 3) if px or acc["btc"] == 0 else None,
             "unrealized_pnl": round(unreal, 2), "realized_today": round(realized_today, 2),
             "exposure_pct": round(btc_value / equity * 100, 2) if btc_value and equity else 0.0,
+            "daily_pnl": round(day["pnl"], 2), "daily_loss_basis": day["basis"],
             "daily_loss_pct": round(day_loss_pct, 3),
             "daily_limit_reached": day_loss_pct >= settings.daily_loss_limit_pct,
             "loss_streak": loss_streak(sells),

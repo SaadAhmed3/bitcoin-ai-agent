@@ -194,6 +194,52 @@ def test_daily_loss_limit_blocks_new_buys(paper):
         pt.buy(P(96.0), 100)
 
 
+DAY_MS = 86_400_000
+DAY0 = FIXED_NOW - FIXED_NOW % DAY_MS          # 00:00 UTC of the fixed "today"
+
+
+def _older_position(db, day_open):
+    """50 BTC bought yesterday at 100 (cost basis 100.1 incl. fee); now it is 01:00 UTC today."""
+    t = {"now": DAY0 - 3_600_000}
+    pt = PaperTrading(db, clock=lambda: t["now"], day_open_price=day_open)
+    pt.reset(10_000)
+    pt.update_settings({"fee_pct": 0.1, "slippage_pct": 0.0, "max_exposure_pct": 100, "daily_loss_limit_pct": 3.0})
+    pt.buy(P(100.0), 5000)
+    t["now"] = DAY0 + 3_600_000
+    return pt, t
+
+
+def test_daily_loss_counts_only_todays_move_of_an_older_position(db):
+    """Regression (B11): the whole unrealised loss since entry counted as TODAY's loss."""
+    pt, _ = _older_position(db, lambda ts: 90.0 if ts == DAY0 else None)
+    st = pt.state(P(89.0))
+    # Since entry: (89 - 100.1) * 50 = -555 (5.6%). Today: (89 - 90) * 50 = -50 on the 00:00 equity 4995 + 50 * 90.
+    assert st["daily_pnl"] == pytest.approx(-50.0, abs=0.01)
+    assert st["daily_loss_pct"] == pytest.approx(50 / 9495 * 100, abs=0.001)
+    assert st["daily_loss_basis"] == "since 00:00 UTC" and not st["daily_limit_reached"]
+    assert st["unrealized_pnl"] == pytest.approx(-555.0, abs=0.01)     # the since-entry figure is still shown
+    pt.buy(P(89.0), 100)                                                # not blocked by yesterday's loss
+
+
+def test_daily_loss_without_a_day_open_price_stays_conservative(db):
+    pt, _ = _older_position(db, lambda ts: None)
+    st = pt.state(P(89.0))
+    assert st["daily_loss_basis"].startswith("since entry") and st["daily_limit_reached"]
+    with pytest.raises(ValueError, match="Daily loss limit"):
+        pt.buy(P(89.0), 100)
+
+
+def test_daily_loss_reverses_todays_orders_exactly(db):
+    pt, _ = _older_position(db, lambda ts: 90.0 if ts == DAY0 else None)
+    pt.sell(P(95.0), 0.5)                           # sell 25 BTC today: +5 vs 00:00 each, fee 2.375
+    pt.buy(P(95.0), 950)                            # 10 BTC, fee 0.95
+    st = pt.state(P(95.0))
+    # Equity at 00:00 = 4995 + 50 * 90 = 9495. Now: cash 4995 + 2375 - 2.375 - 950 - 0.95, BTC 35 * 95.
+    now_equity = 4995 + 2375 - 2.375 - 950 - 0.95 + 35 * 95
+    assert st["daily_pnl"] == pytest.approx(now_equity - 9495, abs=0.01)
+    assert st["daily_loss_pct"] == 0
+
+
 def test_reset_and_db_rejects_non_simulated_orders(paper, db):
     import sqlite3
     pt, _ = paper

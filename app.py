@@ -86,7 +86,16 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         http_factory=lambda: HttpClient(timeout=config.request_timeout, retries=3, backoff=1.0,
                                         min_interval=0.3, user_agent=config.user_agent))
     app.config["BTC_BACKTESTS"] = backtests
-    paper = PaperTrading(db)
+    def _price_at_day_open(ts: int) -> float | None:
+        """BTC price at 00:00 UTC: the stored 1h candle opening then, else a price snapshot within 10 minutes."""
+        for p in market.providers:
+            rows = db.get_candles_range(p.name, p.symbol, "1h", ts, ts)
+            if rows:
+                return float(rows[0]["open"])
+        snap = db.price_near(ts)
+        return float(snap["price"]) if snap else None
+
+    paper = PaperTrading(db, day_open_price=_price_at_day_open)
     app.config["BTC_PAPER"] = paper
 
     # Local AI assistant (Phase 7). Every provider reads the app's own data; Ollama is optional.
