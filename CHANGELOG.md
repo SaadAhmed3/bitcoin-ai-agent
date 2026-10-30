@@ -28,7 +28,7 @@ signal-1.8 (setup, raw setup, tradable, unrounded score, stop, target, downgrade
 |---|---|---|
 | Stale candles (> 2 intervals) | 4h, 1d | **1h, 4h, 1d** (stricter) |
 | Missing candles (> 5) | 4h, 1d | **1h, 4h, 1d** (stricter) |
-| Exchanges disagree | — | **new**: second exchange differs by more than `max_source_divergence_pct` (default 0.5%, setting 0.1-5) → NO TRADE with both prices and quotes. Quotes observed > 15 s apart are not compared; a missing/stale/unreachable second source = warning only |
+| Exchanges disagree | — | **new**: second exchange differs by more than `max_source_divergence_pct` (default 0.5%, setting 0.1-5) **after converting USDT to USD with Coinbase's USDT-USD rate** → NO TRADE showing raw prices, the rate, the converted price and the raw gap. Quotes and the rate observed > 15 s apart are not compared; no usable rate → raw gap as a warning only; a missing/stale/unreachable second source → warning only |
 | News against the setup, high impact, **confirmed** | blocks < 2 h | blocks < 2 h **and 2-24 h if not priced in** (stricter) |
 | … **unverified** (incl. "reportedly"/rumour wording) | blocks < 2 h | blocks < 2 h ("unverified, short block") — unchanged |
 | … **speculative** (opinion, forecast, question) | blocks < 2 h | blocks < 2 h ("speculative, short block") — unchanged; 2-24 h: **new warning** |
@@ -44,6 +44,8 @@ data") and news reasons show headline, publisher, age and link.
 - **Settings:** a news weight above 0 is rejected ("news can only block"). A stored news weight above 0 from an older
   version is set to 0 once, keeping the other weights in their proportions, with a one-time notice on the Settings page.
   New range-checked setting `max_source_divergence_pct`.
+- **Stablecoin deviation:** USDT-USD more than 1% away from 1.00 → a separate warning and a "Stablecoin deviation"
+  alert (own cooldown key); never a block by itself.
 - **Alerts:** "Price not cross-checked" (from the existing source-failure rule) uses its own cooldown key and the
   duplicate check; no alert when no second source is configured. A failing second source also counts toward the
   existing "source failing 3 times in a row" alert.
@@ -61,10 +63,10 @@ data") and news reasons show headline, publisher, age and link.
 | Score | −0.306 | −0.290 |
 | News | bearish −0.394, counted at 15% | bearish −0.394, not counted |
 | NO TRADE reasons | 4h volatility extreme; not validated | 4h volatility extreme; not validated |
-| Cross-check (live, normal caching) | — | Binance vs Coinbase 0.23-0.27%, within the 0.5% limit |
+| Cross-check (live, normal caching) | — | raw Binance vs Coinbase gap 0.22-0.27% (mostly USDT vs USD); after converting with USDT-USD 0.9986 (measured 22:39 UTC): **0.08-0.10%**, well within the 0.5% limit |
 
 ### Tests
-554 → 583 unit (coverage 94.0%) (+ `tests/test_price_cross_check.py`, `tests/test_news_blocking.py`), 87 → 88 e2e. Updated
+554 → 592 unit (coverage 94.0%) (+ `tests/test_price_cross_check.py`, `tests/test_news_blocking.py`), 87 → 88 e2e. Updated
 deliberately (old rules, listed in each commit): the export test's engine pin; `test_news_moves_the_score` →
 `…does_not_move…`; the config API test (default weights sum 0.85, reset gives news 0); the config-hash test changes
 trend instead of news; the stale-reason assertion; the docs-route test (4 documents).

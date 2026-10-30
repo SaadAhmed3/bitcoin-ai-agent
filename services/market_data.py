@@ -202,6 +202,14 @@ class CoinbaseProvider:
             pass  # 24h change is optional
         return {"price": price, "observed_at": observed, "change_24h_pct": change, "latency_ms": latency}
 
+    def fetch_rate(self, pair: str = "USDT-USD") -> dict:
+        """A stablecoin rate from Coinbase's public ticker (e.g. USDT-USD), used to compare USDT and USD prices."""
+        data, latency = self.http.get_json(f"{self.base_url}/products/{pair}/ticker")
+        try:
+            return {"rate": float(data["price"]), "observed_at": _iso_to_ms(data.get("time")), "latency_ms": latency}
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ProviderError(f"coinbase: unexpected {pair} ticker format ({exc})") from exc
+
     def _fetch_raw(self, gran: int, count: int) -> tuple[list[dict], float]:
         rows: list[dict] = []
         total_latency = 0.0
@@ -387,11 +395,60 @@ class MarketDataService:
             return {"status": "unavailable", "reference_configured": True,
                     "reason": f"{primary} and {ref.name} prices were observed {gap_s:.0f} s apart "
                               f"(more than {self.CROSS_CHECK_MAX_GAP_S} s), so they are not compared"}
-        diff = abs(float(q["price"]) / float(price["price"]) - 1) * 100
-        return {"status": "checked", "diff_pct": round(diff, 3),
-                "primary": {"provider": primary, "quote": price.get("quote"), "price": float(price["price"]),
-                            "observed_at": p_obs},
-                "reference": {"provider": ref.name, "quote": ref.quote, "price": float(q["price"]), "observed_at": r_obs}}
+        a = {"provider": primary, "quote": price.get("quote"), "price": float(price["price"]), "observed_at": p_obs}
+        b = {"provider": ref.name, "quote": ref.quote, "price": float(q["price"]), "observed_at": r_obs}
+        out = {"primary": a, "reference": b, "raw_diff_pct": round(abs(b["price"] / a["price"] - 1) * 100, 3)}
+        if a["quote"] == b["quote"]:
+            return {**out, "status": "checked", "diff_pct": out["raw_diff_pct"], "conversion": None}
+        if {a["quote"], b["quote"]} != {"USDT", "USD"}:
+            return {**out, "status": "raw_only", "reason": f"no conversion between {a['quote']} and {b['quote']}"}
+        # USDT vs USD: USDT is not exactly 1 USD, so the USDT leg is converted with the USDT-USD rate (same 15 s rule).
+        # Without a usable rate the raw prices are compared for information only (warning, never a block).
+        rate_q, why, src = self._stablecoin_rate(now, p_obs, prefer=ref)
+        if rate_q is None:
+            return {**out, "status": "raw_only", "reason": why}
+        rate, rate_obs = float(rate_q["rate"]), rate_q.get("observed_at") or now
+        out["stablecoin"] = {"pair": self.STABLE_PAIR, "rate": rate, "deviation_pct": round((rate - 1) * 100, 3),
+                             "warning": abs(rate - 1) * 100 > self.STABLECOIN_WARN_PCT}
+        spread_s = (max(p_obs, r_obs, rate_obs) - min(p_obs, r_obs, rate_obs)) / 1000
+        if spread_s > self.CROSS_CHECK_MAX_GAP_S:
+            return {**out, "status": "raw_only",
+                    "reason": f"the {self.STABLE_PAIR} rate was observed {spread_s:.0f} s from the prices "
+                              f"(more than {self.CROSS_CHECK_MAX_GAP_S} s)"}
+        for leg in (a, b):
+            leg["price_usd"] = leg["price"] * rate if leg["quote"] == "USDT" else leg["price"]
+        out["conversion"] = {"pair": self.STABLE_PAIR, "rate": rate, "observed_at": rate_obs, "source": src}
+        return {**out, "status": "checked", "diff_pct": round(abs(b["price_usd"] / a["price_usd"] - 1) * 100, 3)}
+
+    STABLE_PAIR = "USDT-USD"
+    STABLECOIN_WARN_PCT = 1.0      # USDT more than 1% away from 1.00: a separate warning (never a block by itself)
+
+    def _stablecoin_rate(self, now: int, anchor_ms: int, prefer=None) -> tuple[dict | None, str, str | None]:
+        """USDT-USD from a provider that offers it - the second exchange first (Coinbase), then any other. Cached like
+        prices; a cached rate more than 15 s from the live price is fetched once more.
+        Returns (quote or None, reason, source name)."""
+        key = f"rate:{self.STABLE_PAIR}"
+        cached = self.db.cache_get(key)
+        if cached and now - cached[1] < self.config.price_cache_seconds * 1000 and \
+                abs((cached[0].get("observed_at") or cached[1]) - anchor_ms) <= self.CROSS_CHECK_MAX_GAP_S * 1000:
+            return cached[0], "", cached[0].get("source")
+        sources = [p for p in ([prefer] if prefer else []) + [p for p in self.providers if p is not prefer]
+                   if callable(getattr(p, "fetch_rate", None))]
+        if not sources:
+            return None, f"no {self.STABLE_PAIR} rate source configured", None
+        errors = []
+        for src in sources:
+            health = f"{src.name} {self.STABLE_PAIR}"
+            try:
+                q = {**src.fetch_rate(self.STABLE_PAIR), "source": src.name}
+            except ProviderError as exc:
+                self.db.record_health(health, False, error=str(exc))
+                errors.append(str(exc))
+                continue
+            self.db.record_health(health, True, latency_ms=q.get("latency_ms"))
+            self.db.cache_set(key, q, now)
+            return q, "", src.name
+        return None, f"{self.STABLE_PAIR} rate unavailable ({'; '.join(errors)})", None
 
     def _decorate_price(self, record: dict, now: int, from_cache: bool) -> dict:
         out = dict(record)

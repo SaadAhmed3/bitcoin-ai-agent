@@ -15,9 +15,12 @@ from services.market_data import MarketDataService
 from services.signal_engine import BUY, NO_TRADE, STRONG_BUY, EngineConfig
 
 
-def market(config, db, ref=65_000.0, ref_fail=False, ref_observed=FIXED_NOW - 1_000):
+def market(config, db, ref=65_000.0, ref_fail=False, ref_observed=FIXED_NOW - 1_000, usdt_rate=1.0,
+           rate_observed=None, rate_fail=False):
+    # The Coinbase fake also quotes USDT-USD, like the real Coinbase (batch 2 follow-up; default rate 1.0).
     p1 = FakeProvider("binance", price=65_000.0)
-    p2 = FakeProvider("coinbase", symbol="BTC-USD", quote="USD", price=ref, fail=ref_fail, observed_at=ref_observed)
+    p2 = FakeProvider("coinbase", symbol="BTC-USD", quote="USD", price=ref, fail=ref_fail, observed_at=ref_observed,
+                      usdt_rate=usdt_rate, rate_observed_at=rate_observed, rate_fail=rate_fail)
     svc = MarketDataService(db, config, http=HttpClient(min_interval=0), providers=[p1, p2],
                             overview_provider=FakeOverview(), clock=lambda: FIXED_NOW)
     return svc, p2
@@ -98,7 +101,7 @@ def test_divergence_limit_is_range_checked(config, db):
 
 def test_live_signal_blocks_on_divergence_and_only_warns_without_a_second_source(config, db):
     c = make_client(config, db, [FakeProvider("binance", price=65_000.0),
-                                 FakeProvider("coinbase", symbol="BTC-USD", quote="USD", price=65_500.0)])
+                                 FakeProvider("coinbase", symbol="BTC-USD", quote="USD", price=65_500.0, usdt_rate=1.0)])
     s = c.get("/api/signal").get_json()
     assert "price_divergence" in s["diagnostics"]["gate_keys"]
     assert any("binance 65,000.00 USDT" in r and "coinbase 65,500.00 USD" in r for r in s["no_trade_reasons"])
@@ -127,3 +130,96 @@ def test_unavailable_cross_check_alert_respects_the_cooldown(db):
                                                        "reason": "no second price source configured"}}}
     clock.advance(10 * int(settings["cooldown_min"]) * 60_000)
     assert svc.evaluate() == []                                          # a single-source setup is not a failure
+
+
+# ------------------------------------------------------------------ USDT -> USD conversion (batch 2 follow-up)
+def test_usdt_price_is_converted_to_usd_before_comparing(config, db):
+    """Raw USDT vs USD prices 0.6% apart, but USDT trades at 0.995 USD: converted, the gap is only 0.10%."""
+    svc, p2 = market(config, db, ref=64_610.0, usdt_rate=0.995)
+    xc = svc.cross_check(svc.get_price())
+    assert xc["status"] == "checked" and p2.rate_calls == 1
+    assert xc["raw_diff_pct"] == pytest.approx(0.6, abs=0.001)
+    assert xc["diff_pct"] == pytest.approx(0.1005, abs=0.001)               # 65,000 x 0.995 = 64,675 vs 64,610
+    assert xc["conversion"]["pair"] == "USDT-USD" and xc["conversion"]["rate"] == 0.995
+    assert xc["conversion"]["source"] == "coinbase" and xc["primary"]["price_usd"] == pytest.approx(64_675.0)
+    s = run(price={**PRICE_OK, "price": 65_000.0, "cross_check": xc})
+    assert "price_divergence" not in s["diagnostics"]["gate_keys"]          # raw 0.6% alone would have blocked
+
+
+def test_a_real_gap_after_conversion_blocks_and_the_reason_shows_rate_and_raw_prices(config, db):
+    svc, _ = market(config, db, ref=64_500.0, usdt_rate=1.0002)
+    xc = svc.cross_check(svc.get_price())
+    s = run(price={**PRICE_OK, "price": 65_000.0, "cross_check": xc})
+    assert s["signal"] == NO_TRADE and "price_divergence" in s["diagnostics"]["gate_keys"]
+    r = next(x for x in s["no_trade_reasons"] if x.startswith("Price sources disagree"))
+    assert "after USDT-to-USD conversion" in r and "limit 0.5%" in r
+    assert "binance 65,000.00 USDT x 1.0002 USDT-USD = 65,013.00 USD" in r and "coinbase 64,500.00 USD" in r
+    assert "raw gap 0.77%" in r
+
+
+@pytest.mark.parametrize("rate_kwargs, why", [
+    ({"rate_fail": True}, "rate unavailable"),
+    ({"usdt_rate": None}, "rate unavailable"),
+    ({"rate_observed": FIXED_NOW - 1_000 - 20_000}, "20 s"),                  # rate 20 s older than the prices
+])
+def test_without_a_usable_usdt_rate_the_raw_comparison_is_a_warning_only(config, db, rate_kwargs, why):
+    svc, _ = market(config, db, ref=64_500.0, **rate_kwargs)                  # raw gap 0.77%: above the limit
+    xc = svc.cross_check(svc.get_price())
+    assert xc["status"] == "raw_only" and why in xc["reason"]
+    assert xc["raw_diff_pct"] == pytest.approx(0.769, abs=0.001)
+    s = run(price={**PRICE_OK, "price": 65_000.0, "cross_check": xc})
+    assert "price_divergence" not in s["diagnostics"]["gate_keys"]
+    w = next(x for x in s["data_warnings"] if x.startswith("Price cross-check not converted to USD"))
+    assert "raw gap 0.77%" in w and "not blocking" in w
+
+
+def test_same_quote_currencies_need_no_conversion(config, db):
+    p1 = FakeProvider("binance", price=65_000.0)
+    p2 = FakeProvider("other", price=65_100.0)                                  # both USDT
+    svc = MarketDataService(db, config, http=HttpClient(min_interval=0), providers=[p1, p2],
+                            overview_provider=FakeOverview(), clock=lambda: FIXED_NOW)
+    xc = svc.cross_check(svc.get_price())
+    assert xc["status"] == "checked" and xc.get("conversion") is None and p2.rate_calls == 0
+    assert xc["diff_pct"] == pytest.approx(0.154, abs=0.001)
+
+
+# ------------------------------------------------------------------ stablecoin deviation (batch 2 follow-up)
+def test_usdt_more_than_1_pct_from_one_is_a_separate_warning_not_a_block(config, db):
+    svc, _ = market(config, db, ref=64_025.0, usdt_rate=0.985)              # converted gap ~0.0%: no divergence
+    xc = svc.cross_check(svc.get_price())
+    assert xc["stablecoin"] == {"pair": "USDT-USD", "rate": 0.985, "deviation_pct": -1.5, "warning": True}
+    s = run(price={**PRICE_OK, "price": 65_000.0, "cross_check": xc})
+    assert "price_divergence" not in s["diagnostics"]["gate_keys"]          # a deviation alone never blocks
+    w = next(x for x in s["data_warnings"] if x.startswith("Stablecoin deviation"))
+    assert "USDT-USD is 0.9850" in w and "-1.50% from 1.00" in w
+    svc2, _ = market(config, db, ref=64_935.0, usdt_rate=0.999)
+    assert svc2.cross_check(svc2.get_price())["stablecoin"]["warning"] is False
+
+
+def test_stablecoin_deviation_alert_respects_the_cooldown(db):
+    xc = {"status": "checked", "diff_pct": 0.02,
+          "stablecoin": {"pair": "USDT-USD", "rate": 0.985, "deviation_pct": -1.5, "warning": True}}
+    sig = {"id": 1, "signal": "NO TRADE", "setup": "HOLD", "score": 0.0, "engine": "signal-1.8",
+           "price": {"value": 65_000.0, "cross_check": xc}}
+    svc, data, clock, settings = make_alerts(db, signal=sig, health=[], price=price(65_000))
+    rule(svc, "source_failure")
+    assert [a["title"] for a in svc.evaluate()] == ["Stablecoin deviation: USDT-USD 0.9850"]
+    for _ in range(5):
+        clock.advance(60_000)
+        assert svc.evaluate() == []
+    clock.advance(int(settings["cooldown_min"]) * 60_000)
+    assert [a["title"] for a in svc.evaluate()] == ["Stablecoin deviation: USDT-USD 0.9850"]
+    data["signal"] = {**sig, "price": {"cross_check": {**xc, "stablecoin": {**xc["stablecoin"], "warning": False}}}}
+    clock.advance(10 * int(settings["cooldown_min"]) * 60_000)
+    assert svc.evaluate() == []
+
+
+def test_coinbase_usdt_usd_ticker_is_parsed():
+    from services.market_data import CoinbaseProvider
+
+    class Http:
+        def get_json(self, url, params=None, headers=None):
+            assert url.endswith("/products/USDT-USD/ticker")
+            return {"price": "0.99973", "time": "2026-10-30T21:12:51.123Z"}, 18.0
+    q = CoinbaseProvider(Http()).fetch_rate("USDT-USD")
+    assert q["rate"] == 0.99973 and q["observed_at"] == 1793394771123 and q["latency_ms"] == 18.0

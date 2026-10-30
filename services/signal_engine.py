@@ -339,6 +339,22 @@ def score_news(news_summary: dict | None) -> Component:
                        _pol(v))])
 
 
+def _divergence_reason(xc: dict, limit: float) -> str:
+    """The cross-check NO TRADE reason: raw prices, and for USDT vs USD the rate, the converted price and the raw gap."""
+    a, b, conv = xc["primary"], xc["reference"], xc.get("conversion")
+    if not conv:
+        return (f"Price sources disagree by {xc['diff_pct']:.2f}% (limit {limit:g}%): {a['provider']} {a['price']:,.2f} "
+                f"{a['quote']} vs {b['provider']} {b['price']:,.2f} {b['quote']}. One of them may be wrong or delayed.")
+
+    def leg(x: dict) -> str:
+        if x["quote"] == "USDT":
+            return (f"{x['provider']} {x['price']:,.2f} USDT x {conv['rate']:.4f} {conv['pair']} = "
+                    f"{x['price_usd']:,.2f} USD")
+        return f"{x['provider']} {x['price']:,.2f} {x['quote']}"
+    return (f"Price sources disagree by {xc['diff_pct']:.2f}% after USDT-to-USD conversion (limit {limit:g}%): "
+            f"{leg(a)} vs {leg(b)} (raw gap {xc['raw_diff_pct']:.2f}%). One of them may be wrong or delayed.")
+
+
 def news_blocks(events: list[dict] | None, against: str | None) -> tuple[str | None, list[str]]:
     """signal-1.8: news can only BLOCK. High-impact news against the setup (bearish vs a BUY setup, bullish vs a
     SELL setup; a HOLD is never blocked):
@@ -675,11 +691,7 @@ def generate_signal(analyses: dict[str, dict], data_meta: dict[str, dict], price
     # signal-1.8: a second exchange's price (live only; the backtest has none). Unavailable = a warning, not a block.
     xc = (price or {}).get("cross_check") or {}
     if xc.get("status") == "checked" and xc["diff_pct"] > cfg.max_source_divergence_pct:
-        a, b = xc["primary"], xc["reference"]
-        keyed.append(("price_divergence",
-                      f"Price sources disagree by {xc['diff_pct']:.2f}% (limit {cfg.max_source_divergence_pct:g}%): "
-                      f"{a['provider']} {a['price']:,.2f} {a['quote']} vs {b['provider']} {b['price']:,.2f} {b['quote']}. "
-                      "One of them may be wrong or delayed."))
+        keyed.append(("price_divergence", _divergence_reason(xc, cfg.max_source_divergence_pct)))
     if not _ok(a4h) or a4h.get("bars", 0) < cfg.min_primary_bars:
         keyed.append(("insufficient_data", f"Primary 4h timeframe has too little data (need {cfg.min_primary_bars} closed candles)."))
     if trend.score is None or comps[1].score is None:
@@ -781,6 +793,16 @@ def generate_signal(analyses: dict[str, dict], data_meta: dict[str, dict], price
         warnings += price.get("warnings") or []
     if xc.get("status") == "unavailable":
         warnings.insert(0, f"Price not cross-checked: {xc.get('reason')}. This does not block the signal.")
+    elif xc.get("status") == "raw_only":
+        a, b = xc["primary"], xc["reference"]
+        warnings.insert(0, f"Price cross-check not converted to USD ({xc.get('reason')}): raw gap "
+                           f"{xc['raw_diff_pct']:.2f}% ({a['provider']} {a['price']:,.2f} {a['quote']} vs {b['provider']} "
+                           f"{b['price']:,.2f} {b['quote']}), shown for information - not blocking.")
+    stable = xc.get("stablecoin") or {}
+    if stable.get("warning"):
+        warnings.insert(0, f"Stablecoin deviation: {stable['pair']} is {stable['rate']:.4f} "
+                           f"({stable['deviation_pct']:+.2f}% from 1.00). USDT prices are converted with this rate; "
+                           "this is a warning, not a block by itself.")
     warnings[:0] = news_warn        # older speculative news against the setup: shown, never blocking
 
     return {

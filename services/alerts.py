@@ -464,6 +464,16 @@ class AlertService:
                           ["/#sources"], cooldown_key=f"cooldown:{rule['id']}:price_cross_check")
             if a:
                 out.append(a)
+        # USDT more than 1% away from 1.00 (batch 2 follow-up): its own alert and cooldown; never a block by itself.
+        stable = xc.get("stablecoin") or {}
+        if stable.get("warning"):
+            a = self.emit(rule, "warning", f"Stablecoin deviation: {stable['pair']} {stable['rate']:.4f}",
+                          f"{stable['pair']} is {stable['rate']:.4f}, {stable['deviation_pct']:+.2f}% from 1.00. USDT "
+                          "prices (Binance) are converted with this rate before the exchanges are compared.",
+                          "Stablecoin more than 1% away from its 1.00 peg", stable["rate"], 1.0, "price cross-check",
+                          ["/#sources"], cooldown_key=f"cooldown:{rule['id']}:stablecoin_deviation")
+            if a:
+                out.append(a)
         p = data("price") or {}
         if p:
             key = f"src:{rule['id']}:price_stale"

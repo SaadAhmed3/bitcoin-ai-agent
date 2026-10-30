@@ -207,7 +207,7 @@ reason that applies. You will see it most of the time, which is intended.
 |---|---|---|
 | "Not validated: no holdout run yet …" | The strategy has not passed its out-of-sample test. | Nothing to fix: this is the main reason today. See [Backtesting](#6-backtesting). |
 | "BTC price is stale" / "No current BTC price" | The exchange has not answered recently. | Check your internet; see System & sources. |
-| "Price sources disagree by 0.8% …" | Binance and Coinbase show different prices; one may be wrong or delayed. Both prices are shown. | Wait; it usually clears within minutes. The limit (default 0.5%) is in Settings → Signal. |
+| "Price sources disagree by 0.8% after USDT-to-USD conversion …" | Binance (in USDT, converted to USD with the USDT-USD rate) and Coinbase (in USD) show different prices; one may be wrong or delayed. The raw prices, the rate and the gap are shown. | Wait; it usually clears within minutes. The limit (default 0.5%) is in Settings → Signal. |
 | "1h candles are stale …" / "… missing candles" | Some chart data is old or has holes. | Usually clears on the next update. |
 | "Volatility is extreme" | Prices are moving much more than usual. | Wait for calmer conditions. |
 | "Evidence is contradictory" | The indicators disagree with each other. | Wait. |
@@ -215,8 +215,10 @@ reason that applies. You will see it most of the time, which is intended.
 | "Fresh / Recent high-impact bearish news (confirmed, …)" | Important bad news against a buy setup. The headline, publisher and link are shown. **Confirmed** news blocks for up to 24 hours (unless the price already moved); **unverified** or **speculative** news blocks for 2 hours. | Read the article; wait until it is digested. |
 | "Calculation error in …" | Something went wrong while computing. The app refuses to guess. | Restart the app; if it repeats, check the PowerShell window for the error. |
 
-"Price not cross-checked: …" in the data warnings means the second exchange did not answer. That is a warning only;
-it does not block.
+"Price not cross-checked: …" in the data warnings means the second exchange did not answer, and "Price cross-check not
+converted to USD" means the USDT-USD rate was missing or too old. Both are warnings only; they do not block.
+"Stablecoin deviation: USDT-USD is 0.9850 …" means USDT is more than 1% away from 1 US dollar. That is worth knowing
+(USDT prices are then less reliable as dollar prices), but it does not block by itself.
 
 ---
 
@@ -345,10 +347,10 @@ Invoke-RestMethod http://127.0.0.1:5000/api/health
 
 - **Free public data** can be delayed, rate-limited or briefly unavailable. The app shows the source and age of
   every price and marks old data as stale instead of pretending it is live.
-- **Binance quotes in USDT, Coinbase in USD.** USDT does not trade at exactly 1 USD, so the two prices usually differ
+- **Binance quotes in USDT, Coinbase in USD.** USDT does not trade at exactly 1 USD, so the raw prices usually differ
   by a few tenths of a percent (0.23-0.27% when measured on 30 October 2026). The app never mixes them in one chart.
-  The cross-check limit (0.5%) allows for this, but a large USDT premium or discount can make the exchanges "disagree"
-  even when both are correct: you then see NO TRADE with both prices.
+  For the cross-check it converts the USDT price to USD with Coinbase's USDT-USD rate first, so this difference does
+  not count against the 0.5% limit. If the rate is unavailable, the raw gap is shown as a warning only.
 - **CoinGecko** (market cap, dominance) is aggregated and can lag by a few minutes.
 - **News** comes from public RSS feeds. The app reads headlines only and classifies them with rules, which can be
   wrong. Always read the article before acting on it.

@@ -61,11 +61,21 @@ def db(config):
 
 class FakeProvider:
     def __init__(self, name, symbol="BTCUSDT", quote="USDT", price=65_000.0, fail=False, rows=None,
-                 observed_at=FIXED_NOW - 1_000):
+                 observed_at=FIXED_NOW - 1_000, usdt_rate=None, rate_observed_at=None, rate_fail=False):
         self.name, self.symbol, self.quote = name, symbol, quote
         self.price, self.fail, self.rows, self.observed_at = price, fail, rows, observed_at
+        # batch 2 follow-up: a USDT-USD rate like Coinbase's USDT-USD product (None = no such product)
+        self.usdt_rate, self.rate_observed_at, self.rate_fail = usdt_rate, rate_observed_at, rate_fail
         self.price_calls = 0
         self.candle_calls = 0
+        self.rate_calls = 0
+
+    def fetch_rate(self, pair="USDT-USD"):
+        self.rate_calls += 1
+        if self.rate_fail or self.usdt_rate is None:
+            raise ProviderError(f"{self.name}: {pair} rate unavailable")
+        return {"rate": self.usdt_rate, "latency_ms": 12.0,
+                "observed_at": self.rate_observed_at if self.rate_observed_at is not None else self.observed_at}
 
     def fetch_price(self):
         self.price_calls += 1

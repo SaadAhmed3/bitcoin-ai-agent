@@ -77,7 +77,7 @@ otherwise it becomes HOLD and the plan is shown for research only.
 | Condition | Rule |
 |---|---|
 | No price / stale price | no live price, or older than 120 s |
-| Price sources disagree | the second exchange differs by more than 0.5% (setting 0.1-5%). Quotes observed more than 15 s apart are not compared; a missing second source is a warning only |
+| Price sources disagree | the second exchange differs by more than 0.5% (setting 0.1-5%) **after converting USDT to USD** with Coinbase's USDT-USD rate. Quotes (and the rate) observed more than 15 s apart are not compared. Without a usable rate, or without a second source, it is a warning only. USDT more than 1% away from 1.00 gives a separate "stablecoin deviation" warning and alert (never a block by itself) |
 | Too little data | fewer than 100 closed 4h candles, or trend/momentum cannot be computed |
 | Stale or gappy candles | 1h, 4h or 1d: latest candle older than two intervals, or more than 5 missing candles |
 | Extreme volatility | 4h or 1h ATR% in the top 5% of its recent range |
@@ -137,7 +137,7 @@ All free; no account needed. The only optional key is a free CoinGecko Demo key.
 | Source | Provides | Notes |
 |---|---|---|
 | Binance spot (`api.binance.com`, mirror `data-api.binance.vision`) | BTC/USDT price, candles 5m-1d, backtest history | Blocked in some regions (HTTP 451) |
-| Coinbase Exchange | BTC/USD price and candles; the **second price** for the cross-check | USD and USDT series are never mixed; the USDT/USD difference (0.23-0.27% measured 2026-10-30) counts toward the 0.5% limit |
+| Coinbase Exchange | BTC/USD price and candles; the **second price** and the **USDT-USD rate** for the cross-check | USD and USDT series are never mixed in a chart; for the cross-check the USDT price is converted to USD first |
 | CoinGecko | Market cap, volume, BTC dominance | "Data from CoinGecko" attribution shown |
 | RSS (Cointelegraph, CoinDesk, The Block, Decrypt, Bitcoin Magazine, Google News) | Headlines | Headline, a short snippet and the link only |
 | federalreserve.gov, BLS (optional) | FOMC dates; CPI/PPI/jobs dates | BLS needs `CALENDAR_CONTACT_EMAIL` in `.env` |

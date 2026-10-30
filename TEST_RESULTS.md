@@ -101,9 +101,10 @@ by the manual download script; it is network code with no unit tests (unchanged)
 | `f084955` | news out of the score, block tiers, weight migration notice | 10 of 16 news tests, e2e notice | 581 ✔ | 88 ✔ |
 | `5af977c` | README rewrite, USER_GUIDE.md | /docs/USER_GUIDE.md 404 | 582 ✔ | 88 ✔ |
 | `c6355b3` | stale validation reasons | "re-run it" wording | 583 ✔ | 88 ✔ |
+| (this commit) | USDT-to-USD conversion in the cross-check, stablecoin deviation warning/alert | 8 of 18 cross-check tests | 592 ✔ | 88 ✔ |
 
-**Final:** unit **583 passed, 0 failed, 0 skipped**; e2e **88 passed, 0 failed, 0 skipped**. Coverage **94.0%**
-(315 of 5,246 statements missed; 93.9% after batch 1).
+**Final:** unit **592 passed, 0 failed, 0 skipped**; e2e **88 passed, 0 failed, 0 skipped**. Coverage **94.0%**
+(measured at `c6355b3`: 315 of 5,246 statements missed; 93.9% after batch 1).
 
 **Design-period equivalence (0.9.4 vs signal-1.8):** decisions 2022-10-30 15:59 → 2025-10-28 19:59 UTC, only candles
 closing before the 2025-10-29 holdout start loaded: 6,566 bars compared, 0 differences in setup, raw setup, tradable,
