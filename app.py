@@ -24,10 +24,10 @@ from services.market_data import SOURCE_DOCS, MarketDataService
 from services.news_collector import FEEDS, NewsCollector
 from services.news_service import NewsService
 from services.signal_engine import DEFAULT_WEIGHTS, ENGINE_VERSION, WEIGHT_RATIONALE
-from services.signal_service import SignalService
+from services.signal_service import RANGES as SIGNAL_RANGES, SignalService
 from services.backtest_service import BacktestService, effective_validation
 from services.paper_trading import PaperTrading
-from services.risk_manager import RiskSettings, position_size
+from services.risk_manager import RISK_RANGES, RiskSettings, position_size
 from services.technical_analysis import analyze, chart_series
 from services.assistant import Assistant, AssistantBusy, load_study
 from services.ollama_service import OllamaService, _model_matches
@@ -495,9 +495,10 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         from dataclasses import asdict
         out = settings.all()
         out["signal"] = {"config": asdict(signals.config()), "warning": SIGNAL_STALE_WARNING,
-                         "validation": effective_validation(db.get_setting("strategy_validation"), signals.config())}
+                         "validation": effective_validation(db.get_setting("strategy_validation"), signals.config()),
+                         "ranges": SIGNAL_RANGES}
         out["risk"] = {"settings": asdict(paper.settings()), "defaults": asdict(RiskSettings()),
-                       "label": "SIMULATED paper account settings"}
+                       "label": "SIMULATED paper account settings", "ranges": RISK_RANGES}
         return jsonify(out)
 
     @app.put("/api/settings/<section>")

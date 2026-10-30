@@ -226,6 +226,49 @@ def test_signal_config_api(config, db):
     assert r.get_json()["config"]["weights"]["news"] == 0.15
 
 
+@pytest.mark.parametrize("bad, field", [
+    ({"fee_pct": -0.1}, "fee_pct"), ({"slippage_pct": -0.01}, "slippage_pct"), ({"fee_pct": 1.5}, "fee_pct"),
+    ({"min_rr": 0}, "min_rr"), ({"min_rr": -1}, "min_rr"),
+    ({"buy_threshold": 1.5}, "buy_threshold"), ({"strong_threshold": 1.2}, "strong_threshold"),
+    ({"sell_threshold": -1.5}, "sell_threshold"),
+    ({"strong_threshold": 0.25}, "strong"),                       # strong == buy
+    ({"strong_threshold": 0.2, "buy_threshold": 0.3}, "strong"),  # strong < buy
+    ({"sell_threshold": 0}, "sell"), ({"sell_threshold": 0.1}, "sell"),
+    ({"min_agreement": 5}, "min_agreement"), ({"strong_min_agreement": -0.1}, "strong_min_agreement"),
+    ({"counter_trend_limit": 2}, "counter_trend_limit"),
+])
+def test_signal_config_rejects_out_of_range_values(config, db, bad, field):
+    """Regression (B2): negative costs, min R/R <= 0 and unreachable or inverted thresholds were accepted."""
+    c = make_client(config, db, [FakeProvider("fake1")])
+    r = c.put("/api/signal/config", json=bad)
+    assert r.status_code == 400, bad
+    assert field in r.get_json()["error"]
+    assert c.get("/api/signal/config").get_json()["config"]["fee_pct"] == 0.10     # nothing was stored
+
+
+def test_signal_config_accepts_edges_and_ignores_stored_out_of_range_values(config, db):
+    c = make_client(config, db, [FakeProvider("fake1")])
+    for ok in ({"fee_pct": 0, "slippage_pct": 0}, {"min_rr": 0.5}, {"strong_threshold": 1.0},
+               {"sell_threshold": -1.0}, {"min_agreement": 1.0}):
+        assert c.put("/api/signal/config", json=ok).status_code == 200, ok
+    c.put("/api/signal/config", json={"reset": True})
+    db.set_setting("signal_config", {"fee_pct": -1, "min_rr": 2, "buy_threshold": 9})   # written by an older version
+    cfg = c.get("/api/signal/config").get_json()["config"]
+    assert cfg["fee_pct"] == 0.10 and cfg["buy_threshold"] == 0.25 and cfg["min_rr"] == 2
+    ranges = c.get("/api/settings").get_json()["signal"]["ranges"]
+    assert ranges["fee_pct"]["min"] == 0 and ranges["min_rr"]["min_exclusive"] is True
+
+
+def test_risk_pct_above_max_risk_is_rejected_by_the_api(config, db):
+    c = make_client(config, db, [FakeProvider("fake1")])
+    r = c.post("/api/paper/settings", json={"risk_pct": 2.5})
+    assert r.status_code == 400 and "max_risk_pct" in r.get_json()["error"]
+    r = c.post("/api/risk/size", json={"portfolio_value": 10_000, "entry": 100, "stop": 95, "settings": {"risk_pct": 3}})
+    assert r.status_code == 400 and "risk_pct" in r.get_json()["error"]
+    assert c.post("/api/paper/settings", json={"risk_pct": 2}).status_code == 200
+    assert "risk_pct" in c.get("/api/settings").get_json()["risk"]["ranges"]
+
+
 def test_validation_record_unlocks_signal_only_for_matching_settings(config, db):
     from services.backtesting import config_hash
     from services.signal_engine import EngineConfig

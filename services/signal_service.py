@@ -16,6 +16,36 @@ RECORD_EVERY_MS = 60 * 60_000  # also store an unchanged signal at most once per
 SCORE_STEP = 0.10              # a score move this large is stored even if signal/setup did not change
 EDITABLE = {"strong_threshold", "buy_threshold", "sell_threshold", "min_agreement", "strong_min_agreement",
             "counter_trend_limit", "min_rr", "fee_pct", "slippage_pct", "require_validated_edge", "entry_mode"}
+# Allowed numeric ranges (inclusive unless min_exclusive). The score lives in [-1, +1], so a threshold outside it
+# could never fire; costs below zero would make trades look cheaper than free.
+RANGES: dict[str, dict] = {
+    "strong_threshold": {"min": -1.0, "max": 1.0, "help": "score scale -1..+1; must be above the buy threshold"},
+    "buy_threshold": {"min": -1.0, "max": 1.0, "help": "score scale -1..+1; must be above 0"},
+    "sell_threshold": {"min": -1.0, "max": 1.0, "help": "score scale -1..+1; must be below 0"},
+    "min_agreement": {"min": 0.0, "max": 1.0, "help": "share of weighted evidence, 0..1"},
+    "strong_min_agreement": {"min": 0.0, "max": 1.0, "help": "share of weighted evidence, 0..1"},
+    "counter_trend_limit": {"min": 0.0, "max": 1.0, "help": "daily trend score, 0..1"},
+    "min_rr": {"min": 0.0, "max": 10.0, "min_exclusive": True, "help": "reward/risk after costs, above 0"},
+    "fee_pct": {"min": 0.0, "max": 1.0, "help": "% per side, 0..1"},
+    "slippage_pct": {"min": 0.0, "max": 1.0, "help": "% per side, 0..1"},
+}
+for _r in RANGES.values():
+    _r.setdefault("min_exclusive", False)
+
+
+def check_range(key: str, v: float) -> None:
+    r = RANGES[key]
+    low_ok = v > r["min"] if r["min_exclusive"] else v >= r["min"]
+    if not (low_ok and v <= r["max"]) or v != v:
+        low = f"greater than {r['min']:g}" if r["min_exclusive"] else f"at least {r['min']:g}"
+        raise ValueError(f"'{key}' must be {low} and at most {r['max']:g} ({r['help']}); got {v:g}")
+
+
+def check_thresholds(cfg: EngineConfig) -> None:
+    s, b, st = cfg.sell_threshold, cfg.buy_threshold, cfg.strong_threshold
+    if not (-1 <= s < 0 < b < st <= 1):
+        raise ValueError(f"Thresholds must satisfy -1 <= sell < 0 < buy < strong <= 1 "
+                         f"(got sell {s:g}, buy {b:g}, strong {st:g})")
 
 
 class SignalService:
@@ -28,25 +58,52 @@ class SignalService:
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------------ config
-    def config(self) -> EngineConfig:
-        cfg = EngineConfig()
-        stored = self.db.get_setting("signal_config", {}) or {}
-        if "weights" in stored:
-            try:
-                cfg.weights = validate_weights(stored["weights"])
-            except ValueError:
-                pass  # ignore a corrupted stored value; defaults stay
+    @staticmethod
+    def _valid_stored(stored: dict) -> dict:
+        """Stored values that are still allowed. Values written by an older version without range checks
+        (e.g. a negative fee) are dropped, so their defaults apply."""
+        out = {}
         for k, v in stored.items():
-            if k in EDITABLE:
-                if k == "entry_mode" and v not in ENTRY_MODES:
-                    continue  # ignore a corrupted stored value
-                setattr(cfg, k, v)
+            if k == "weights":
+                try:
+                    out[k] = validate_weights(v)
+                except ValueError:
+                    pass
+            elif k == "entry_mode":
+                if v in ENTRY_MODES:
+                    out[k] = v
+            elif k == "require_validated_edge":
+                if isinstance(v, bool):
+                    out[k] = v
+            elif k in RANGES:
+                try:
+                    check_range(k, float(v))
+                    out[k] = float(v)
+                except (TypeError, ValueError):
+                    pass
+        return out
+
+    @staticmethod
+    def _build(values: dict) -> EngineConfig:
+        cfg = EngineConfig()
+        for k, v in values.items():
+            setattr(cfg, k, v)
+        return cfg
+
+    def config(self) -> EngineConfig:
+        values = self._valid_stored(self.db.get_setting("signal_config", {}) or {})
+        cfg = self._build(values)
+        try:
+            check_thresholds(cfg)
+        except ValueError:          # an inconsistent stored combination: use the default thresholds
+            cfg = self._build({k: v for k, v in values.items()
+                               if k not in ("strong_threshold", "buy_threshold", "sell_threshold")})
         return cfg
 
     def update_config(self, payload: dict) -> EngineConfig:
         if not isinstance(payload, dict):
             raise ValueError("Body must be a JSON object")
-        stored = self.db.get_setting("signal_config", {}) or {}
+        stored = self._valid_stored(self.db.get_setting("signal_config", {}) or {})
         if "weights" in payload:
             stored["weights"] = validate_weights(payload["weights"])
         types = {f.name: f.type for f in fields(EngineConfig)}
@@ -62,21 +119,16 @@ class SignalService:
                 if not isinstance(v, bool):
                     raise ValueError(f"'{k}' must be true or false")
             else:
+                if isinstance(v, bool):
+                    raise ValueError(f"'{k}' must be a number")
                 try:
                     v = float(v)
                 except (TypeError, ValueError):
                     raise ValueError(f"'{k}' must be a number") from None
-                if not (-1 <= v <= 10):
-                    raise ValueError(f"'{k}' is out of range")
+                check_range(k, v)
             stored[k] = v
-        merged = EngineConfig()
-        for k, v in stored.items():
-            if k == "weights":
-                merged.weights = v
-            else:
-                setattr(merged, k, v)
-        if not (merged.sell_threshold < 0 < merged.buy_threshold <= merged.strong_threshold):
-            raise ValueError("Thresholds must satisfy sell < 0 < buy <= strong")
+        merged = self._build(stored)
+        check_thresholds(merged)
         self.db.set_setting("signal_config", stored)
         return merged
 

@@ -37,8 +37,13 @@ def test_size_never_increases_after_losses():
 
 
 def test_risk_ceiling_and_validation():
-    r = position_size(10_000, 100, 95, RiskSettings(risk_pct=5, max_risk_pct=2, max_exposure_pct=100, fee_pct=0, slippage_pct=0))
+    # Batch 1 (0.9.2): a risk % above the ceiling is REJECTED instead of silently capped (owner's requirement:
+    # risk % must lie in (0, max_risk_pct]). The ceiling itself is still the most a trade can risk.
+    r = position_size(10_000, 100, 95, RiskSettings(risk_pct=2, max_risk_pct=2, max_exposure_pct=100, fee_pct=0, slippage_pct=0))
     assert r["risk_pct_used"] == 2 and r["max_loss_at_stop"] == pytest.approx(200)
+    for risk in (5, 2.01, 0, -1):
+        with pytest.raises(ValueError, match="risk_pct"):
+            RiskSettings(risk_pct=risk, max_risk_pct=2).validate()
     for bad in ((10_000, 100, 105), (0, 100, 95), (10_000, -1, 95)):
         with pytest.raises(ValueError):
             position_size(*bad, RiskSettings())

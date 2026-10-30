@@ -260,6 +260,28 @@ def test_settings_save_reload_persist_reset_and_key_status(ui):
     assert ui.errors == []
 
 
+@pytest.mark.parametrize("section, field, value, expect", [
+    ("signal", "fee_pct", "-1", "fee_pct"),
+    ("signal", "min_rr", "0", "min_rr"),
+    ("signal", "strong_threshold", "0.2", "strong"),
+    ("risk", "risk_pct", "3", "max_risk_pct"),
+])
+def test_settings_page_shows_server_range_errors(ui, section, field, value, expect):
+    """Regression (B2): invalid engine/risk values are rejected by the server and the reason is shown."""
+    page = ui.goto("/settings", ready=False)
+    page.wait_for_selector(f"#{section}[data-state='ready']")
+    row = page.locator(f"#{section} .set-row", has=page.locator(f"input[name='{field}']"))
+    assert row.locator(".help").text_content().strip()               # the allowed range is shown next to the label
+    before = page.locator(f"#{section} input[name='{field}']").input_value()
+    page.locator(f"#{section} input[name='{field}']").fill(value)
+    page.click(f"#{section} button[type=submit]")
+    page.wait_for_function(f"() => document.querySelector('#{section} .set-msg').textContent.startsWith('Not saved')")
+    assert expect in page.locator(f"#{section} .set-msg").text_content()
+    page.reload()
+    page.wait_for_selector(f"#{section}[data-state='ready']")
+    assert page.locator(f"#{section} input[name='{field}']").input_value() == before    # nothing was stored
+
+
 @smoke
 def test_settings_key_status_is_only_set_or_not_set(ui):
     page = ui.goto("/settings", ready=False)

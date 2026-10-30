@@ -13,6 +13,17 @@ import math
 from dataclasses import asdict, dataclass
 
 
+RISK_RANGES = {   # shown on the Settings page; RiskSettings.validate() is the enforcement
+    "risk_pct": "greater than 0, at most max_risk_pct",
+    "max_exposure_pct": "greater than 0, at most 100 (no leverage)",
+    "daily_loss_limit_pct": "greater than 0, at most 20",
+    "fee_pct": "0..1 (% per side)",
+    "slippage_pct": "0..1 (% per side)",
+    "loss_streak_reduce": "1..10 losses",
+    "max_risk_pct": "greater than 0, at most 5",
+}
+
+
 @dataclass
 class RiskSettings:
     risk_pct: float = 1.0               # % of portfolio you accept to lose if the stop is hit
@@ -25,12 +36,14 @@ class RiskSettings:
 
     def validate(self) -> "RiskSettings":
         checks = [
-            (0 < self.risk_pct <= 5, "risk_pct must be between 0 and 5"),
+            (0 < self.max_risk_pct <= 5, "max_risk_pct must be between 0 and 5"),
+            # Rejected rather than silently capped (0.9.2): what you enter is what is used.
+            (0 < self.risk_pct <= self.max_risk_pct,
+             f"risk_pct must be greater than 0 and at most max_risk_pct ({self.max_risk_pct:g}%); got {self.risk_pct:g}"),
             (0 < self.max_exposure_pct <= 100, "max_exposure_pct must be between 0 and 100 (no leverage)"),
             (0 < self.daily_loss_limit_pct <= 20, "daily_loss_limit_pct must be between 0 and 20"),
             (0 <= self.fee_pct <= 1 and 0 <= self.slippage_pct <= 1, "fee/slippage must be between 0 and 1%"),
             (1 <= self.loss_streak_reduce <= 10, "loss_streak_reduce must be between 1 and 10"),
-            (0 < self.max_risk_pct <= 5, "max_risk_pct must be between 0 and 5"),
         ]
         for ok, msg in checks:
             if not ok:
@@ -73,9 +86,7 @@ def position_size(portfolio_value: float, entry: float, stop: float, settings: R
     settings.validate()
     notes, warnings = [], []
 
-    risk_pct = min(settings.risk_pct, settings.max_risk_pct)
-    if settings.risk_pct > settings.max_risk_pct:
-        notes.append(f"Risk capped at the {settings.max_risk_pct}% ceiling.")
+    risk_pct = settings.risk_pct     # validate() guarantees 0 < risk_pct <= max_risk_pct
     streak = loss_streak(recent_pnls or [])
     if streak >= settings.loss_streak_reduce:
         risk_pct /= 2

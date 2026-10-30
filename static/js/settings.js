@@ -51,6 +51,12 @@
       <div>${input(key, f)}<div class="muted small">Source: <span class="src-badge ${esc(f.source)}">${esc(SOURCE[f.source] || f.source)}</span>${f.env ? (f.source === "env" ? ` from env ${esc(f.env)}` : ` · env ${esc(f.env)} would override`) : ""}${restart}</div></div></div>`;
   }
 
+  // Allowed range from the server (the server enforces it; this is only the hint next to the label).
+  function rangeHelp(r) {
+    if (!r) return "";
+    return `${r.min_exclusive ? ">" : ""}${r.min} to ${r.max}: ${r.help}`;
+  }
+
   function plainRow(key, value, help) {
     const isBool = typeof value === "boolean";
     const name = `name="${esc(key)}" aria-label="${esc(key.replace(/_/g, " "))}"`;
@@ -68,11 +74,12 @@
         const c = data.signal.config;
         const v = data.signal.validation || {};
         box.innerHTML = `<p class="muted small">Validation now: <b>${v.validated ? "validated" : v.stale ? "STALE (settings changed since the last backtest)" : "not validated"}</b>${v.note ? " - " + esc(v.note) : ""}</p>`
-          + SIGNAL_FIELDS.map((k) => plainRow(k, c[k])).join("")
+          + SIGNAL_FIELDS.map((k) => plainRow(k, c[k], rangeHelp((data.signal.ranges || {})[k]))).join("")
           + `<div class="set-row"><label>weights<span class="help">JSON object; normalised to sum 1</span></label><div><input type="text" name="weights" aria-label="weights" value="${esc(JSON.stringify(c.weights))}"></div></div>`;
       } else if (sec === "risk") {
         const s = data.risk.settings;
-        box.innerHTML = `<p class="sim-banner">SIMULATED ACCOUNT · no real money · no real orders</p>` + RISK_FIELDS.map((k) => plainRow(k, s[k])).join("");
+        box.innerHTML = `<p class="sim-banner">SIMULATED ACCOUNT · no real money · no real orders</p>`
+          + RISK_FIELDS.map((k) => plainRow(k, s[k], (data.risk.ranges || {})[k])).join("");
       } else {
         box.innerHTML = Object.entries(data[sec]).map(([k, f]) => row(k, f)).join("");
       }
