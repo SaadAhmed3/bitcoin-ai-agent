@@ -76,6 +76,7 @@ class EngineConfig:
     require_validated_edge: bool = True
     horizon: str = "1-3 days (4h primary, 1d trend filter, 1h confirmation)"
     entry_mode: str = "standard"       # "standard" | "breakout" | "pullback" (see ENTRY_MODES)
+    max_source_divergence_pct: float = 0.5   # signal-1.8: two exchanges disagreeing by more -> NO TRADE
 
     def __post_init__(self):
         if self.entry_mode not in ENTRY_MODES:
@@ -629,6 +630,14 @@ def generate_signal(analyses: dict[str, dict], data_meta: dict[str, dict], price
         keyed.append(("no_price", "No current BTC price available."))
     elif price.get("is_stale"):
         keyed.append(("stale_price", f"BTC price is stale ({price.get('age_seconds')}s old)."))
+    # signal-1.8: a second exchange's price (live only; the backtest has none). Unavailable = a warning, not a block.
+    xc = (price or {}).get("cross_check") or {}
+    if xc.get("status") == "checked" and xc["diff_pct"] > cfg.max_source_divergence_pct:
+        a, b = xc["primary"], xc["reference"]
+        keyed.append(("price_divergence",
+                      f"Price sources disagree by {xc['diff_pct']:.2f}% (limit {cfg.max_source_divergence_pct:g}%): "
+                      f"{a['provider']} {a['price']:,.2f} {a['quote']} vs {b['provider']} {b['price']:,.2f} {b['quote']}. "
+                      "One of them may be wrong or delayed."))
     if not _ok(a4h) or a4h.get("bars", 0) < cfg.min_primary_bars:
         keyed.append(("insufficient_data", f"Primary 4h timeframe has too little data (need {cfg.min_primary_bars} closed candles)."))
     if trend.score is None or comps[1].score is None:
@@ -729,6 +738,8 @@ def generate_signal(analyses: dict[str, dict], data_meta: dict[str, dict], price
         warnings += [f"{tf}: {w}" for w in (m.get("warnings") or [])]
     if price:
         warnings += price.get("warnings") or []
+    if xc.get("status") == "unavailable":
+        warnings.insert(0, f"Price not cross-checked: {xc.get('reason')}. This does not block the signal.")
 
     return {
         "signal": final,
@@ -745,7 +756,8 @@ def generate_signal(analyses: dict[str, dict], data_meta: dict[str, dict], price
         "generated_at": now_ms,
         "horizon": cfg.horizon,
         "price": {"value": price_now, "provider": (price or {}).get("provider"), "quote": (price or {}).get("quote"),
-                  "observed_at": (price or {}).get("observed_at"), "status": (price or {}).get("status")},
+                  "observed_at": (price or {}).get("observed_at"), "status": (price or {}).get("status"),
+                  "cross_check": xc or None},
         "components": [c.as_dict(round(eff_w.get(c.name, 0.0), 4)) for c in comps],
         "evidence_bullish": bullish_ev[:10],
         "evidence_bearish": bearish_ev[:10],

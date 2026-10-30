@@ -6,7 +6,7 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const SOURCE = { env: "env override (read-only)", settings: "settings DB", default: "default" };
   const SIGNAL_FIELDS = ["entry_mode", "strong_threshold", "buy_threshold", "sell_threshold", "min_agreement", "strong_min_agreement",
-    "counter_trend_limit", "min_rr", "fee_pct", "slippage_pct", "require_validated_edge"];
+    "counter_trend_limit", "min_rr", "fee_pct", "slippage_pct", "max_source_divergence_pct", "require_validated_edge"];
   const RISK_FIELDS = ["risk_pct", "max_exposure_pct", "daily_loss_limit_pct", "fee_pct", "slippage_pct", "loss_streak_reduce", "max_risk_pct"];
   let data = null;
 

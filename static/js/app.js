@@ -614,6 +614,7 @@
     [/too little data|could not be calculated/i, "Not enough data to judge the market"],
     [/candles are stale/i, "Chart data is stale: waiting for fresh candles"],
     [/missing candles/i, "Gaps in the price history"],
+    [/^Price sources disagree/i, "Exchanges disagree on the price: waiting until they agree"],
     [/volatility is extreme/i, "Volatility is extreme: too risky to judge"],
     [/contradictory/i, "The evidence is mixed: indicators disagree"],
     [/fights the daily/i, "The setup fights the daily trend"],

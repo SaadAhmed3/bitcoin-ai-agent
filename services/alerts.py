@@ -453,6 +453,17 @@ class AlertService:
                                 "Source returned to OK after a failure alert", 0.0, float(FAILURES_IN_A_ROW), src, ["/#sources"])
                 out.append(a)
                 self._set_state(key, False)
+        # Batch 2: the live price could not be compared with a second exchange. A warning (it never blocks the
+        # signal), throttled by the rule's own cooldown key; a single-source setup is a choice, not a failure.
+        xc = ((data("signal") or {}).get("price") or {}).get("cross_check") or {}
+        if xc.get("status") == "unavailable" and xc.get("reference_configured"):
+            a = self.emit(rule, "warning", "Price not cross-checked",
+                          f"The BTC price could not be compared with a second exchange: {xc.get('reason')}. "
+                          "Signals are not blocked by this (a disagreement between exchanges would block them).",
+                          "Second price source unavailable or not comparable", None, None, "price cross-check",
+                          ["/#sources"], cooldown_key=f"cooldown:{rule['id']}:price_cross_check")
+            if a:
+                out.append(a)
         p = data("price") or {}
         if p:
             key = f"src:{rule['id']}:price_stale"

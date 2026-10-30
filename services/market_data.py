@@ -351,6 +351,48 @@ class MarketDataService:
         return {"price": None, "status": "unavailable", "is_stale": True, "errors": errors,
                 "warnings": ["No price source is reachable and no cached price exists."]}
 
+    # Batch 2 (signal-1.8): compare the live price with a second exchange. Only quotes observed close together are
+    # compared, so a delayed quote is "unavailable" (a warning), never a false divergence.
+    CROSS_CHECK_MAX_GAP_S = 15
+
+    def cross_check(self, price: dict | None) -> dict:
+        """{"status": "checked", "primary", "reference", "diff_pct"} or {"status": "unavailable", "reason",
+        "reference_configured"}. The engine decides whether diff_pct is too large; this never blocks anything."""
+        primary = (price or {}).get("provider")
+        if not price or price.get("price") is None or not primary:
+            return {"status": "unavailable", "reason": "no live price to check", "reference_configured": True}
+        ref = next((p for p in self.providers if p.name != primary), None)
+        if ref is None:
+            return {"status": "unavailable", "reason": "no second price source configured", "reference_configured": False}
+        p_obs = price.get("observed_at") or price.get("fetched_at")
+        if not p_obs:
+            return {"status": "unavailable", "reason": f"{primary} price has no timestamp", "reference_configured": True}
+        now = self.clock()
+        key = f"price:ref:{ref.name}"
+        cached = self.db.cache_get(key)
+        q = cached[0] if cached and now - cached[1] < self.config.price_cache_seconds * 1000 else None
+        if q is not None and abs((q.get("observed_at") or cached[1]) - p_obs) > self.CROSS_CHECK_MAX_GAP_S * 1000:
+            q = None                                   # cached quote too far from the live one: fetch once more
+        if q is None:
+            try:
+                q = ref.fetch_price()
+            except ProviderError as exc:
+                self.db.record_health(ref.name, False, error=str(exc))
+                return {"status": "unavailable", "reason": f"{ref.name}: {exc}", "reference_configured": True}
+            self.db.record_health(ref.name, True, latency_ms=q.get("latency_ms"))
+            self.db.cache_set(key, q, now)
+        r_obs = q.get("observed_at") or now
+        gap_s = abs(r_obs - p_obs) / 1000
+        if gap_s > self.CROSS_CHECK_MAX_GAP_S:
+            return {"status": "unavailable", "reference_configured": True,
+                    "reason": f"{primary} and {ref.name} prices were observed {gap_s:.0f} s apart "
+                              f"(more than {self.CROSS_CHECK_MAX_GAP_S} s), so they are not compared"}
+        diff = abs(float(q["price"]) / float(price["price"]) - 1) * 100
+        return {"status": "checked", "diff_pct": round(diff, 3),
+                "primary": {"provider": primary, "quote": price.get("quote"), "price": float(price["price"]),
+                            "observed_at": p_obs},
+                "reference": {"provider": ref.name, "quote": ref.quote, "price": float(q["price"]), "observed_at": r_obs}}
+
     def _decorate_price(self, record: dict, now: int, from_cache: bool) -> dict:
         out = dict(record)
         ref = record.get("observed_at") or record.get("fetched_at")

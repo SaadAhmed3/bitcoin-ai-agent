@@ -19,7 +19,8 @@ SIGNAL_TIMEFRAMES = ("1h", "4h", "1d")
 RECORD_EVERY_MS = 60 * 60_000  # also store an unchanged signal at most once per hour, for the audit trail
 SCORE_STEP = 0.10              # a score move this large is stored even if signal/setup did not change
 EDITABLE = {"strong_threshold", "buy_threshold", "sell_threshold", "min_agreement", "strong_min_agreement",
-            "counter_trend_limit", "min_rr", "fee_pct", "slippage_pct", "require_validated_edge", "entry_mode"}
+            "counter_trend_limit", "min_rr", "fee_pct", "slippage_pct", "require_validated_edge", "entry_mode",
+            "max_source_divergence_pct"}
 # Allowed numeric ranges (inclusive unless min_exclusive). The score lives in [-1, +1], so a threshold outside it
 # could never fire; costs below zero would make trades look cheaper than free.
 RANGES: dict[str, dict] = {
@@ -31,6 +32,8 @@ RANGES: dict[str, dict] = {
     "counter_trend_limit": {"min": 0.0, "max": 1.0, "help": "daily trend score, 0..1"},
     "min_rr": {"min": 0.0, "max": 10.0, "min_exclusive": True, "help": "reward/risk after costs, above 0"},
     "fee_pct": {"min": 0.0, "max": 1.0, "help": "% per side, 0..1"},
+    "max_source_divergence_pct": {"min": 0.1, "max": 5.0,
+                                  "help": "% two exchanges may differ before NO TRADE (signal-1.8), 0.1..5"},
     "slippage_pct": {"min": 0.0, "max": 1.0, "help": "% per side, 0..1"},
 }
 for _r in RANGES.values():
@@ -154,6 +157,8 @@ class SignalService:
                     meta[tf] = res.meta()
                 stage = "price"
                 price = self.market.get_price()
+                stage = "price cross-check"
+                price = {**price, "cross_check": self.market.cross_check(price)}
                 try:
                     news = self.news_report() or {}
                 except Exception:
