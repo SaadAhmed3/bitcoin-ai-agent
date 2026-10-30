@@ -137,6 +137,10 @@ either (79th vs 86th) because it depends on the window span; that is one more re
 record points at run #1. The docs should quote the run ID together with its window dates, or quote run #1. Batch 1
 updates the CHANGELOG only; the README fix is planned for batch 2 with the User Guide.
 
+## 7b. Holdout contamination for trend-following hypotheses (2026-10-31)
+
+Backtest run #1 (full period, decisions 2022-10-30 → 2026-10-29) computed and **displayed** buy & hold (+294.32%) and the EMA 50/200 crossover (+244.87%) **through the holdout year**, and the audit documents quoted those figures (and run #3's +281.87% / +241.99% from an earlier database). Anyone who has seen them knows roughly how holding and simple trend-following did in the holdout year. **The 2025-10-29 holdout is therefore contaminated for trend-following hypotheses and is not used for H1 or H2.** They are tested on **forward** data only (Research → Forward tests: decisions on daily candles that close after the tracker starts). The app's holdout registry still shows the period as untouched (no holdout run was made); whether it is still clean for the live engine, whose largest component is trend, is an open question for the owner.
+
 ## 8. Overall assessment
 
 The project's engineering of *honesty* (no look-ahead, NO TRADE by default, labels) is strong. Its *edge* is

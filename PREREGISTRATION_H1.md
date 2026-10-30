@@ -124,3 +124,7 @@ every criterion's value and its own fingerprint. The result is kept whatever it 
 | Criteria changed? | **No.** |
 
 H1 is still run by the forward paper tracker (Research → Forward tests), **for information only**: those results do not change this verdict.
+
+## 9. Holdout contamination (2026-10-31)
+
+Backtest run #1 (full period, decisions 2022-10-30 → 2026-10-29) computed and **displayed** buy & hold (+294.32%) and the EMA 50/200 crossover (+244.87%) **through the holdout year**, and the audit documents quoted those figures (and run #3's +281.87% / +241.99% from an earlier database). Anyone who has seen them knows roughly how holding and simple trend-following did in the holdout year. **The 2025-10-29 holdout is therefore contaminated for trend-following hypotheses and is not used for H1 or H2.** They are tested on **forward** data only (Research → Forward tests: decisions on daily candles that close after the tracker starts). The app's holdout registry still shows the period as untouched (no holdout run was made); whether it is still clean for the live engine, whose largest component is trend, is an open question for the owner.
