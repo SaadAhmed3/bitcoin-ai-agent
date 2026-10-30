@@ -90,3 +90,22 @@ Uncovered new lines are mostly defensive: the compare-and-set conflict branch in
 unreachable under `BEGIN IMMEDIATE`, kept as a database-level guard), "account missing" in `buy`, and the daily-loss
 branch for an open position with no current price. `history.py` (the Binance history downloader) is exercised only
 by the manual download script; it is network code with no unit tests (unchanged).
+
+## After batch 2 (0.9.5, signal-1.8, branch `batch2-data-checks`, 2026-10-31)
+
+| Commit | Change | Red on the previous code | Unit | E2E |
+|---|---|---|---|---|
+| `6f46d77` | GET /api/paper read-only (B16) | a GET sold the position | 554 ✔ | 87 ✔ |
+| `1d0b210` | 1h stale/gap gate; engine signal-1.8 | stale 1h gave BUY SETUP | 556 ✔ | 87 ✔ |
+| `d5c28a8` | cross-source price check | 0.77% apart gave only 'not_validated' | 565 ✔ | 87 ✔ |
+| `f084955` | news out of the score, block tiers, weight migration notice | 10 of 16 news tests, e2e notice | 581 ✔ | 88 ✔ |
+| `5af977c` | README rewrite, USER_GUIDE.md | /docs/USER_GUIDE.md 404 | 582 ✔ | 88 ✔ |
+| `c6355b3` | stale validation reasons | "re-run it" wording | 583 ✔ | 88 ✔ |
+
+**Final:** unit **583 passed, 0 failed, 0 skipped**; e2e **88 passed, 0 failed, 0 skipped**. Coverage **94.0%**
+(315 of 5,246 statements missed; 93.9% after batch 1).
+
+**Design-period equivalence (0.9.4 vs signal-1.8):** decisions 2022-10-30 15:59 → 2025-10-28 19:59 UTC, only candles
+closing before the 2025-10-29 holdout start loaded: 6,566 bars compared, 0 differences in setup, raw setup, tradable,
+unrounded score, stop, target, downgrade or gate keys; the same 5 trades (+9.08%). Scripts: `equiv_replay.py`
+(session scratchpad, not committed).
