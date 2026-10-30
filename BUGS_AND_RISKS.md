@@ -1,5 +1,9 @@
 # Bugs and Risks
 
+> **Status after 0.9.2 (batch 1):** fixed — B1, B2, B3, B4, B5, B6, B11, P1-5 (calculation error → NO TRADE), plus a
+> pre-existing source-health insert race found during testing. Still open — B7, B8, B9, B10 (they change live-signal
+> behaviour and wait for approval), B12–B18 and the hygiene items. See CHANGELOG.md.
+
 Audit of v0.9.1 / signal-1.7, 2026-10-30. Severity follows the roadmap: **P0** = financial-calculation correctness
 or a safety bypass; **P1** = data quality, validation validity, risk management; **P2** = signal/research quality;
 **P3** = UX; **P4** = optional. "Reproduced" means a script in this audit showed the failure. Scripts were run on a

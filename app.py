@@ -41,7 +41,7 @@ from services import security
 from services.security import MAX_BODY_BYTES
 from werkzeug.exceptions import HTTPException
 
-APP_VERSION = "0.9.1 (Phases 1-9, UI polish)"
+APP_VERSION = "0.9.2 (batch 1: safety fixes)"
 DOC_FILES = ("README.md", "SECURITY.md", "CHANGELOG.md")      # served read-only at /docs/<name>
 SIGNAL_STALE_WARNING = ("Changing these makes the current validation stale; the signal stays NO TRADE until a new "
                         "backtest validates the new settings.")

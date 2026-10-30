@@ -22,3 +22,8 @@ data/*.png
 __pycache__/
 .pytest_cache/
 prompt_*.md
+
+# coverage (0.9.2)
+.coverage
+.coverage.*
+htmlcov/
