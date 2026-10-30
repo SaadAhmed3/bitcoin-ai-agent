@@ -102,6 +102,17 @@ def test_buy_blocked_when_stale_or_no_cash_or_exposure(paper, db):
         pt.buy(P(100.0), 3000)
 
 
+def test_sell_blocked_when_price_is_stale(paper):
+    """Regression (B5): a manual SELL filled at a stale cached price when every price source was down."""
+    pt, _ = paper
+    pt.buy(P(100.0), 1000)
+    with pytest.raises(ValueError, match="stale"):
+        pt.sell(P(90.0, stale=True))
+    st = pt.state(P(100.0))
+    assert st["btc"] == pytest.approx(10.0) and not [o for o in st["orders"] if o["side"] == "SELL"]
+    assert pt.sell(P(101.0))["simulated"]                       # a fresh price sells normally
+
+
 def test_no_short_selling(paper):
     pt, _ = paper
     with pytest.raises(ValueError, match="no short"):

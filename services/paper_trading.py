@@ -229,6 +229,8 @@ class PaperTrading:
     def sell(self, price: dict | None, fraction: float = 1.0, reason: str = "manual") -> dict:
         if not price or price.get("price") is None:
             raise ValueError("No current price: cannot fill a simulated order.")
+        if price.get("is_stale"):
+            raise ValueError("Price is stale: simulated orders are blocked until fresh data arrives.")
         try:
             fraction = float(fraction)
         except (TypeError, ValueError):
