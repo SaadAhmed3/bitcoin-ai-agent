@@ -114,6 +114,63 @@ def test_stop_and_target_checks(paper):
     assert "target hit" in pt.state(P(121.0))["orders"][0]["reason"]
 
 
+def _concurrently(pt, fn, n=2):
+    """Run fn() in n threads that all read the account before any of them writes (two tabs polling at once)."""
+    import threading
+    barrier = threading.Barrier(n)
+    original = pt._account
+
+    def synced():
+        acc = original()
+        try:
+            barrier.wait(timeout=2)
+        except threading.BrokenBarrierError:
+            pass                       # a correct implementation may serialise the threads: don't deadlock
+        return acc
+
+    pt._account = synced
+    results, errors = [], []
+
+    def run():
+        try:
+            results.append(fn())
+        except ValueError as exc:
+            errors.append(str(exc))
+
+    threads = [threading.Thread(target=run) for _ in range(n)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    pt._account = original
+    return results, errors
+
+
+def test_concurrent_stop_checks_sell_once(paper):
+    """Regression (B1): two simultaneous stop checks recorded two SELLs for one position."""
+    pt, _ = paper
+    pt.buy(P(100.0), 4000, stop=95.0)               # 40 BTC at 100, fee 4 -> cost basis 100.1
+    results, errors = _concurrently(pt, lambda: pt.check_levels(P(90.0)))
+    st = pt.state(P(90.0))
+    sells = [o for o in st["orders"] if o["side"] == "SELL"]
+    assert len(sells) == 1 and not errors
+    assert sells[0]["qty"] == pytest.approx(40.0)
+    # (90 - 100.1) * 40 - sell fee 3.6 = -407.6
+    assert sells[0]["realized_pnl"] == pytest.approx(-407.6, abs=0.01)
+    assert st["btc"] == 0 and st["cash"] == pytest.approx(10_000 - 4004 + 3600 - 3.6, abs=0.01)
+    assert st["loss_streak"] == 1
+    assert sum(1 for r in results if r) == 1         # exactly one caller reports the exit
+
+
+def test_concurrent_manual_sells_sell_once(paper):
+    pt, _ = paper
+    pt.buy(P(100.0), 4000)
+    results, errors = _concurrently(pt, lambda: pt.sell(P(90.0)))
+    sells = [o for o in pt.state(P(90.0))["orders"] if o["side"] == "SELL"]
+    assert len(sells) == 1 and len(results) == 1
+    assert len(errors) == 1 and "no short" in errors[0].lower()
+
+
 def test_invalid_stop_target(paper):
     pt, _ = paper
     with pytest.raises(ValueError, match="Stop"):
