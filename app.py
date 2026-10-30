@@ -207,7 +207,7 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
 
     def paper_levels_check():
         """SIMULATED stop/target check every monitor cycle, whether or not the Paper view is open. Same atomic
-        close path as GET /api/paper, so the two can never sell the same position twice."""
+        close path as a manual SELL. GET /api/paper is read-only (batch 2): this is the only automatic exit."""
         res = paper.check_levels(market.get_price())
         if res:
             last_background_exit.update(res, at=now_ms())
@@ -468,10 +468,8 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
 
     @app.get("/api/paper")
     def paper_state():
-        price = market.get_price()
-        auto = paper.check_levels(price)
-        st = paper.state(price)
-        st["auto_exit"] = auto
+        """Read-only (batch 2, B16). Simulated stop/target exits happen only in the background monitor."""
+        st = paper.state(market.get_price())
         st["last_background_exit"] = dict(last_background_exit) or None
         return jsonify(st)
 
