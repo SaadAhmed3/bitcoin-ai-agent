@@ -25,7 +25,7 @@ from services.news_collector import FEEDS, NewsCollector
 from services.news_service import NewsService
 from services.signal_engine import DEFAULT_WEIGHTS, ENGINE_VERSION, WEIGHT_RATIONALE
 from services.signal_service import RANGES as SIGNAL_RANGES, SignalService
-from services.backtest_service import BacktestService, effective_validation
+from services.backtest_service import BacktestService, current_validation
 from services.backtesting import DESIGN_BADGE, FULL_BADGE
 from services.paper_trading import PaperTrading
 from services.risk_manager import RISK_RANGES, RiskSettings, position_size
@@ -42,7 +42,7 @@ from services import security
 from services.security import MAX_BODY_BYTES
 from werkzeug.exceptions import HTTPException
 
-APP_VERSION = "0.9.2 (batch 1: safety fixes)"
+APP_VERSION = "0.9.3 (batch 1b: single-use holdout)"
 DOC_FILES = ("README.md", "SECURITY.md", "CHANGELOG.md")      # served read-only at /docs/<name>
 SIGNAL_STALE_WARNING = ("Changing these makes the current validation stale; the signal stays NO TRADE until a new "
                         "backtest validates the new settings.")
@@ -143,7 +143,7 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         "news": lambda: news.report(hours=72),
         "backtest": _latest_backtest,
         "validation_run": _validation_backtest,
-        "validation": lambda: effective_validation(db.get_setting("strategy_validation"), signals.config()),
+        "validation": lambda: current_validation(db, signals.config()),
         "paper": lambda: paper.state(market.get_price()),
         "health": db.get_health,
         "study": lambda: load_study(Path(config.db_path).parent / "score_study_design.json"),
@@ -398,9 +398,14 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     @app.get("/api/backtest/status")
     def backtest_status():
         st = backtests.status()
-        st["validation"] = effective_validation(db.get_setting("strategy_validation"), signals.config())
-        st["holdout_runs"] = db.holdout_counts()
+        st["validation"] = current_validation(db, signals.config())    # st["holdout"]: the single-use holdout
         return jsonify(st)
+
+    @app.post("/api/backtest/holdout_start")
+    def backtest_holdout_start():
+        """Start a NEW holdout period after the current one was spent (forward data only). Body {"start": "YYYY-MM-DD"}."""
+        body = request.get_json(silent=True) or {}
+        return jsonify({"holdout": backtests.set_holdout_start(body.get("start"))})
 
     @app.get("/api/backtest/runs")
     def backtest_runs():
@@ -528,7 +533,7 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         from dataclasses import asdict
         out = settings.all()
         out["signal"] = {"config": asdict(signals.config()), "warning": SIGNAL_STALE_WARNING,
-                         "validation": effective_validation(db.get_setting("strategy_validation"), signals.config()),
+                         "validation": current_validation(db, signals.config()),
                          "ranges": SIGNAL_RANGES}
         out["risk"] = {"settings": asdict(paper.settings()), "defaults": asdict(RiskSettings()),
                        "label": "SIMULATED paper account settings", "ranges": RISK_RANGES}

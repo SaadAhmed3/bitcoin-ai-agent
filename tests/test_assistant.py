@@ -370,8 +370,8 @@ def test_existing_database_upgrades_to_chat_table(tmp_path):
         tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         version = conn.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone()[0]
     # Phase 8: the schema became version 6 (alert tables) - deliberate change from "5".
-    # 0.9.2: version 7 (holdout_runs) - deliberate change from "6".
-    assert "chat_messages" in tables and version == "7" and d2.get_setting("keep_me") == {"x": 1}
+    # 0.9.2: version 7 (holdout_runs) - deliberate change from "6". 0.9.3: version 8 (holdout_start) - from "7".
+    assert "chat_messages" in tables and version == "8" and d2.get_setting("keep_me") == {"x": 1}
     assert {"alerts", "alert_rules", "alert_state", "holdout_runs"} <= tables
     d2.add_chat("user", "hi", 1)
     assert d2.chat_history()[0]["content"] == "hi"

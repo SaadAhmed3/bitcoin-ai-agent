@@ -222,6 +222,50 @@ def test_legacy_full_run_shows_badge_reason_and_holdout_count(browser, fresh_ser
         p.context.close()
 
 
+def test_research_shows_holdout_status_and_a_new_start_once_it_is_spent(browser, fresh_server):
+    """0.9.3: 'Holdout status: untouched / spent on <date> by run #N'; once spent, a new holdout start can be set
+    only after the spent period, and the period list shows the new start."""
+    import datetime as dt
+    from database import now_ms
+
+    def day(ms):
+        return dt.datetime.fromtimestamp(ms / 1000, dt.timezone.utc).strftime("%Y-%m-%d")
+    p = Page(browser, fresh_server.url, viewport={"width": 1280, "height": 900})
+    try:
+        page = p.goto("/#/research")
+        page.wait_for_function("() => document.getElementById('btHoldoutStatus').textContent.startsWith('Holdout status')")
+        assert page.locator("#btHoldoutStatus").text_content() == \
+            "Holdout status: untouched (reserved period from 2025-10-29)"
+        assert not page.locator("#btNewHoldout").is_visible()
+        assert page.locator("#btPeriod option[value='holdout']").text_content() == "holdout (from 2025-10-29)"
+
+        spent_at = now_ms() - 3_600_000
+        fresh_server.db.register_holdout_run(spent_at, "h" * 16, "c" * 16, "signal-1.7", {}, {}, 7)  # like run #7
+        page.reload()                                                    # same hash: a goto would not reload
+        page.wait_for_selector("#btNewHoldout:not([hidden])")
+        assert page.locator("#btHoldoutStatus").text_content() == f"Holdout status: spent on {day(spent_at)} by run #7"
+        earliest = day((spent_at // 86_400_000 + 1) * 86_400_000)
+        assert page.locator("#btNewHoldoutDate").get_attribute("min") == earliest
+        assert f"on or after {earliest}" in page.locator("#btNewHoldoutText").text_content()
+
+        page.fill("#btNewHoldoutDate", day(spent_at))                    # inside the spent period: refused
+        page.click("#btNewHoldoutSet")
+        page.wait_for_function("() => document.getElementById('btNewHoldoutMsg').textContent.startsWith('Not set')")
+        assert "after the spent period" in page.locator("#btNewHoldoutMsg").text_content()
+
+        page.fill("#btNewHoldoutDate", earliest)
+        page.click("#btNewHoldoutSet")
+        page.wait_for_function("() => document.getElementById('btNewHoldoutMsg').textContent.startsWith('New holdout period')")
+        assert page.locator("#btHoldoutStatus").text_content() == \
+            f"Holdout status: untouched (reserved period from {earliest})"
+        assert not page.locator("#btNewHoldout").is_visible()
+        assert page.locator("#btPeriod option[value='holdout']").text_content() == f"holdout (from {earliest})"
+        assert page.locator("#btPeriod option[value='design']").text_content() == f"design (to {earliest})"
+        assert [e for e in p.errors if "400" not in e] == []             # the refused date logs one 400
+    finally:
+        p.context.close()
+
+
 # ------------------------------------------------------------------ placeholders, console, layout
 def visit_every_view(p: Page, open_details: bool = True) -> dict[str, list[str]]:
     page = p.goto("/")

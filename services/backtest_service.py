@@ -4,17 +4,19 @@ from __future__ import annotations
 import threading
 import traceback
 from dataclasses import asdict, replace
+from datetime import datetime, timezone
 from typing import Callable
 
 from database import Database, now_ms
-from services.backtesting import PERIODS, BacktestConfig, config_hash, hypothesis_hash, run_backtest
+from services.backtesting import (HOLDOUT_START, PERIODS, BacktestConfig, code_fingerprint, config_hash,
+                                  hypothesis_hash, run_backtest)
 from services.history import download_all
 from services.http_client import HttpClient
 from services.signal_engine import DAY_MS, ENTRY_MODES, FORWARD_OBSERVATION_DAYS
 
 PROVIDER, SYMBOL = "binance", "BTCUSDT"
 WARMUP_YEARS = 1.5   # the daily timeframe needs ~500 closed candles before the first decision
-REPEAT_BADGE = "HOLDOUT ALREADY USED - not valid for validation"
+SPENT_BADGE = "HOLDOUT SPENT - not valid for validation"
 
 
 class BacktestService:
@@ -37,7 +39,33 @@ class BacktestService:
         with self._lock:
             out = dict(self.state)
         out["history"] = {tf: self.db.candle_span(PROVIDER, SYMBOL, tf) for tf in ("1h", "4h", "1d")}
+        out["holdout"] = holdout_status(self.db)
         return out
+
+    # ------------------------------------------------------------------ the single-use holdout (0.9.3)
+    def set_holdout_start(self, value) -> dict:
+        """Start a NEW holdout period. Only allowed once the current one is spent, and only from the day after the
+        run that spent it: the new holdout must be forward data that no rule choice has seen."""
+        st = holdout_status(self.db)
+        if st["status"] != "spent":
+            raise ValueError(f"The current holdout (from {_utc_date(st['start'])}) is untouched: use it. A new holdout "
+                             "start can only be set after it has been spent.")
+        if not isinstance(value, str):
+            raise ValueError("start must be a date string YYYY-MM-DD (UTC)")
+        try:
+            day = datetime.strptime(value.strip(), "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            raise ValueError("start must be a date string YYYY-MM-DD (UTC)") from None
+        start = int(day.timestamp() * 1000)
+        if start < st["earliest_new_start"]:
+            raise ValueError(f"The new holdout must begin after the spent period: on or after "
+                             f"{_utc_date(st['earliest_new_start'])} (the holdout from {_utc_date(st['start'])} was "
+                             f"{st['label']}).")
+        stored = self.db.get_setting("holdout_period") or {}
+        previous = list(stored.get("previous") or []) + [{"start": st["start"], "spent_at": st["spent_at"],
+                                                           "spent_by_run": st["spent_by_run"]}]
+        self.db.set_setting("holdout_period", {"start": start, "set_at": self.clock(), "previous": previous})
+        return holdout_status(self.db)
 
     def _set(self, **kw) -> None:
         with self._lock:
@@ -62,7 +90,7 @@ class BacktestService:
             self._cancel.clear()
             self.state.update({"state": "starting", "progress": 0.0, "message": "Starting...", "run_id": None,
                                "started_at": self.clock(), "finished_at": None, "error": None})
-        cfg = cfg or BacktestConfig(years=years, period=period)
+        cfg = cfg or BacktestConfig(years=years, period=period, holdout_start=current_holdout_start(self.db))
         if background:
             self._thread = threading.Thread(target=self._run, args=(years, download, cfg, entry_mode), daemon=True)
             self._thread.start()
@@ -96,25 +124,26 @@ class BacktestService:
             result.setdefault("period_kind", cfg.period)
             criteria_passed = sum(1 for c in result["criteria"] if c["passed"])
             holdout = None
+            fingerprint = code_fingerprint()
             if cfg.period == "holdout":
-                # Every holdout run is recorded; only the FIRST run of a hypothesis can change the validation.
-                hyp = hypothesis_hash(engine_cfg, cfg)
+                # Every holdout run is recorded. The holdout is SINGLE-USE: only the first run in this holdout period,
+                # whatever its rule set, can change the validation; it spends the period.
+                hyp = hypothesis_hash(engine_cfg, cfg, fingerprint)
                 holdout = self.db.register_holdout_run(
                     self.clock(), hyp, result["config_hash"], result["engine"],
                     {"engine": asdict(engine_cfg), "backtest": {k: v for k, v in asdict(cfg).items() if k != "criteria"},
-                     "criteria": asdict(cfg.criteria)},
+                     "criteria": asdict(cfg.criteria), "code_fingerprint": fingerprint},
                     {"verdict": result["verdict"], "all_criteria_passed": bool(result["validated"]),
                      "criteria_passed": criteria_passed, "criteria_total": len(result["criteria"]),
                      "strategy": {k: result["strategy"].get(k) for k in ("trades", "net_return_pct", "max_drawdown_pct",
                                                                          "profit_factor")}},
-                    None)
+                    None, holdout_start=cfg.holdout_start)
                 result["hypothesis_hash"] = hyp
-                result["holdout"] = {**holdout, "hypothesis_hash": hyp}
+                result["holdout"] = {**holdout, "hypothesis_hash": hyp, "holdout_start": cfg.holdout_start}
                 if not holdout["counts_for_validation"]:
                     result["validated"] = False
-                    result["period_badge"] = REPEAT_BADGE
-                    result["verdict"] = (f"{REPEAT_BADGE}: holdout run #{holdout['first_run_id']} already tested these "
-                                         f"rules. Stored for review, not valid for validation. {criteria_passed} of "
+                    result["period_badge"] = SPENT_BADGE
+                    result["verdict"] = (f"Stored for review, {spent_label(holdout['spender'])}. {criteria_passed} of "
                                          f"{len(result['criteria'])} criteria passed.")
             else:
                 result["validated"] = False   # design and full runs include in-sample data: never a validation
@@ -129,14 +158,15 @@ class BacktestService:
                                            bool(result["validated"]), summary, result)
             if holdout:
                 self.db.link_holdout_run(holdout["id"], run_id)
-            # Only the first holdout run of a hypothesis becomes the validation record the NO TRADE gate reads.
+            # Only the run that spent the holdout period becomes the validation record the NO TRADE gate reads.
             if holdout and holdout["counts_for_validation"]:
                 self.db.set_setting("strategy_validation", {
                     "validated": bool(result["validated"]), "run_id": run_id, "as_of": self.clock(),
                     "engine": result["engine"], "config_hash": result["config_hash"],
                     "entry_mode": result["entry_mode"], "period_kind": "holdout",
                     "counts_for_validation": True, "holdout_run_id": holdout["id"],
-                    "hypothesis_hash": result["hypothesis_hash"],
+                    "hypothesis_hash": result["hypothesis_hash"], "code_fingerprint": fingerprint,
+                    "holdout_start": cfg.holdout_start,
                     "period": result["period"], "note": result["verdict"],
                     "failed": [f"{c['name']} ({c.get('detail', '')})" for c in result["criteria"] if not c["passed"]]})
             self._set(state="done", progress=1.0, run_id=run_id, finished_at=self.clock(),
@@ -154,8 +184,50 @@ class BacktestService:
         self._set(state="error", error=str(exc), message=f"Failed: {exc}", finished_at=self.clock())
 
 
-def effective_validation(stored: dict | None, engine_cfg) -> dict:
-    """A validation only counts for the exact engine version + settings it was produced with."""
+def _utc_date(ms: int) -> str:
+    return datetime.fromtimestamp(ms / 1000, timezone.utc).strftime("%Y-%m-%d")
+
+
+def current_holdout_start(db: Database) -> int:
+    """Start of the current holdout period: 2025-10-29 until a spent holdout is replaced by a new one."""
+    return int((db.get_setting("holdout_period") or {}).get("start") or HOLDOUT_START)
+
+
+def spent_label(spender: dict) -> str:
+    run = f"run #{spender['backtest_run_id']}" if spender.get("backtest_run_id") else f"holdout run #{spender['id']}"
+    return f"not valid for validation: holdout already spent on {_utc_date(spender['created_at'])}, {run}"
+
+
+def holdout_status(db: Database) -> dict:
+    """The current holdout period: untouched, or spent on <date> by run #N - then a new start may be set, from the
+    day after the spending run (forward data only)."""
+    start = current_holdout_start(db)
+    st = db.holdout_state(start)
+    st["previous"] = (db.get_setting("holdout_period") or {}).get("previous") or []
+    if st["status"] == "spent":
+        run = st["spent_by_run"] or f"{st['spent_by_holdout_run']} (holdout registry)"
+        st["label"] = f"spent on {_utc_date(st['spent_at'])} by run #{run}"
+        st["earliest_new_start"] = (max(start, st["spent_at"]) // DAY_MS + 1) * DAY_MS
+    else:
+        st["label"], st["earliest_new_start"] = "untouched", None
+    return st
+
+
+def current_validation(db: Database, engine_cfg) -> dict:
+    """The validation the NO TRADE gate reads: the stored record, checked against the current settings, the current
+    rule code and the run that actually spent its holdout period."""
+    stored = db.get_setting("strategy_validation")
+    spender = None
+    if stored and stored.get("validated"):
+        spender = db.holdout_state(int(stored.get("holdout_start") or HOLDOUT_START))["spent_by_holdout_run"]
+    return effective_validation(stored, engine_cfg, spender_id=spender, fingerprint=code_fingerprint(),
+                                check_spender=True)
+
+
+def effective_validation(stored: dict | None, engine_cfg, spender_id: int | None = None,
+                         fingerprint: str | None = None, check_spender: bool = False) -> dict:
+    """A validation only counts for the exact engine version + settings it was produced with (and, when given,
+    the same rule code and the run that spent the holdout period - see current_validation)."""
     if not stored:
         return {"validated": False, "note": "No backtest has been run yet - run one from the Backtest & validation panel."}
     current = config_hash(engine_cfg)
@@ -170,6 +242,14 @@ def effective_validation(stored: dict | None, engine_cfg) -> dict:
         why = f"only the first holdout run of a set of rules can validate; this record is from a {kind} run"
         return {**stored, "validated": False, "note": f"Not counted: {why}.",
                 "failed": [f"Not a first holdout run ({why})"]}
+    if stored.get("validated") and fingerprint is not None and stored.get("code_fingerprint") != fingerprint:
+        # 0.9.3: the rule code changed (even without an engine version bump), or the record predates fingerprints.
+        return {**stored, "validated": False, "stale": True,
+                "note": "The rule code changed since this validation (code fingerprint differs): the validated rules "
+                        "are not the ones running now. Validating them needs a new holdout period."}
+    if stored.get("validated") and check_spender and stored.get("holdout_run_id") != spender_id:
+        return {**stored, "validated": False,
+                "note": "Not counted: this holdout period was spent by another run; only that run's result counts."}
     if stored.get("validated") and stored.get("as_of"):
         # The NO TRADE gate stays on for a forward-observation period after a validation (see signal_engine).
         return {**stored, "observation_until": int(stored["as_of"]) + FORWARD_OBSERVATION_DAYS * DAY_MS}

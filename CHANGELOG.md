@@ -2,6 +2,36 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## 0.9.3 (batch 1b: single-use holdout) — 2026-10-30
+
+Owner's decision: the holdout is **single-use and global**. **Signal engine unchanged: signal-1.7**; no weights,
+thresholds, news weight or live-signal rule changed. **The holdout was not run** (tests use synthetic data and fake
+runners). Regression tests were written first and shown failing on 0.9.2.
+
+- **Single-use, global (replaces 0.9.2's "first run per rule set").** The first holdout run in a holdout period, whatever
+  its rule set, counts and spends the period. Later runs are stored with the label "not valid for validation: holdout
+  already spent on <date>, run #N" and the badge "HOLDOUT SPENT - not valid for validation". One `INSERT` decides this
+  atomically; a unique index allows one counting run per period. On 0.9.2 found: a second rule set counted again on
+  the same holdout.
+- **New holdout start, forward data only.** `POST /api/backtest/holdout_start {"start": "YYYY-MM-DD"}` (and a box in
+  the Research view, shown only when the holdout is spent). Refused while the current holdout is untouched, and for
+  any date before the day after the spending run. Backtests then use the new start: holdout runs begin there and
+  design runs extend up to it. The previous periods are kept in the setting `holdout_period.previous`.
+- **Code fingerprint in the rule-set hash.** SHA-256 of `services/signal_engine.py` and `services/technical_analysis.py`
+  (line endings normalised). On 0.9.2 found: changing the stop from 2 ATR to 2.1 ATR without an engine version bump
+  left the hash unchanged. A validation now counts only while its fingerprint matches the running code and it is the
+  record of the run that spent its period; 0.9.2 records (no fingerprint) never lift the gate.
+- **Research view:** "Holdout status: untouched (reserved period from <date>)" or "spent on <date> by run #N"; the
+  period list shows the current start; "Holdout runs made: N · K counted for validation".
+- **Database schema 8:** `holdout_runs.holdout_start` (additive; existing rows get 2025-10-29). The app backs the file
+  up before upgrading; a manual backup was also made. A 0.9.2 database holding two counting runs in one period still
+  opens: the earliest one is the spender, and the unique index is skipped instead of rewriting data.
+
+**Tests:** 537 → 547 unit (new `tests/test_holdout_single_use.py`), 86 → 87 e2e. Updated deliberately for the new rule:
+`test_new_settings_are_a_new_hypothesis_with_their_own_first_run` → `test_new_settings_do_not_get_a_second_attempt_on_a_spent_holdout`;
+two tests that hand-write a validated record now include the spending registry run and the code fingerprint; the
+schema-version test expects 8; the version test expects 0.9.3.
+
 ## 0.9.2 (batch 1: safety fixes) — 2026-10-30
 
 Bug fixes and stricter safeguards from the 2026-10-30 audit ([PROJECT_AUDIT.md](PROJECT_AUDIT.md),

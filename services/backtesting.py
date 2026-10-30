@@ -34,6 +34,7 @@ import json
 import math
 import random
 from bisect import bisect_right
+from pathlib import Path
 from dataclasses import asdict, dataclass, field, replace
 from typing import Callable
 
@@ -87,7 +88,10 @@ class BacktestConfig:
     random_runs: int = 200
     seed: int = 7
     years: float | None = 4.0         # backtest span (after warm-up); None = everything available
-    period: str = "full"              # "full" | "design" (start -> HOLDOUT_START) | "holdout" (HOLDOUT_START -> end)
+    period: str = "full"              # "full" | "design" (start -> holdout_start) | "holdout" (holdout_start -> end)
+    # 0.9.3: the holdout is single-use. Once a holdout period is spent, a later rule set needs a NEW start after it
+    # (forward data only); the backtest service passes the current one. Design runs end where the holdout starts.
+    holdout_start: int = HOLDOUT_START
     criteria: ValidationCriteria = field(default_factory=ValidationCriteria)
 
     def __post_init__(self):
@@ -104,14 +108,30 @@ def config_hash(engine_cfg: EngineConfig) -> str:
     return hashlib.sha256(blob.encode()).hexdigest()[:16]
 
 
-def hypothesis_hash(engine_cfg: EngineConfig, cfg: BacktestConfig) -> str:
-    """What a holdout run is a test OF: the trading rules (config_hash: engine version, weights, thresholds, costs,
-    entry rule), the trade management (candle window, time stop, exit on SELL) and the fixed holdout start.
+# The rule CODE: plans, stops, targets and ATR multiples (signal_engine.py), indicators, swings and support /
+# resistance levels (technical_analysis.py). Its fingerprint is part of the rule-set hash (0.9.3).
+RULE_FILES = (Path(__file__).with_name("signal_engine.py"), Path(__file__).with_name("technical_analysis.py"))
 
-    Run length, random seed / runs, walk-forward window sizes and the pass criteria are deliberately left out:
-    changing them must not buy a second holdout attempt for the same rules."""
-    blob = json.dumps({"config": config_hash(engine_cfg), "window": cfg.window, "max_hold_bars": cfg.max_hold_bars,
-                       "exit_on_sell": cfg.exit_on_sell, "holdout_start": HOLDOUT_START}, sort_keys=True)
+
+def code_fingerprint(files: tuple[Path, ...] | None = None) -> str:
+    """SHA-256 of the rule code, line endings normalised (a CRLF and an LF checkout give the same value). Editing
+    any of these files changes the rule set even when ENGINE_VERSION is not bumped."""
+    h = hashlib.sha256()
+    for p in (files if files is not None else RULE_FILES):
+        h.update(p.name.encode() + b"\0" + Path(p).read_bytes().replace(b"\r\n", b"\n") + b"\0")
+    return h.hexdigest()[:16]
+
+
+def hypothesis_hash(engine_cfg: EngineConfig, cfg: BacktestConfig, fingerprint: str | None = None) -> str:
+    """The rule set a holdout run tests: the settings (config_hash: engine version, weights, thresholds, costs, entry
+    rule), the rule code (code_fingerprint), the trade management (candle window, time stop, exit on SELL) and the
+    holdout start.
+
+    Run length, random seed / runs, walk-forward window sizes and the pass criteria are deliberately left out.
+    (Since 0.9.3 the holdout is single-use for ALL rule sets; the hash records WHAT was tested.)"""
+    blob = json.dumps({"config": config_hash(engine_cfg), "code": fingerprint or code_fingerprint(),
+                       "window": cfg.window, "max_hold_bars": cfg.max_hold_bars, "exit_on_sell": cfg.exit_on_sell,
+                       "holdout_start": cfg.holdout_start}, sort_keys=True)
     return hashlib.sha256(blob.encode()).hexdigest()[:16]
 
 
@@ -610,13 +630,13 @@ def run_backtest(c1h_rows: list[dict], c4h_rows: list[dict], c1d_rows: list[dict
     if cfg.years:
         start = max(start, len(c4h) - 1 - int(cfg.years * BARS_PER_YEAR))
     # Period split. A decision at the close of bar i trades in bar i+1, so:
-    #   design  = decisions whose NEXT bar also closes before HOLDOUT_START (no design trade touches the holdout);
-    #   holdout = decisions made at or after HOLDOUT_START (earlier candles are only indicator warm-up).
+    #   design  = decisions whose NEXT bar also closes before the holdout start (no design trade touches the holdout);
+    #   holdout = decisions made at or after the holdout start (earlier candles are only indicator warm-up).
     end = len(c4h) - 1
     if cfg.period == "design":
-        end = min(end, int(np.searchsorted(ct4, HOLDOUT_START - BAR_MS)))
+        end = min(end, int(np.searchsorted(ct4, cfg.holdout_start - BAR_MS)))
     elif cfg.period == "holdout":
-        start = max(start, int(np.searchsorted(ct4, HOLDOUT_START)))
+        start = max(start, int(np.searchsorted(ct4, cfg.holdout_start)))
     if end - start < 200:
         raise ValueError(f"Not enough history after warm-up for period '{cfg.period}' ({max(0, end - start)} bars). "
                          "Download more years.")
@@ -700,7 +720,8 @@ def run_backtest(c1h_rows: list[dict], c4h_rows: list[dict], c1d_rows: list[dict
         "design_badge": DESIGN_BADGE if cfg.period == "design" else None,
         "period_badge": {"design": DESIGN_BADGE, "full": FULL_BADGE}.get(cfg.period),
         "hypothesis_hash": hypothesis_hash(engine_cfg, cfg),
-        "holdout_start": HOLDOUT_START,
+        "holdout_start": cfg.holdout_start,
+        "code_fingerprint": code_fingerprint(),
         "period": {"kind": cfg.period, "start": times[0], "end": times[-1], "bars": len(bars),
                    "years": round(len(bars) / BARS_PER_YEAR, 2)},
         "settings": {"backtest": {k: v for k, v in asdict(cfg).items() if k != "criteria"},
