@@ -167,6 +167,28 @@ def test_gate_stale_candles_and_gaps():
     _gate(run(meta=meta), "missing candles")
 
 
+def test_gate_stale_or_gappy_1h_series():
+    """Batch 2 (signal-1.8): 1h drives 40% of momentum and half of overextension; before, a stale or gappy 1h
+    series fed the signal silently (only 4h and 1d were checked)."""
+    meta = deepcopy(META_OK)
+    meta["1h"]["is_stale"] = True
+    s = run(meta=meta)
+    assert s["signal"] == NO_TRADE and "stale_candles" in s["diagnostics"]["gate_keys"]
+    assert any(r.startswith("1h candles are stale") and "momentum" in r for r in s["no_trade_reasons"])
+    meta = deepcopy(META_OK)
+    meta["1h"]["gaps"] = 6
+    s = run(meta=meta)
+    assert s["signal"] == NO_TRADE and "gaps" in s["diagnostics"]["gate_keys"]
+    assert any(r.startswith("1h series has 6 missing candles") for r in s["no_trade_reasons"])
+    meta["1h"]["gaps"] = 5                                         # the limit itself (max_gaps = 5) still passes
+    assert "gaps" not in run(meta=meta)["diagnostics"]["gate_keys"]
+
+
+def test_engine_version_is_signal_1_8():
+    from services.signal_engine import ENGINE_VERSION
+    assert ENGINE_VERSION == "signal-1.8"
+
+
 def test_gate_insufficient_primary_data():
     a = bullish()
     a["4h"]["bars"] = 40

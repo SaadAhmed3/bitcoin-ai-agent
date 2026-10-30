@@ -501,7 +501,10 @@ def test_every_dataset_csv_and_json(config, db, dataset, query):
     assert j.status_code == 200 and j.mimetype == "application/json"
     assert j.headers["Content-Disposition"].endswith('.json"')
     meta = j.get_json()["metadata"]
-    assert meta["dataset"] == dataset and meta["app_version"] == __import__("app").APP_VERSION and meta["engine"] == "signal-1.7"
+    # batch 2: live engine bumped to signal-1.8 (deliberate). A backtest export reports the engine that made the
+    # run (the seeded run is signal-1.7); before the bump the two happened to be the same.
+    expected_engine = "signal-1.7" if dataset == "backtest" else "signal-1.8"
+    assert meta["dataset"] == dataset and meta["app_version"] == __import__("app").APP_VERSION and meta["engine"] == expected_engine
     assert meta["generated_at"].endswith("Z") and meta["source_notes"]
 
 

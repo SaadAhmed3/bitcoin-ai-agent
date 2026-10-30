@@ -30,7 +30,7 @@ import math
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-ENGINE_VERSION = "signal-1.7"
+ENGINE_VERSION = "signal-1.8"   # batch 2: 1h data check, cross-source price check, news only blocks
 
 STRONG_BUY, BUY, HOLD, SELL, NO_TRADE = "STRONG BUY SETUP", "BUY SETUP", "HOLD", "SELL / REDUCE EXPOSURE", "NO TRADE"
 
@@ -633,12 +633,16 @@ def generate_signal(analyses: dict[str, dict], data_meta: dict[str, dict], price
         keyed.append(("insufficient_data", f"Primary 4h timeframe has too little data (need {cfg.min_primary_bars} closed candles)."))
     if trend.score is None or comps[1].score is None:
         keyed.append(("insufficient_data", "Trend or momentum could not be calculated."))
-    for tf in ("4h", "1d"):
+    # signal-1.8: 1h is checked too - it drives 40% of momentum and half of overextension.
+    used_for = {"1h": "momentum and overextension", "4h": "every component", "1d": "the daily trend"}
+    for tf in ("1h", "4h", "1d"):
         m = data_meta.get(tf) or {}
         if m.get("is_stale"):
-            keyed.append(("stale_candles", f"{tf} candles are stale."))
+            keyed.append(("stale_candles", f"{tf} candles are stale (the latest closed candle is more than two "
+                                           f"intervals old); {used_for[tf]} would use old data."))
         if (m.get("gaps") or 0) > cfg.max_gaps:
-            keyed.append(("gaps", f"{tf} series has {m['gaps']} missing candles."))
+            keyed.append(("gaps", f"{tf} series has {m['gaps']} missing candles (more than {cfg.max_gaps}); "
+                                  f"{used_for[tf]} would be computed over holes in the data."))
     extreme_vol = False
     for a, tf in ((a4h, "4h"), (a1h, "1h")):
         if (a.get("volatility") or {}).get("regime") == "extreme":
