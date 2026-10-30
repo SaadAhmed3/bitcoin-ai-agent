@@ -109,8 +109,10 @@ def config_hash(engine_cfg: EngineConfig) -> str:
 
 
 # The rule CODE: plans, stops, targets and ATR multiples (signal_engine.py), indicators, swings and support /
-# resistance levels (technical_analysis.py). Its fingerprint is part of the rule-set hash (0.9.3).
-RULE_FILES = (Path(__file__).with_name("signal_engine.py"), Path(__file__).with_name("technical_analysis.py"))
+# resistance levels (technical_analysis.py), and the simulation and pass criteria (backtesting.py: fills, stop
+# handling, time stop, ValidationCriteria). Its fingerprint is part of the rule-set hash (0.9.3; backtesting.py 0.9.4).
+RULE_FILES = (Path(__file__).with_name("signal_engine.py"), Path(__file__).with_name("technical_analysis.py"),
+              Path(__file__))
 
 
 def code_fingerprint(files: tuple[Path, ...] | None = None) -> str:

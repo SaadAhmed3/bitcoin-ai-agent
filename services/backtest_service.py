@@ -8,8 +8,8 @@ from datetime import datetime, timezone
 from typing import Callable
 
 from database import Database, now_ms
-from services.backtesting import (HOLDOUT_START, PERIODS, BacktestConfig, code_fingerprint, config_hash,
-                                  hypothesis_hash, run_backtest)
+from services.backtesting import (HOLDOUT_MIN_TRADES, HOLDOUT_START, PERIODS, BacktestConfig, code_fingerprint,
+                                  config_hash, hypothesis_hash, run_backtest)
 from services.history import download_all
 from services.http_client import HttpClient
 from services.signal_engine import DAY_MS, ENTRY_MODES, FORWARD_OBSERVATION_DAYS
@@ -129,6 +129,14 @@ class BacktestService:
                 # Every holdout run is recorded. The holdout is SINGLE-USE: only the first run in this holdout period,
                 # whatever its rule set, can change the validation; it spends the period.
                 hyp = hypothesis_hash(engine_cfg, cfg, fingerprint)
+                # The verdict and the criteria values are decided NOW and stored write-once: they are never
+                # recalculated, so changing the pass criteria later cannot turn a spent FAIL into a PASS (0.9.4).
+                verdict = "PASS" if result["validated"] else "FAIL"
+                thresholds = ((result.get("settings") or {}).get("criteria")
+                              or asdict(replace(cfg.criteria, min_trades=HOLDOUT_MIN_TRADES)))
+                criteria_used = {"thresholds": thresholds,
+                                 "results": [{k: c.get(k) for k in ("name", "passed", "detail")}
+                                             for c in result["criteria"]]}
                 holdout = self.db.register_holdout_run(
                     self.clock(), hyp, result["config_hash"], result["engine"],
                     {"engine": asdict(engine_cfg), "backtest": {k: v for k, v in asdict(cfg).items() if k != "criteria"},
@@ -137,9 +145,10 @@ class BacktestService:
                      "criteria_passed": criteria_passed, "criteria_total": len(result["criteria"]),
                      "strategy": {k: result["strategy"].get(k) for k in ("trades", "net_return_pct", "max_drawdown_pct",
                                                                          "profit_factor")}},
-                    None, holdout_start=cfg.holdout_start)
+                    None, holdout_start=cfg.holdout_start, verdict=verdict, criteria=criteria_used)
                 result["hypothesis_hash"] = hyp
-                result["holdout"] = {**holdout, "hypothesis_hash": hyp, "holdout_start": cfg.holdout_start}
+                result["holdout"] = {**holdout, "hypothesis_hash": hyp, "holdout_start": cfg.holdout_start,
+                                     "verdict": verdict, "criteria": criteria_used}
                 if not holdout["counts_for_validation"]:
                     result["validated"] = False
                     result["period_badge"] = SPENT_BADGE
@@ -166,7 +175,8 @@ class BacktestService:
                     "entry_mode": result["entry_mode"], "period_kind": "holdout",
                     "counts_for_validation": True, "holdout_run_id": holdout["id"],
                     "hypothesis_hash": result["hypothesis_hash"], "code_fingerprint": fingerprint,
-                    "holdout_start": cfg.holdout_start,
+                    "holdout_start": cfg.holdout_start, "verdict": result["holdout"]["verdict"],
+                    "criteria": result["holdout"]["criteria"],
                     "period": result["period"], "note": result["verdict"],
                     "failed": [f"{c['name']} ({c.get('detail', '')})" for c in result["criteria"] if not c["passed"]]})
             self._set(state="done", progress=1.0, run_id=run_id, finished_at=self.clock(),
@@ -215,17 +225,20 @@ def holdout_status(db: Database) -> dict:
 
 def current_validation(db: Database, engine_cfg) -> dict:
     """The validation the NO TRADE gate reads: the stored record, checked against the current settings, the current
-    rule code and the run that actually spent its holdout period."""
+    rule code and the run that actually spent its holdout period - whose verdict, stored write-once at run time,
+    decides (the record's own 'validated' flag is never trusted on its own)."""
     stored = db.get_setting("strategy_validation")
-    spender = None
+    spender, verdict = None, None
     if stored and stored.get("validated"):
-        spender = db.holdout_state(int(stored.get("holdout_start") or HOLDOUT_START))["spent_by_holdout_run"]
+        st = db.holdout_state(int(stored.get("holdout_start") or HOLDOUT_START))
+        spender, verdict = st["spent_by_holdout_run"], st["verdict"]
     return effective_validation(stored, engine_cfg, spender_id=spender, fingerprint=code_fingerprint(),
-                                check_spender=True)
+                                check_spender=True, spender_verdict=verdict)
 
 
 def effective_validation(stored: dict | None, engine_cfg, spender_id: int | None = None,
-                         fingerprint: str | None = None, check_spender: bool = False) -> dict:
+                         fingerprint: str | None = None, check_spender: bool = False,
+                         spender_verdict: str | None = None) -> dict:
     """A validation only counts for the exact engine version + settings it was produced with (and, when given,
     the same rule code and the run that spent the holdout period - see current_validation)."""
     if not stored:
@@ -250,6 +263,10 @@ def effective_validation(stored: dict | None, engine_cfg, spender_id: int | None
     if stored.get("validated") and check_spender and stored.get("holdout_run_id") != spender_id:
         return {**stored, "validated": False,
                 "note": "Not counted: this holdout period was spent by another run; only that run's result counts."}
+    if stored.get("validated") and check_spender and spender_verdict != "PASS":
+        return {**stored, "validated": False,
+                "note": f"Not validated: the holdout verdict stored at run time is {spender_verdict or 'missing'} "
+                        "(it is never recalculated, whatever the pass criteria are now)."}
     if stored.get("validated") and stored.get("as_of"):
         # The NO TRADE gate stays on for a forward-observation period after a validation (see signal_engine).
         return {**stored, "observation_until": int(stored["as_of"]) + FORWARD_OBSERVATION_DAYS * DAY_MS}

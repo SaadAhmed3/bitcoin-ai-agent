@@ -17,4 +17,4 @@ def test_docs_route_serves_only_the_three_documents_as_plain_text(config, db):
 
 def test_app_version_is_the_batch_1b_release():
     import app
-    assert app.APP_VERSION == "0.9.3 (batch 1b: single-use holdout)"   # deliberate bump from 0.9.2
+    assert app.APP_VERSION == "0.9.4 (batch 1b: single-use holdout)"   # deliberate bump from 0.9.3

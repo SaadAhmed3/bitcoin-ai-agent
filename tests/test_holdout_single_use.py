@@ -123,7 +123,8 @@ def test_run_backtest_splits_at_the_configured_holdout_start(monkeypatch):
 
 # ------------------------------------------------------------------ code fingerprint in the rule-set hash
 def test_code_fingerprint_changes_when_rule_code_changes_without_a_version_bump(tmp_path, monkeypatch):
-    assert {p.name for p in bt.RULE_FILES} == {"signal_engine.py", "technical_analysis.py"}
+    # 0.9.4 (owner's request, deliberate): backtesting.py joined the rule code; see test_holdout_verdict.py.
+    assert {p.name for p in bt.RULE_FILES} == {"signal_engine.py", "technical_analysis.py", "backtesting.py"}
     copies = []
     for p in bt.RULE_FILES:
         q = tmp_path / p.name

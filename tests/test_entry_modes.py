@@ -343,7 +343,8 @@ def test_forward_observation_gate_lasts_56_days(config, db):
     c, _ = make_client6(config, db)
     day = 86_400_000
     from services.backtesting import code_fingerprint
-    spender = db.register_holdout_run(now_ms(), "h" * 16, config_hash(EngineConfig()), "x", {}, {}, 7)
+    spender = db.register_holdout_run(now_ms(), "h" * 16, config_hash(EngineConfig()), "x", {}, {}, 7,
+                                      verdict="PASS")    # 0.9.4: the gate reads the verdict stored at run time
     good = {"validated": True, "run_id": 7, "engine": "x", "config_hash": config_hash(EngineConfig()), "note": "ok",
             "period_kind": "holdout", "counts_for_validation": True,      # 0.9.3: the run that spent the holdout,
             "holdout_run_id": spender["id"], "code_fingerprint": code_fingerprint()}   # with the current rule code

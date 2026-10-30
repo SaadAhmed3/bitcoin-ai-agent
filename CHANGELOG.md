@@ -2,6 +2,29 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## 0.9.4 (batch 1b follow-up: stored holdout verdict) — 2026-10-31
+
+**Signal engine unchanged: signal-1.7. The holdout was not run** (synthetic data and fake runners only). Regression
+tests were written first and shown failing on 0.9.3.
+
+- **`services/backtesting.py` is part of the rule code.** The code fingerprint in the rule-set hash now covers
+  `signal_engine.py`, `technical_analysis.py` and `backtesting.py` (fills, stop handling, time stop, pass criteria).
+  Relaxing a criterion in code, e.g. `min_trades` 30 → 10, changes the fingerprint, so a stored validation no longer
+  counts for the edited code.
+- **Holdout verdict stored at run time, never recalculated.** Each holdout run stores PASS / FAIL and the criteria
+  values used (thresholds + each criterion's name, result and detail) in the registry and in the validation record.
+  Registry rows are **write-once**: database triggers abort any update or delete, except linking the stored backtest
+  run once. The NO TRADE gate now reads the verdict of the run that spent the period. On 0.9.3 found: rewriting the
+  validation setting as a PASS after a FAIL lifted the gate.
+- **Research subtitle:** "Only the first holdout run in the current holdout period can lift the NO TRADE gate."
+- **Database schema 9:** `holdout_runs.verdict`, `holdout_runs.criteria` and the write-once triggers (additive). Rows
+  from 0.9.2/0.9.3 keep the run-time outcome stored in their result (`all_criteria_passed`); nothing is recalculated.
+  Backups: automatic before the upgrade, and a manual one made.
+
+**Tests:** 547 → 553 unit (new `tests/test_holdout_verdict.py`), 87 e2e (subtitle assertion added). Updated
+deliberately: the 0.9.3 fingerprint test now expects three rule files; the schema-version test expects 9; the version
+test expects 0.9.4; two tests that hand-write a validated record now register the spending run with a stored PASS verdict.
+
 ## 0.9.3 (batch 1b: single-use holdout) — 2026-10-30
 
 Owner's decision: the holdout is **single-use and global**. **Signal engine unchanged: signal-1.7**; no weights,

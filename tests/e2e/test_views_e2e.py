@@ -238,6 +238,8 @@ def test_research_shows_holdout_status_and_a_new_start_once_it_is_spent(browser,
             "Holdout status: untouched (reserved period from 2025-10-29)"
         assert not page.locator("#btNewHoldout").is_visible()
         assert page.locator("#btPeriod option[value='holdout']").text_content() == "holdout (from 2025-10-29)"
+        assert "Only the first holdout run in the current holdout period can lift the NO TRADE gate." in \
+            page.locator("#backtest .card-head p").text_content()                       # 0.9.4 subtitle
 
         spent_at = now_ms() - 3_600_000
         fresh_server.db.register_holdout_run(spent_at, "h" * 16, "c" * 16, "signal-1.7", {}, {}, 7)  # like run #7
