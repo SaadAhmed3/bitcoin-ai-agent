@@ -30,6 +30,7 @@ from services.backtesting import DESIGN_BADGE, FULL_BADGE
 from services.paper_trading import PaperTrading
 from services.forward_tests import ForwardTests
 from services.advanced_analysis import AdvancedAnalysis, apply_sweep_corrections
+from services.no_trade_text import summary as no_trade_summary
 from services.risk_manager import RISK_RANGES, RiskSettings, position_size
 from services.technical_analysis import analyze, chart_series
 from services.assistant import Assistant, AssistantBusy, load_study
@@ -84,6 +85,13 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     app.config["BTC_NEWS"] = news
     signals = signals or SignalService(db, market, news_report=lambda: news.report(hours=72))
     app.config["BTC_SIGNALS"] = signals
+
+    def _with_summary(sig):
+        """Add the one shared plain NO TRADE sentence (Overview, Signal details, alerts, assistant)."""
+        if isinstance(sig, dict) and "no_trade_reasons" in sig:
+            fwd = app.config.get("BTC_FORWARD")
+            sig = {**sig, "no_trade_summary": no_trade_summary(sig.get("no_trade_reasons"), fwd.status() if fwd else None)}
+        return sig
     backtests = backtests or BacktestService(
         db, engine_config=signals.config,
         http_factory=lambda: HttpClient(timeout=config.request_timeout, retries=3, backoff=1.0,
@@ -143,7 +151,7 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
 
     assistant = Assistant(db, ollama, providers={
         "price": market.get_price,
-        "signal": signals.current,
+        "signal": lambda: _with_summary(signals.current()),
         "mtf": _mtf_summary,
         "news": lambda: news.report(hours=72),
         "backtest": _latest_backtest,
@@ -202,7 +210,7 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         "price_1h_ago": _price_1h_ago,
         "news": lambda: news.report(hours=72),
         "volatility": _volatility,
-        "signal": _signal_throttled,
+        "signal": lambda: _with_summary(_signal_throttled()),
         "health": db.get_health,
         "paper": lambda: paper.state(market.get_price()),
     }, clock=now_ms, notifiers=alert_notifiers)
@@ -380,7 +388,7 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     # ---------------------------------------------------------------- signals
     @app.get("/api/signal")
     def signal_current():
-        return jsonify(signals.current())
+        return jsonify(_with_summary(signals.current()))
 
     @app.get("/api/signal/history")
     def signal_history():

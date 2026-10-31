@@ -424,7 +424,9 @@ class AlertService:
         links = [f"/api/signal/{sig['id']}"] if sig.get("id") else ["/#signal"]
         a = self.emit(rule, "info", f"Signal changed: {cur['signal']} ({cur['setup']})",
                       f"Signal {state.get('signal')} / {state.get('setup')} -> {cur['signal']} / {cur['setup']}, "
-                      f"score {sig.get('score')}. Research signal, not financial advice.",
+                      f"score {sig.get('score')}. "
+                      + (f"{sig['no_trade_summary']} " if sig.get("no_trade_summary") else "")
+                      + "Research signal, not financial advice.",
                       f"Final signal or setup differs from the last alerted value (engine {sig.get('engine')})",
                       sig.get("score"), None, "signal engine", links)
         if a:

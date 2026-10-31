@@ -127,7 +127,8 @@ def test_fast_timeframe_switches_end_on_the_last_choice_with_its_overlays(browse
         page.locator("input[data-ov='regime']").check()
         for tf in ("4h", "15m", "1d", "4h"):                                  # quicker than the answers arrive
             page.locator(f"#tfSeg button[data-tf='{tf}']").click()
-        page.wait_for_timeout(2500)
+        page.wait_for_function(f"() => ({TRACES})().includes('Market regime')")     # the 1d labels may come first
+        page.wait_for_timeout(1500)                                            # any late answer would land by now
         step = page.evaluate("() => { const x = document.getElementById('chartBox').data[0].x; "
                              "return Date.parse(x[1]) - Date.parse(x[0]); }")
         assert step == H4                                                      # 4h candles, not a late 1d / 15m answer
