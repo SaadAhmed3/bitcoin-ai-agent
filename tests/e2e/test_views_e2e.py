@@ -335,6 +335,8 @@ def test_research_shows_a_contaminated_holdout_and_asks_for_forward_data(browser
         page.wait_for_selector("#btNewHoldout:not([hidden])")
         assert page.locator("#btHoldoutStatus").text_content() == \
             f"Holdout status: contaminated (seen via full run #{rid} on {day(seen)}), cannot validate"
+        # the run count must not call a contaminated period "untouched"
+        assert page.locator("#btHoldout").text_content() == "Holdout runs made: 0 · period contaminated, cannot validate"
         tomorrow = day((now_ms() // 86_400_000 + 1) * 86_400_000)
         assert page.locator("#btNewHoldoutDate").get_attribute("min") == tomorrow
         assert "Validation now needs forward data" in page.locator("#btNewHoldoutText").text_content()
