@@ -2,6 +2,20 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## 0.9.8 (advanced analysis) — 2026-10-31
+
+Version for everything since 0.9.7: the collapsible sidebar and Forward tests table, and the advanced market analysis
+(regime, liquidity sweeps, volume profile in shadow mode), both described below. **No live-signal change (engine
+signal-1.8).** No holdout run.
+
+- **The design study runs once.** `scripts/research_advanced.py` refuses to run when
+  `data/research_advanced_design.json` (or `.md`) already exists, before computing anything (exit code 2).
+  `--confirm-rerun` runs it again and saves to new timestamped files
+  (`research_advanced_design_rerun-<UTC time>.json/.md`, `-2`, `-3`… within the same second); files are opened
+  create-only, so the original result is never overwritten.
+- Tests (failed before): four new tests in `tests/test_research_advanced.py`; `test_ui_docs`: version 0.9.8
+  (deliberate, from 0.9.7).
+
 ## Advanced market analysis: regime, liquidity sweeps, volume profile (shadow mode) — 2026-10-31
 
 **No live-signal change: engine signal-1.8, its score, weights, thresholds and NO TRADE gates are unchanged.** The

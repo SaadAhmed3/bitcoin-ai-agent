@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 import numpy as np
@@ -80,3 +81,53 @@ def test_forward_returns_never_reach_the_holdout(ra):
     assert c4h["close_time"].iloc[last + 6] < HOLDOUT_START                       # the +6 bar closed before it
     assert np.isnan(r[last + 1:]).all()
     assert r[0] == pytest.approx(c4h["close"].iloc[6] / c4h["close"].iloc[0] - 1)
+
+
+# ---------------------------------------------------------------- the study is run once: a rerun never overwrites it
+@pytest.fixture
+def offline(ra, tmp_path, monkeypatch):
+    """main() with a temporary data folder and a stub study (no database, no real computation)."""
+    calls = []
+    monkeypatch.setattr(ra, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(ra, "load_rows", lambda: {"1h": [], "4h": [], "1d": []})
+    monkeypatch.setattr(ra, "study", lambda *a, **k: calls.append(1) or {"run": len(calls)})
+    monkeypatch.setattr(ra, "markdown", lambda r: f"# run {r['run']}\n")
+    monkeypatch.setattr(ra, "utc_stamp", lambda: "20261031T150000Z")
+    return tmp_path, calls
+
+
+def test_first_run_writes_the_original_files(ra, offline):
+    tmp, calls = offline
+    assert ra.main([]) == 0
+    assert json.loads((tmp / "research_advanced_design.json").read_text()) == {"run": 1}
+    assert (tmp / "research_advanced_design.md").read_text(encoding="utf-8") == "# run 1\n"
+
+
+def test_refuses_to_run_again_without_confirm_rerun(ra, offline, capsys):
+    tmp, calls = offline
+    (tmp / "research_advanced_design.json").write_text('{"original": true}')
+    (tmp / "research_advanced_design.md").write_text("original")
+    assert ra.main([]) == 2
+    assert calls == []                                                   # nothing was computed
+    assert "--confirm-rerun" in capsys.readouterr().out
+    assert (tmp / "research_advanced_design.json").read_text() == '{"original": true}'
+    assert sorted(p.name for p in tmp.iterdir()) == ["research_advanced_design.json", "research_advanced_design.md"]
+
+
+def test_confirmed_rerun_saves_new_timestamped_files_and_keeps_the_original(ra, offline):
+    tmp, calls = offline
+    (tmp / "research_advanced_design.json").write_text('{"original": true}')
+    (tmp / "research_advanced_design.md").write_text("original")
+    assert ra.main(["--confirm-rerun"]) == 0
+    assert ra.main(["--confirm-rerun"]) == 0                            # same second: still a new file
+    assert (tmp / "research_advanced_design.json").read_text() == '{"original": true}'
+    assert (tmp / "research_advanced_design.md").read_text() == "original"
+    assert json.loads((tmp / "research_advanced_design_rerun-20261031T150000Z.json").read_text()) == {"run": 1}
+    assert json.loads((tmp / "research_advanced_design_rerun-20261031T150000Z-2.json").read_text()) == {"run": 2}
+    assert (tmp / "research_advanced_design_rerun-20261031T150000Z-2.md").read_text(encoding="utf-8") == "# run 2\n"
+
+
+def test_a_lone_markdown_original_also_blocks_a_rerun(ra, offline):
+    tmp, calls = offline
+    (tmp / "research_advanced_design.md").write_text("original")
+    assert ra.main([]) == 2 and calls == []

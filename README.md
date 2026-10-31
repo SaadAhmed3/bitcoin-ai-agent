@@ -143,7 +143,8 @@ components (each in -1..+1), the live signal at that time and a "what if" combin
 Nothing reads it back into the signal. It is the forward data for any future, pre-registered test.
 
 Design-data study (run once, pre-registered in [PREREGISTRATION_ADVANCED.md](PREREGISTRATION_ADVANCED.md)):
-`python scripts\research_advanced.py` → `data\research_advanced_design.md`. Design-data evidence only. Result:
+`python scripts\research_advanced.py` → `data\research_advanced_design.md`. Design-data evidence only. The script refuses to run again once
+that result exists; `--confirm-rerun` saves a rerun to new timestamped files and never overwrites it. Result:
 no evidence of added value. The engine makes 5 design trades; the regime and sweep filters each remove the same one
 (+0.6%), the volume-profile and combined filters remove none. In the event study (+6 and +18 4h bars) no regime or
 confirmed-sweep group's 95% CI excludes the average of all bars.
