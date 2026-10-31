@@ -810,6 +810,39 @@
     }
   }
 
+  // Forward paper tests (research-1): read-only; the background monitor starts and advances them.
+  async function loadForward() {
+    let st;
+    try { st = await getJson("/api/forward"); } catch (err) { $("fwdProgress").textContent = "Forward tests unavailable: " + err.message; return; }
+    const sec = $("forward");
+    if (st.state === "not_started") {
+      $("fwdProgress").textContent = "Not started yet: starts at the next UTC midnight after the app's background monitor first runs (python app.py).";
+      $("fwdBody").innerHTML = "";
+      $("fwdFingerprint").textContent = "";
+      sec.dataset.state = "ready";
+      return;
+    }
+    const day = `Day ${st.days_elapsed} of ${st.target_days}`;
+    $("fwdProgress").textContent = `${day} · started ${st.start_date} (UTC)` + (st.waiting_for ? ` · ${st.waiting_for}` : "");
+    const pct = (x) => (x == null ? "no data yet" : fmtPct(x));
+    $("fwdBody").innerHTML = st.strategies.map((s) => {
+      const d = s.last_decision;
+      const last = d ? `${esc(d.date)}: ${d.in_market ? "in" : "out"}` : "none yet";
+      const ev = s.evaluation ? ` · ${esc(s.evaluation.verdict === "NOT YET" ? `verdict after ${st.target_days} days` : s.evaluation.verdict)}` : "";
+      return `<tr data-rule="${esc(s.name)}"><td><b>${esc(s.label)}</b></td><td>${esc(s.role)}${ev}</td>
+        <td>${esc(s.position)}${s.pending ? ` · ${esc(s.pending)}` : ""}</td><td class="mono">${esc(pct(s.net_return_pct))}</td>
+        <td class="mono">${esc(s.max_drawdown_pct == null ? "no data yet" : fmtPct(-s.max_drawdown_pct))}</td>
+        <td class="mono">${esc(s.trades)}</td><td class="mono">${esc(s.time_in_market_pct == null ? "no data yet" : s.time_in_market_pct + "%")}</td>
+        <td>${last}</td></tr>`;
+    }).join("");
+    labelCells($("fwdTable"));
+    const changed = st.strategies.some((s) => s.code_changed);
+    const fp = (st.strategies[0] || {}).fingerprint_at_start || "";
+    $("fwdFingerprint").textContent = `Rule code fingerprint at start: ${fp.slice(0, 16)}…`
+      + (changed ? " · WARNING: the rule code changed since the start; results are no longer a clean test." : " · unchanged since the start.");
+    sec.dataset.state = "ready";
+  }
+
   async function loadBacktest() {
     const st = await loadBacktestStatus();
     if (st && !["starting", "downloading", "running"].includes(st.state)) await loadBacktestResult();
@@ -1405,7 +1438,7 @@
     market: [loadChart, loadAnalysis, loadMtf],
     news: [loadNews, loadCalendar],
     signal: [loadSignal],
-    research: [loadBacktest],
+    research: [loadBacktest, loadForward],
     paper: [loadPaper, loadSignal],
     alerts: [loadAlerts, loadAlertRules],
     assistant: [loadAssistantStatus, loadChatHistory],

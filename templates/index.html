@@ -301,6 +301,21 @@
       <div id="btResult" class="bt-result"><div class="empty">Loading…</div></div>
     </section>
 
+    <section id="forward" class="card" data-views="research" data-state="idle">
+      <div class="card-head">
+        <div><h2>Forward tests</h2>
+          <p class="muted">H1 and H2 run every day on NEW closed daily candles only, next to buy &amp; hold. Simulated: no real orders, no change to the live signal.</p></div>
+        <div class="head-actions"><span class="tag hyp">Simulated</span></div>
+      </div>
+      <p class="small" id="fwdProgress">Loading…</p>
+      <div class="table-wrap"><table class="stack" id="fwdTable">
+        <thead><tr><th>Rule</th><th>Role</th><th>Position</th><th>Net return</th><th>Max drawdown</th><th>Trades</th><th>Time in market</th><th>Last decision</th></tr></thead>
+        <tbody id="fwdBody"></tbody>
+      </table></div>
+      <p class="muted small" id="fwdFingerprint"></p>
+      <p class="muted small">Rules and pass criteria: PREREGISTRATION_H1.md (failed on design data: tracked for information only) and PREREGISTRATION_H2.md (the pre-registered test, judged after 365 days). Decide at the daily close, act at the next open, 0.10% fee + 0.05% slippage per side.</p>
+    </section>
+
     <!-- ============================================================ Paper -->
     <section id="risk" class="grid-2" data-views="paper">
       <article class="card">

@@ -372,7 +372,8 @@ def test_existing_database_upgrades_to_chat_table(tmp_path):
     # Phase 8: the schema became version 6 (alert tables) - deliberate change from "5".
     # 0.9.2: version 7 (holdout_runs) - deliberate change from "6". 0.9.3: version 8 (holdout_start) - from "7".
     # 0.9.4: version 9 (holdout verdict + criteria, write-once) - from "8".
-    assert "chat_messages" in tables and version == "9" and d2.get_setting("keep_me") == {"x": 1}
+    # research-1: version 10 (forward_tests + forward_events, append-only) - from "9".
+    assert "chat_messages" in tables and version == "10" and d2.get_setting("keep_me") == {"x": 1}
     assert {"alerts", "alert_rules", "alert_state", "holdout_runs"} <= tables
     d2.add_chat("user", "hi", 1)
     assert d2.chat_history()[0]["content"] == "hi"

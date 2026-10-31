@@ -290,6 +290,30 @@ def test_settings_shows_the_news_weight_notice_once(browser, fresh_server):
         p.context.close()
 
 
+def test_research_shows_the_forward_tests_panel(browser, fresh_server):
+    """research-1: H1, H2 and buy & hold forward paper tests, with days elapsed of 365 and the rule fingerprint."""
+    import datetime as dt
+    p = Page(browser, fresh_server.url, viewport={"width": 1280, "height": 900})
+    try:
+        page = p.goto("/#/research")
+        page.wait_for_selector("#forward[data-state='ready']")
+        assert page.locator("#fwdProgress").text_content().startswith("Not started yet")
+        info = fresh_server.app.config["BTC_FORWARD"].ensure_started()      # what the background monitor does
+        start = dt.datetime.fromtimestamp(info["start_day"] / 1000, dt.timezone.utc).strftime("%Y-%m-%d")
+        page.reload()
+        page.wait_for_function("() => document.getElementById('fwdProgress').textContent.startsWith('Day 0 of 365')")
+        assert f"started {start} (UTC)" in page.locator("#fwdProgress").text_content()
+        rules = [r.get_attribute("data-rule") for r in page.locator("#fwdBody tr").all()]
+        assert rules == ["H1", "H2", "BH"]
+        h2 = page.locator("#fwdBody tr[data-rule='H2']").text_content()
+        assert "pre-registered forward test" in h2 and "verdict after 365 days" in h2 and "no data yet" in h2
+        assert "failed on design data" in page.locator("#fwdBody tr[data-rule='H1']").text_content()
+        assert "unchanged since the start" in page.locator("#fwdFingerprint").text_content()
+        assert p.errors == []
+    finally:
+        p.context.close()
+
+
 # ------------------------------------------------------------------ placeholders, console, layout
 def visit_every_view(p: Page, open_details: bool = True) -> dict[str, list[str]]:
     page = p.goto("/")

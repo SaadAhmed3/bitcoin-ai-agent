@@ -12,9 +12,10 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
-SCHEMA_VERSION = 9  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
-                    # 7: holdout_runs (0.9.2), 8: holdout_runs.holdout_start (0.9.3),
-                    # 9: holdout_runs.verdict + criteria, write-once triggers (0.9.4).
+SCHEMA_VERSION = 10  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
+                     # 7: holdout_runs (0.9.2), 8: holdout_runs.holdout_start (0.9.3),
+                     # 9: holdout_runs.verdict + criteria, write-once triggers (0.9.4),
+                     # 10: forward_tests + forward_events, append-only (research-1).
                     # Migrations are additive; an upgrade backs the file up first.
 
 SCHEMA = """
@@ -195,6 +196,37 @@ CREATE TABLE IF NOT EXISTS holdout_runs (
     criteria               TEXT                                         -- JSON: thresholds + each criterion's value
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_holdout_first ON holdout_runs (hypothesis_hash) WHERE counts_for_validation = 1;
+
+-- Forward paper tests (research-1): each rule set is registered once with its start day and the SHA-256 of the rule
+-- code; every daily decision, simulated fill and mark is appended. Nothing is ever updated or deleted.
+CREATE TABLE IF NOT EXISTS forward_tests (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    name         TEXT    NOT NULL UNIQUE,
+    rules        TEXT    NOT NULL,
+    fingerprint  TEXT    NOT NULL,
+    start_day    INTEGER NOT NULL,
+    created_at   INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS forward_events (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    test_id      INTEGER NOT NULL REFERENCES forward_tests (id),
+    day          INTEGER NOT NULL,
+    kind         TEXT    NOT NULL CHECK (kind IN ('fill', 'mark', 'decision')),
+    in_market    INTEGER NOT NULL CHECK (in_market IN (0, 1)),
+    price        REAL,
+    equity       REAL,
+    detail       TEXT    NOT NULL,
+    created_at   INTEGER NOT NULL,
+    UNIQUE (test_id, day, kind)
+);
+CREATE TRIGGER IF NOT EXISTS forward_tests_no_update BEFORE UPDATE ON forward_tests
+    BEGIN SELECT RAISE(ABORT, 'forward test rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS forward_tests_no_delete BEFORE DELETE ON forward_tests
+    BEGIN SELECT RAISE(ABORT, 'forward test rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS forward_events_no_update BEFORE UPDATE ON forward_events
+    BEGIN SELECT RAISE(ABORT, 'forward test rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS forward_events_no_delete BEFORE DELETE ON forward_events
+    BEGIN SELECT RAISE(ABORT, 'forward test rows are append-only'); END;
 """
 DEFAULT_HOLDOUT_START = 1_761_696_000_000   # 2025-10-29 00:00 UTC = services.backtesting.HOLDOUT_START (asserted in tests)
 
@@ -439,6 +471,41 @@ class Database:
         with self.connect() as conn:
             conn.execute("UPDATE holdout_runs SET backtest_run_id=? WHERE id=? AND backtest_run_id IS NULL",
                          (backtest_run_id, holdout_id))
+
+    # ---------------------------------------------------------------- forward paper tests (append-only)
+    def forward_start(self, tests: list[dict], created_at: int) -> list[dict]:
+        """Register rule sets once (name is unique; an existing one is never changed)."""
+        with self.connect() as conn:
+            for t in tests:
+                conn.execute("INSERT OR IGNORE INTO forward_tests (name, rules, fingerprint, start_day, created_at) "
+                             "VALUES (?,?,?,?,?)", (t["name"], json.dumps(t["rules"]), t["fingerprint"],
+                                                    t["start_day"], created_at))
+        return self.forward_tests()
+
+    def forward_tests(self) -> list[dict]:
+        with self.connect() as conn:
+            rows = conn.execute("SELECT * FROM forward_tests ORDER BY id").fetchall()
+        return [{**dict(r), "rules": json.loads(r["rules"])} for r in rows]
+
+    def forward_add_events(self, rows: list[dict]) -> int:
+        """Append events; one per (test, day, kind) - reprocessing a day adds nothing. Returns the number added."""
+        added = 0
+        with self.connect() as conn:
+            for r in rows:
+                cur = conn.execute("INSERT OR IGNORE INTO forward_events (test_id, day, kind, in_market, price, "
+                                   "equity, detail, created_at) VALUES (?,?,?,?,?,?,?,?)",
+                                   (r["test_id"], r["day"], r["kind"], int(r["in_market"]), r.get("price"),
+                                    r.get("equity"), json.dumps(r.get("detail") or {}), r["created_at"]))
+                added += cur.rowcount
+        return added
+
+    def forward_events(self, name: str) -> list[dict]:
+        """Events of one rule set in processing order: per day fill, then mark, then decision."""
+        with self.connect() as conn:
+            rows = conn.execute("""SELECT e.* FROM forward_events e JOIN forward_tests t ON t.id = e.test_id
+                                    WHERE t.name = ? ORDER BY e.day, CASE e.kind WHEN 'fill' THEN 0
+                                    WHEN 'mark' THEN 1 ELSE 2 END""", (name,)).fetchall()
+        return [{**dict(r), "in_market": bool(r["in_market"]), "detail": json.loads(r["detail"])} for r in rows]
 
     def holdout_runs(self, limit: int = 50) -> list[dict]:
         with self.connect() as conn:
