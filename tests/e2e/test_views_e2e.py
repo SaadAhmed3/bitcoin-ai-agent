@@ -246,7 +246,8 @@ def test_research_shows_holdout_status_and_a_new_start_once_it_is_spent(browser,
         page.reload()                                                    # same hash: a goto would not reload
         page.wait_for_selector("#btNewHoldout:not([hidden])")
         assert page.locator("#btHoldoutStatus").text_content() == f"Holdout status: spent on {day(spent_at)} by run #7"
-        earliest = day((spent_at // 86_400_000 + 1) * 86_400_000)
+        # 0.9.7 (deliberate): a new holdout must also start after today (forward data only)
+        earliest = day(max((spent_at // 86_400_000 + 1) * 86_400_000, (now_ms() // 86_400_000 + 1) * 86_400_000))
         assert page.locator("#btNewHoldoutDate").get_attribute("min") == earliest
         assert f"on or after {earliest}" in page.locator("#btNewHoldoutText").text_content()
 
@@ -309,6 +310,38 @@ def test_research_shows_the_forward_tests_panel(browser, fresh_server):
         assert "pre-registered forward test" in h2 and "verdict after 365 days" in h2 and "no data yet" in h2
         assert "failed on design data" in page.locator("#fwdBody tr[data-rule='H1']").text_content()
         assert "unchanged since the start" in page.locator("#fwdFingerprint").text_content()
+        assert p.errors == []
+    finally:
+        p.context.close()
+
+
+def test_research_shows_a_contaminated_holdout_and_asks_for_forward_data(browser, fresh_server):
+    """0.9.7: a full run over the holdout (like run #1) contaminates it; Research says so and only allows a new start
+    after today."""
+    import datetime as dt
+    from database import now_ms
+    from services.backtest_service import record_contaminations
+    from services.backtesting import HOLDOUT_START
+
+    def day(ms):
+        return dt.datetime.fromtimestamp(ms / 1000, dt.timezone.utc).strftime("%Y-%m-%d")
+    db, seen = fresh_server.db, now_ms() - 86_400_000
+    rid = db.save_backtest(seen, "signal-1.7", "abc", False, {"period_kind": "full", "period": {
+        "kind": "full", "start": HOLDOUT_START - 1000 * 86_400_000, "end": seen}}, {})
+    record_contaminations(db)                                           # what app start-up does
+    p = Page(browser, fresh_server.url, viewport={"width": 1280, "height": 900})
+    try:
+        page = p.goto("/#/research")
+        page.wait_for_selector("#btNewHoldout:not([hidden])")
+        assert page.locator("#btHoldoutStatus").text_content() == \
+            f"Holdout status: contaminated (seen via full run #{rid} on {day(seen)}), cannot validate"
+        tomorrow = day((now_ms() // 86_400_000 + 1) * 86_400_000)
+        assert page.locator("#btNewHoldoutDate").get_attribute("min") == tomorrow
+        assert "Validation now needs forward data" in page.locator("#btNewHoldoutText").text_content()
+        page.fill("#btNewHoldoutDate", tomorrow)
+        page.click("#btNewHoldoutSet")
+        page.wait_for_function("() => document.getElementById('btNewHoldoutMsg').textContent.startsWith('New holdout period')")
+        assert page.locator("#btHoldoutStatus").text_content() == f"Holdout status: untouched (reserved period from {tomorrow})"
         assert p.errors == []
     finally:
         p.context.close()

@@ -89,3 +89,22 @@ not from skill. Per the project rules, **no profitability claim can be made.**
 4. Minimum 15 holdout trades (existing pre-registered value) — and the report shows the bootstrap CI next to every
    ratio.
 5. Historical performance never implies future returns. Every result page keeps this statement.
+
+## 6. Status after 0.9.7 (2026-10-31): the holdout is contaminated for every rule set
+
+The owner decided that the 2025-10-29 holdout is contaminated for the **live engine** as well, not only for
+trend-following hypotheses: full run #1 replayed the live engine over that year (its sixth trade falls inside it) and
+displayed buy & hold and EMA 50/200 through it.
+
+The app now records this, append-only (`holdout_contaminations`):
+
+- **Status.** The Research view shows "Holdout status: contaminated (seen via full run #1 on 2026-10-29), cannot
+  validate". Existing full runs are found at app start, and any new full run that reaches into the current holdout
+  period contaminates it.
+- **No run counts.** A holdout run in a contaminated period is stored as "not valid for validation: holdout
+  contaminated (…)". A validation record from such a period does not lift NO TRADE.
+- **Validation needs forward data only.** That means the forward paper tracker (`PREREGISTRATION_H2.md`) or a new
+  holdout start **after today**. The NO TRADE reason says so.
+
+The design/holdout split in §1-§5 still describes how the backtester works. For this project's current rules, the
+only clean out-of-sample data is data that does not exist yet.

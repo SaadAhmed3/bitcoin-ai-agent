@@ -2,6 +2,26 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## 0.9.7 (holdout contaminated; forward data only) — 2026-10-31
+
+Owner's decision: the 2025-10-29 holdout is contaminated for the live engine too (full run #1 replayed the live engine
+over that year; its sixth trade is inside it). **No signal rule changed** (only the NO TRADE reason text). **No
+holdout run.**
+
+- **Recorded, append-only** (`holdout_contaminations`, schema 11): at app start every stored full run that reached
+  into a holdout period marks it contaminated (run #1 → the 2025-10-29 holdout); a new full run that reaches into the
+  current holdout period does the same.
+- **Cannot validate.** A contaminated period gets no counting holdout run: runs are stored as "not valid for
+  validation: holdout contaminated (seen via full run #N on <date>)" (badge "HOLDOUT CONTAMINATED"), and a stored
+  validation from that period does not lift NO TRADE.
+- **Forward data only.** A new holdout start must be **after today** (and after any spending run). The Research view
+  shows "Holdout status: contaminated (seen via full run #1 on 2026-10-29), cannot validate" with the new-start box;
+  the NO TRADE reason says "validation now needs forward data (Research -> Forward tests, or a new holdout start after
+  today)".
+- Docs: README, USER_GUIDE, BACKTEST_VALIDATION_REPORT updated. Manual DB backup made before the schema change.
+- Tests: new `tests/test_holdout_contamination.py` (8) and an e2e test, shown failing first. Updated deliberately: the
+  schema-version test (11) and the 0.9.3 holdout e2e test (a new start must now also be after today).
+
 ## 0.9.6 (research-1: H1/H2 and forward tests) — 2026-10-31
 
 **No live-signal change (engine signal-1.8). No holdout run.** Research only, simulated only.
