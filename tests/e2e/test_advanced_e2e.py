@@ -21,7 +21,9 @@ def test_market_view_shows_the_three_panels_as_context(browser, live_server, the
         assert card.locator("h2").first.text_content() == "Advanced market analysis"
         assert "Context, not part of the score" in card.text_content()
         assert page.locator("#advRegime .adv-label").text_content() in REGIMES
-        assert "/ 100" in page.locator("#advRegime").text_content()                  # confidence, heuristic
+        conf = page.locator("#advRegime .adv-conf")
+        assert "/ 100 · " in conf.text_content() and conf.text_content().endswith("checks")   # heuristic + basis
+        assert conf.get_attribute("title").startswith("Heuristic, not a probability")
         assert page.locator("#advSweep").text_content().strip()
         vp = page.locator("#advProfile").text_content()
         for k in ("POC", "VAH", "VAL", "$"):

@@ -151,3 +151,39 @@ def test_statuses_and_score_window():
     assert sweep_score(df, [e], ct(J + 5)) == pytest.approx(-e["strength"] / 100)    # bearish evidence
     assert sweep_score(df, [e], ct(J + 4)) == 0                                       # only potential at that time
     assert sweep_score(df, [e], ct(J + 12)) == 0                                      # older than 6 bars
+
+
+# ---------------------------------------------------------------- real-data review (0.9.8): one move, one event
+def real_candles() -> pd.DataFrame:
+    import json
+    from pathlib import Path
+    data = json.loads((Path(__file__).parent / "fixtures" / "btc_4h_sweep_2026-10.json").read_text())
+    return pd.DataFrame(data["rows"])
+
+
+def test_real_candles_one_buy_side_sweep_at_81823_not_two():
+    # 2026-10-29 12:00 UTC: wick to 81,900 above the 81,823 swing high, close back below -> POTENTIAL.
+    # 16:00 UTC: a higher wick (81,971) while that event is still open: the same move, not a second sweep.
+    ev = [e for e in detect_sweeps(real_candles()) if e["direction"] == "buy_side" and e["level"] == 81823.0]
+    assert len(ev) == 1
+    e = ev[0]
+    utc = lambda ms: pd.Timestamp(ms, unit="ms", tz="UTC").strftime("%m-%d %H:%M")  # noqa: E731
+    assert utc(e["event_time"]) == "10-29 15:59" and e["sweep_extreme"] == 81971.0
+    assert [(u["status"], utc(u["at"])) for u in e["updates"]] == [
+        ("POTENTIAL SWEEP", "10-29 15:59"), ("CONFIRMED SWEEP", "10-29 23:59"), ("RECLAIM CONFIRMED", "10-30 03:59")]
+
+
+def test_a_level_with_an_open_event_is_not_swept_again_until_the_event_closes():
+    # each poke wicks a little higher (a new extreme of the open event) but stays within 0.1 x ATR of the level, so
+    # the level is still "untaken"; it must not start a second event while the first is open
+    poke = lambda hi: (100.0, hi, 99.8, 101.0, 150.0)  # noqa: E731
+    first = (100.0, 102.06, 99.8, 101.0, 200.0)
+    df = build([SWING_HIGH, BASE, BASE, BASE, first, poke(102.07), poke(102.08), poke(102.09), BASE])
+    ev = events(df)
+    assert len(ev) == 1 and ev[0]["updates"][-1]["status"] == "NO CONFIRMATION"
+    assert ev[0]["updates"][-1]["at"] == ct(J + 7)
+    # once the first event is closed, a later poke at the same level is a new event
+    later = build([SWING_HIGH, BASE, BASE, BASE, first, poke(102.07), poke(102.08), poke(102.09), poke(102.10),
+                   (101.0, 101.5, 100.0, 100.5, 100.0)])
+    ev = events(later)
+    assert [e["event_time"] for e in ev] == [ct(J + 4), ct(J + 8)]
