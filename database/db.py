@@ -12,10 +12,11 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
-SCHEMA_VERSION = 10  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
+SCHEMA_VERSION = 11  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
                      # 7: holdout_runs (0.9.2), 8: holdout_runs.holdout_start (0.9.3),
                      # 9: holdout_runs.verdict + criteria, write-once triggers (0.9.4),
-                     # 10: forward_tests + forward_events, append-only (research-1).
+                     # 10: forward_tests + forward_events, append-only (research-1),
+                     # 11: holdout_contaminations, append-only (0.9.7).
                     # Migrations are additive; an upgrade backs the file up first.
 
 SCHEMA = """
@@ -227,6 +228,21 @@ CREATE TRIGGER IF NOT EXISTS forward_events_no_update BEFORE UPDATE ON forward_e
     BEGIN SELECT RAISE(ABORT, 'forward test rows are append-only'); END;
 CREATE TRIGGER IF NOT EXISTS forward_events_no_delete BEFORE DELETE ON forward_events
     BEGIN SELECT RAISE(ABORT, 'forward test rows are append-only'); END;
+
+-- A holdout period whose results were displayed before any holdout run (e.g. by a full-period backtest) is
+-- contaminated: no run in it may count for validation (0.9.7). Recorded once per period, never changed.
+CREATE TABLE IF NOT EXISTS holdout_contaminations (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    holdout_start    INTEGER NOT NULL UNIQUE,
+    reason           TEXT    NOT NULL,
+    seen_via_run_id  INTEGER,
+    seen_at          INTEGER NOT NULL,
+    created_at       INTEGER NOT NULL
+);
+CREATE TRIGGER IF NOT EXISTS holdout_contaminations_no_update BEFORE UPDATE ON holdout_contaminations
+    BEGIN SELECT RAISE(ABORT, 'holdout contamination rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS holdout_contaminations_no_delete BEFORE DELETE ON holdout_contaminations
+    BEGIN SELECT RAISE(ABORT, 'holdout contamination rows are append-only'); END;
 """
 DEFAULT_HOLDOUT_START = 1_761_696_000_000   # 2025-10-29 00:00 UTC = services.backtesting.HOLDOUT_START (asserted in tests)
 
@@ -423,14 +439,36 @@ class Database:
                 """INSERT INTO holdout_runs (created_at, hypothesis_hash, config_hash, engine, settings, result,
                                              backtest_run_id, holdout_start, verdict, criteria, counts_for_validation)
                    VALUES (?,?,?,?,?,?,?,?,?,?, NOT EXISTS (SELECT 1 FROM holdout_runs
-                                                            WHERE holdout_start=? AND counts_for_validation=1))""",
+                                                            WHERE holdout_start=? AND counts_for_validation=1)
+                                                AND NOT EXISTS (SELECT 1 FROM holdout_contaminations
+                                                                WHERE holdout_start=?))""",
                 (created_at, hypothesis, config_hash, engine, json.dumps(settings), json.dumps(result),
                  backtest_run_id, holdout_start, verdict, None if criteria is None else json.dumps(criteria),
-                 holdout_start))
+                 holdout_start, holdout_start))
             rid = int(cur.lastrowid)
             row = conn.execute("SELECT counts_for_validation FROM holdout_runs WHERE id=?", (rid,)).fetchone()
             spender = self._spender(conn, holdout_start)
-        return {"id": rid, "counts_for_validation": bool(row[0]), "first_run_id": spender["id"], "spender": spender}
+            contamination = self._contamination(conn, holdout_start)
+        return {"id": rid, "counts_for_validation": bool(row[0]), "first_run_id": spender["id"] if spender else None,
+                "spender": spender, "contamination": contamination}
+
+    @staticmethod
+    def _contamination(conn, holdout_start: int) -> dict | None:
+        row = conn.execute("SELECT * FROM holdout_contaminations WHERE holdout_start=?", (holdout_start,)).fetchone()
+        return dict(row) if row else None
+
+    def holdout_contamination(self, holdout_start: int) -> dict | None:
+        with self.connect() as conn:
+            return self._contamination(conn, holdout_start)
+
+    def mark_holdout_contaminated(self, holdout_start: int, reason: str, seen_via_run_id: int | None, seen_at: int,
+                                  created_at: int) -> bool:
+        """Record once that a holdout period's results were seen before a holdout run. Returns True if new."""
+        with self.connect() as conn:
+            cur = conn.execute("INSERT OR IGNORE INTO holdout_contaminations (holdout_start, reason, seen_via_run_id, "
+                               "seen_at, created_at) VALUES (?,?,?,?,?)",
+                               (holdout_start, reason, seen_via_run_id, seen_at, created_at))
+            return cur.rowcount == 1
 
     @staticmethod
     def _spender(conn, holdout_start: int) -> dict | None:
@@ -457,11 +495,13 @@ class Database:
         """Status of one holdout period: untouched, or spent on <date> by run #N; plus the runs made in it."""
         with self.connect() as conn:
             spender = self._spender(conn, holdout_start)
+            contamination = self._contamination(conn, holdout_start)
             row = conn.execute("""SELECT COUNT(*) made, COALESCE(SUM(counts_for_validation), 0) counted
                                   FROM holdout_runs WHERE holdout_start=?""", (holdout_start,)).fetchone()
         out = {"start": holdout_start, "status": "spent" if spender else "untouched",
                "made": int(row["made"]), "counted": int(row["counted"]),
-               "spent_at": None, "spent_by_run": None, "spent_by_holdout_run": None, "verdict": None}
+               "spent_at": None, "spent_by_run": None, "spent_by_holdout_run": None, "verdict": None,
+               "contamination": contamination}
         if spender:
             out.update(spent_at=spender["created_at"], spent_by_holdout_run=spender["id"],
                        spent_by_run=spender["backtest_run_id"], verdict=spender["verdict"])

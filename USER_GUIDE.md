@@ -205,7 +205,7 @@ reason that applies. You will see it most of the time, which is intended.
 
 | Reason you might see | What it means | What you can do |
 |---|---|---|
-| "Not validated: no holdout run yet …" | The strategy has not passed its out-of-sample test. | Nothing to fix: this is the main reason today. See [Backtesting](#6-backtesting). |
+| "Not validated: the holdout from 2025-10-29 is contaminated …; validation now needs forward data" | The holdout's results were already seen (a full backtest showed them), so it cannot test the strategy. | Nothing to fix: this is the main reason today. Validation needs new data: see [Backtesting](#6-backtesting) and Research → Forward tests. |
 | "BTC price is stale" / "No current BTC price" | The exchange has not answered recently. | Check your internet; see System & sources. |
 | "Price sources disagree by 0.8% after USDT-to-USD conversion …" | Binance (in USDT, converted to USD with the USDT-USD rate) and Coinbase (in USD) show different prices; one may be wrong or delayed. The raw prices, the rate and the gap are shown. | Wait; it usually clears within minutes. The limit (default 0.5%) is in Settings → Signal. |
 | "1h candles are stale …" / "… missing candles" | Some chart data is old or has holes. | Usually clears on the next update. |
@@ -240,12 +240,23 @@ trades it would have made (including fees and slippage). Results are **hypotheti
 |---|---|---|
 | **design** | History up to the holdout start. Use it to explore. | Never |
 | **full** | Everything. An overview that includes the design data. | Never |
-| **holdout** | The reserved period (from 2025-10-29) that has never been used to choose rules. | Only the **first** holdout run |
+| **holdout** | A reserved period whose results nobody has seen. | Only the **first** holdout run, and only if the period is not contaminated |
 
 The holdout is **single-use**: the first holdout run, whatever its rules, uses it up ("spent"). Later holdout runs
-are stored but marked "not valid for validation". The Research view shows **Holdout status: untouched** or
-**spent on <date> by run #N**. After it is spent, a different set of rules can only be tested on **new** data: set a
-new holdout start (after the spent period) in the box that appears, and wait for enough new data.
+are stored but marked "not valid for validation".
+
+A holdout is also used up the moment its results are **seen** some other way. A **full** run shows performance
+through the holdout period, so the app marks that period **contaminated** and no run in it can ever count. This has
+happened to the original holdout (from 2025-10-29): full run #1 showed the signal and the simple baselines over that
+year. The Research view therefore shows **Holdout status: contaminated (seen via full run #1 on <date>), cannot
+validate**.
+
+So any rule set can now only be validated on **forward** data, data that did not exist when the rules were written:
+
+- the **Forward tests** panel in Research (H1, H2 and buy & hold, judged after 365 days), or
+- a **new holdout start after today**, set in the box that appears under the holdout status. Then wait for enough
+  new data, and do not run a **full** backtest in the meantime: one that reaches into the new period contaminates it
+  too.
 
 The app also records a fingerprint of the rule code and the PASS/FAIL verdict at the time of the run. Editing the
 code or relaxing the pass criteria later cannot turn a failed test into a pass.

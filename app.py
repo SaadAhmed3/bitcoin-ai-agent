@@ -25,7 +25,7 @@ from services.news_collector import FEEDS, NewsCollector
 from services.news_service import NewsService
 from services.signal_engine import DEFAULT_WEIGHTS, ENGINE_VERSION, WEIGHT_RATIONALE
 from services.signal_service import RANGES as SIGNAL_RANGES, SignalService
-from services.backtest_service import BacktestService, current_validation
+from services.backtest_service import BacktestService, current_validation, record_contaminations
 from services.backtesting import DESIGN_BADGE, FULL_BADGE
 from services.paper_trading import PaperTrading
 from services.forward_tests import ForwardTests
@@ -43,7 +43,7 @@ from services import security
 from services.security import MAX_BODY_BYTES
 from werkzeug.exceptions import HTTPException
 
-APP_VERSION = "0.9.6 (research-1: forward tests)"
+APP_VERSION = "0.9.7 (holdout contaminated)"
 DOC_FILES = ("README.md", "USER_GUIDE.md", "SECURITY.md", "CHANGELOG.md")   # served read-only at /docs/<name>
 SIGNAL_STALE_WARNING = ("Changing these makes the current validation stale; the signal stays NO TRADE until a new "
                         "backtest validates the new settings.")
@@ -88,6 +88,8 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         http_factory=lambda: HttpClient(timeout=config.request_timeout, retries=3, backoff=1.0,
                                         min_interval=0.3, user_agent=config.user_agent))
     app.config["BTC_BACKTESTS"] = backtests
+    # 0.9.7: a stored full run that reached into a holdout period makes that period contaminated (append-only).
+    record_contaminations(db)
     def _price_at_day_open(ts: int) -> float | None:
         """BTC price at 00:00 UTC: the stored 1h candle opening then, else a price snapshot within 10 minutes."""
         for p in market.providers:

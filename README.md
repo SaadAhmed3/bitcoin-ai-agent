@@ -15,7 +15,7 @@ signal and NO TRADE mean.
 |---|---|
 | App version | 0.9.5 (batch 2: data checks) |
 | Signal engine | **signal-1.8** |
-| Validation | Not validated. Reserved holdout (from 2025-10-29): **untouched** |
+| Validation | Not validated. The 2025-10-29 holdout is **contaminated** (seen via full run #1), so validation needs **forward data** only |
 | Platform | Windows 10/11, Python 3.12+ (tested on 3.14.6), runs on `http://127.0.0.1:5000` |
 
 ## Quick start (PowerShell)
@@ -98,12 +98,17 @@ close, fills at the next open, stop assumed first when a candle touches both, co
 |---|---|---|
 | design (to the holdout start) | developing and comparing rules | never |
 | full | informational overview (includes design data) | never |
-| holdout (from 2025-10-29) | one pre-registered test | only the **first** holdout run in the period |
+| holdout (from its start) | one pre-registered test | only the **first** holdout run in a period that is **not contaminated** |
 
 - **Single-use holdout.** The first holdout run in a holdout period, whatever its rules, spends the period. Later
   runs are stored and labelled "not valid for validation: holdout already spent on <date>, run #N".
-- **New holdout start.** After the holdout is spent, a different rule set can only be tested on a new holdout that
-  starts after the spending run (forward data only), set in the Research view.
+- **Contaminated holdout (0.9.7).** A full-period run displays results through the holdout, so the period can no
+  longer test anything: it is recorded as **contaminated** (append-only) and no run in it counts. The Research view
+  shows "contaminated (seen via full run #N on <date>), cannot validate". **The original 2025-10-29 holdout is
+  contaminated**: full run #1 (the live engine and its baselines) covered it, and its sixth trade fell inside it.
+- **Validation needs forward data only.** Either the forward paper tests (Research → Forward tests,
+  `PREREGISTRATION_H2.md`) or a **new holdout start after today**, set in the Research view once the current holdout is
+  spent or contaminated. Any later full run that reaches into that new period contaminates it too.
 - **Rule-set fingerprint.** Each run records the settings plus a SHA-256 of `signal_engine.py`,
   `technical_analysis.py` and `backtesting.py`. A validation counts only while that fingerprint matches the code
   that is running.

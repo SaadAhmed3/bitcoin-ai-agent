@@ -790,20 +790,23 @@
   // holdout start after it (forward data only).
   function renderHoldout(h) {
     if (!h) return;
-    const spent = h.status === "spent";
-    $("btHoldoutStatus").textContent = `Holdout status: ${h.label}` + (spent ? "" : ` (reserved period from ${fmtD(h.start)})`);
+    const spent = h.status === "spent", contaminated = h.status === "contaminated";
+    $("btHoldoutStatus").textContent = `Holdout status: ${h.label}` + (h.status === "untouched" ? ` (reserved period from ${fmtD(h.start)})` : "");
     $("btHoldout").textContent = `Holdout runs made: ${h.made}` + (h.made
       ? ` · ${h.counted} counted for validation (only the first run in a holdout period counts, whatever its rules; later runs are stored, not valid for validation)`
       : " · the reserved holdout period is untouched");
     $("btPeriod").querySelector("option[value='holdout']").textContent = `holdout (from ${fmtD(h.start)})`;
     $("btPeriod").querySelector("option[value='design']").textContent = `design (to ${fmtD(h.start)})`;
     const box = $("btNewHoldout");
-    box.hidden = !spent;
-    if (spent) {
+    box.hidden = !(spent || contaminated);
+    if (spent || contaminated) {
       const earliest = fmtD(h.earliest_new_start);
-      $("btNewHoldoutText").textContent = `The holdout from ${fmtD(h.start)} is spent (${h.label}). To validate a different `
-        + `rule set you need fresh data: set a new holdout start on or after ${earliest}. Only data from that day on is `
-        + "used for the holdout; design runs then extend up to the new start.";
+      $("btNewHoldoutText").textContent = contaminated
+        ? `The holdout from ${fmtD(h.start)} is ${h.label}. Validation now needs forward data: see Forward tests below, `
+          + `or set a new holdout start on or after ${earliest} (after today) and wait for enough new data.`
+        : `The holdout from ${fmtD(h.start)} is spent (${h.label}). To validate a different `
+          + `rule set you need fresh data: set a new holdout start on or after ${earliest}. Only data from that day on is `
+          + "used for the holdout; design runs then extend up to the new start.";
       const input = $("btNewHoldoutDate");
       input.min = earliest;
       if (!input.value || input.value < earliest) input.value = earliest;

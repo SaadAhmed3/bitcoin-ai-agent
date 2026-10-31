@@ -17,6 +17,8 @@ from services.signal_engine import DAY_MS, ENTRY_MODES, FORWARD_OBSERVATION_DAYS
 PROVIDER, SYMBOL = "binance", "BTCUSDT"
 WARMUP_YEARS = 1.5   # the daily timeframe needs ~500 closed candles before the first decision
 SPENT_BADGE = "HOLDOUT SPENT - not valid for validation"
+CONTAMINATED_BADGE = "HOLDOUT CONTAMINATED - not valid for validation"
+CONTAMINATION_REASON = "a full-period backtest displayed results through the holdout period"
 
 
 class BacktestService:
@@ -39,17 +41,17 @@ class BacktestService:
         with self._lock:
             out = dict(self.state)
         out["history"] = {tf: self.db.candle_span(PROVIDER, SYMBOL, tf) for tf in ("1h", "4h", "1d")}
-        out["holdout"] = holdout_status(self.db)
+        out["holdout"] = holdout_status(self.db, self.clock())
         return out
 
     # ------------------------------------------------------------------ the single-use holdout (0.9.3)
     def set_holdout_start(self, value) -> dict:
-        """Start a NEW holdout period. Only allowed once the current one is spent, and only from the day after the
-        run that spent it: the new holdout must be forward data that no rule choice has seen."""
-        st = holdout_status(self.db)
-        if st["status"] != "spent":
+        """Start a NEW holdout period. Only allowed once the current one is spent or contaminated, and only after
+        today (and after the spending run): the new holdout must be forward data that no rule choice has seen."""
+        st = holdout_status(self.db, self.clock())
+        if st["status"] not in ("spent", "contaminated"):
             raise ValueError(f"The current holdout (from {_utc_date(st['start'])}) is untouched: use it. A new holdout "
-                             "start can only be set after it has been spent.")
+                             "start can only be set after it has been spent or contaminated.")
         if not isinstance(value, str):
             raise ValueError("start must be a date string YYYY-MM-DD (UTC)")
         try:
@@ -58,14 +60,16 @@ class BacktestService:
             raise ValueError("start must be a date string YYYY-MM-DD (UTC)") from None
         start = int(day.timestamp() * 1000)
         if start < st["earliest_new_start"]:
-            raise ValueError(f"The new holdout must begin after the spent period: on or after "
-                             f"{_utc_date(st['earliest_new_start'])} (the holdout from {_utc_date(st['start'])} was "
+            after = "the spent period" if st["status"] == "spent" else "today (forward data only)"
+            raise ValueError(f"The new holdout must begin after {after}: on or after "
+                             f"{_utc_date(st['earliest_new_start'])} (the holdout from {_utc_date(st['start'])} is "
                              f"{st['label']}).")
         stored = self.db.get_setting("holdout_period") or {}
-        previous = list(stored.get("previous") or []) + [{"start": st["start"], "spent_at": st["spent_at"],
-                                                           "spent_by_run": st["spent_by_run"]}]
+        previous = list(stored.get("previous") or []) + [{
+            "start": st["start"], "spent_at": st["spent_at"], "spent_by_run": st["spent_by_run"],
+            "contaminated": contamination_text(st["contamination"]) if st["contamination"] else None}]
         self.db.set_setting("holdout_period", {"start": start, "set_at": self.clock(), "previous": previous})
-        return holdout_status(self.db)
+        return holdout_status(self.db, self.clock())
 
     def _set(self, **kw) -> None:
         with self._lock:
@@ -151,8 +155,14 @@ class BacktestService:
                                      "verdict": verdict, "criteria": criteria_used}
                 if not holdout["counts_for_validation"]:
                     result["validated"] = False
-                    result["period_badge"] = SPENT_BADGE
-                    result["verdict"] = (f"Stored for review, {spent_label(holdout['spender'])}. {criteria_passed} of "
+                    if holdout.get("contamination"):
+                        result["period_badge"] = CONTAMINATED_BADGE
+                        why = ("not valid for validation: holdout contaminated "
+                               f"({contamination_text(holdout['contamination'])})")
+                    else:
+                        result["period_badge"] = SPENT_BADGE
+                        why = spent_label(holdout["spender"])
+                    result["verdict"] = (f"Stored for review, {why}. {criteria_passed} of "
                                          f"{len(result['criteria'])} criteria passed.")
             else:
                 result["validated"] = False   # design and full runs include in-sample data: never a validation
@@ -167,6 +177,10 @@ class BacktestService:
                                            bool(result["validated"]), summary, result)
             if holdout:
                 self.db.link_holdout_run(holdout["id"], run_id)
+            if cfg.period == "full" and _period_end(result.get("period"), self.clock()) >= cfg.holdout_start:
+                # A full run DISPLAYS results through the holdout: that period can no longer test anything (0.9.7).
+                self.db.mark_holdout_contaminated(cfg.holdout_start, CONTAMINATION_REASON, run_id, self.clock(),
+                                                  self.clock())
             # Only the run that spent the holdout period becomes the validation record the NO TRADE gate reads.
             if holdout and holdout["counts_for_validation"]:
                 self.db.set_setting("strategy_validation", {
@@ -208,19 +222,54 @@ def spent_label(spender: dict) -> str:
     return f"not valid for validation: holdout already spent on {_utc_date(spender['created_at'])}, {run}"
 
 
-def holdout_status(db: Database) -> dict:
-    """The current holdout period: untouched, or spent on <date> by run #N - then a new start may be set, from the
-    day after the spending run (forward data only)."""
+def contamination_text(c: dict) -> str:
+    run = f"full run #{c['seen_via_run_id']}" if c.get("seen_via_run_id") else "a full run"
+    return f"seen via {run} on {_utc_date(c['seen_at'])}"
+
+
+def _period_end(period: dict | None, fallback: int) -> int:
+    return int((period or {}).get("end") or fallback)
+
+
+def holdout_status(db: Database, now: int | None = None) -> dict:
+    """The current holdout period: untouched; spent on <date> by run #N; or contaminated (its results were displayed
+    before any holdout run) - then it can never validate. A new start may be set once it is spent or contaminated,
+    only after today (forward data only) and after the spending run."""
+    now = now_ms() if now is None else now
     start = current_holdout_start(db)
     st = db.holdout_state(start)
     st["previous"] = (db.get_setting("holdout_period") or {}).get("previous") or []
-    if st["status"] == "spent":
+    tomorrow = (now // DAY_MS + 1) * DAY_MS
+    if st["contamination"]:
+        st["status"] = "contaminated"
+        st["label"] = f"contaminated ({contamination_text(st['contamination'])}), cannot validate"
+        st["earliest_new_start"] = max(tomorrow, (max(start, st["spent_at"] or 0) // DAY_MS + 1) * DAY_MS)
+    elif st["status"] == "spent":
         run = st["spent_by_run"] or f"{st['spent_by_holdout_run']} (holdout registry)"
         st["label"] = f"spent on {_utc_date(st['spent_at'])} by run #{run}"
-        st["earliest_new_start"] = (max(start, st["spent_at"]) // DAY_MS + 1) * DAY_MS
+        st["earliest_new_start"] = max(tomorrow, (max(start, st["spent_at"]) // DAY_MS + 1) * DAY_MS)
     else:
         st["label"], st["earliest_new_start"] = "untouched", None
     return st
+
+
+def record_contaminations(db: Database, now: int | None = None) -> int:
+    """Mark every known holdout period that a stored FULL run reached into as contaminated (oldest run first, so the
+    first run to display it is the one recorded). Runs at app start; idempotent. Returns the number newly marked."""
+    now = now_ms() if now is None else now
+    hp = db.get_setting("holdout_period") or {}
+    starts = sorted({HOLDOUT_START, current_holdout_start(db)} | {int(p["start"]) for p in hp.get("previous") or []})
+    added = 0
+    for r in sorted(db.backtest_runs(1_000_000), key=lambda x: x["id"]):
+        summary = r.get("summary") or {}
+        kind = summary.get("period_kind") or (summary.get("period") or {}).get("kind") or "full"   # pre-6.2: full
+        if kind != "full":
+            continue
+        end = _period_end(summary.get("period"), r["created_at"])
+        for start in starts:
+            if end >= start and db.mark_holdout_contaminated(start, CONTAMINATION_REASON, r["id"], r["created_at"], now):
+                added += 1
+    return added
 
 
 def current_validation(db: Database, engine_cfg) -> dict:
@@ -228,12 +277,21 @@ def current_validation(db: Database, engine_cfg) -> dict:
     rule code and the run that actually spent its holdout period - whose verdict, stored write-once at run time,
     decides (the record's own 'validated' flag is never trusted on its own)."""
     stored = db.get_setting("strategy_validation")
-    spender, verdict = None, None
+    spender, verdict, contaminated = None, None, None
     if stored and stored.get("validated"):
         st = db.holdout_state(int(stored.get("holdout_start") or HOLDOUT_START))
-        spender, verdict = st["spent_by_holdout_run"], st["verdict"]
-    return effective_validation(stored, engine_cfg, spender_id=spender, fingerprint=code_fingerprint(),
-                                check_spender=True, spender_verdict=verdict)
+        spender, verdict, contaminated = st["spent_by_holdout_run"], st["verdict"], st["contamination"]
+    out = effective_validation(stored, engine_cfg, spender_id=spender, fingerprint=code_fingerprint(),
+                               check_spender=True, spender_verdict=verdict)
+    if contaminated and out.get("validated"):
+        out = {**out, "validated": False, "observation_until": None,
+               "note": f"Not counted: its holdout period is contaminated ({contamination_text(contaminated)})."}
+    current = holdout_status(db)
+    if current["contamination"] and not out.get("validated"):
+        # The NO TRADE reason then says why no holdout run can help: validation needs forward data (0.9.7).
+        out = {**out, "holdout_contaminated": {"start_date": _utc_date(current["start"]),
+                                               "seen": contamination_text(current["contamination"])}}
+    return out
 
 
 def effective_validation(stored: dict | None, engine_cfg, spender_id: int | None = None,

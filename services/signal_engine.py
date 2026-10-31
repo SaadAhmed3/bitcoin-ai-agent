@@ -605,6 +605,11 @@ def validation_reason(validation: dict | None, now_ms: int | None = None) -> str
     if now_ms is not None and in_forward_observation(v, now_ms):
         return (f"Validated on {_utc_date(v['as_of'])}; forward observation period until "
                 f"{_utc_date(v['observation_until'])}.")
+    if v.get("holdout_contaminated"):
+        # 0.9.7: the current holdout's results were displayed before any holdout run, so no run in it can validate.
+        c = v["holdout_contaminated"]
+        return (f"Not validated: the holdout from {c['start_date']} is contaminated ({c['seen']}); validation now needs "
+                "forward data (Research -> Forward tests, or a new holdout start after today).")
     # Records written before Phase 6.2 have no period / entry mode: those runs were full-period, standard entry.
     period = v.get("period_kind") or (v.get("period") or {}).get("kind") or "full"
     if v.get("run_id") and period != "holdout":
