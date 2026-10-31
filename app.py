@@ -44,7 +44,7 @@ from services import security
 from services.security import MAX_BODY_BYTES
 from werkzeug.exceptions import HTTPException
 
-APP_VERSION = "0.9.7 (holdout contaminated)"
+APP_VERSION = "0.9.8 (advanced analysis)"
 DOC_FILES = ("README.md", "USER_GUIDE.md", "SECURITY.md", "CHANGELOG.md")   # served read-only at /docs/<name>
 SIGNAL_STALE_WARNING = ("Changing these makes the current validation stale; the signal stays NO TRADE until a new "
                         "backtest validates the new settings.")

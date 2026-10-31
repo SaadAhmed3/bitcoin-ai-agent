@@ -7,10 +7,13 @@ and no holdout candle is used (asserted). The live signal (signal-1.8) is not to
 
 Usage (from the project folder, .venv active):
     python scripts\\research_advanced.py
-Writes data\\research_advanced_design.json and data\\research_advanced_design.md.
+Writes data\\research_advanced_design.json and data\\research_advanced_design.md. The study is run ONCE: if either
+file exists the script refuses to run. `--confirm-rerun` runs it again and saves to new timestamped files
+(research_advanced_design_rerun-<UTC time>.json/.md); the original result is never overwritten.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import sys
@@ -45,6 +48,8 @@ VARIANTS: dict[str, dict[str, float]] = {
 HORIZONS = (6, 18)
 BOOT_RUNS, BOOT_SEED = 2000, 7
 LABEL = "design-data evidence only"
+DATA_DIR = ROOT / "data"
+STEM = "research_advanced_design"
 
 
 def combined(score: float, comps: dict[str, float], weights: dict[str, float]) -> float:
@@ -249,19 +254,57 @@ def markdown(r: dict) -> str:
     return "\n".join(L)
 
 
-def main() -> int:
-    cfg = Config()
-    db = Database(cfg.db_path, read_only=True)
-    rows = {tf: db.get_candles_range(PROVIDER, SYMBOL, tf) for tf in ("1h", "4h", "1d")}
+def utc_stamp() -> str:
+    return time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+
+
+def output_paths(confirm_rerun: bool) -> tuple[Path, Path]:
+    """The original files on the first run. After that: refuse (FileExistsError) unless confirm_rerun, then new
+    timestamped files that never replace an existing one."""
+    original = (DATA_DIR / f"{STEM}.json", DATA_DIR / f"{STEM}.md")
+    if not any(p.exists() for p in original):
+        return original
+    if not confirm_rerun:
+        raise FileExistsError(
+            f"{original[0].name} already exists: this pre-registered study is run once. Nothing was run. "
+            "Use --confirm-rerun to run it again; the rerun is saved to new timestamped files and the original is "
+            "kept unchanged.")
+    base, n = f"{STEM}_rerun-{utc_stamp()}", 1
+    while True:
+        name = base if n == 1 else f"{base}-{n}"
+        paths = (DATA_DIR / f"{name}.json", DATA_DIR / f"{name}.md")
+        if not any(p.exists() for p in paths):
+            return paths
+        n += 1
+
+
+def load_rows() -> dict[str, list[dict]]:
+    db = Database(Config().db_path, read_only=True)
+    return {tf: db.get_candles_range(PROVIDER, SYMBOL, tf) for tf in ("1h", "4h", "1d")}
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description="Pre-registered design-data study (run once).")
+    ap.add_argument("--confirm-rerun", action="store_true",
+                    help="run again although a result exists; saves to new timestamped files")
+    args = ap.parse_args(argv)
+    try:
+        out_json, out_md = output_paths(args.confirm_rerun)      # decided before any computation
+    except FileExistsError as exc:
+        print(exc)
+        return 2
+    rows = load_rows()
     t0 = time.time()
     r = study(rows["1h"], rows["4h"], rows["1d"],
               progress=lambda f, m: print(f"\r{m}  ({time.time() - t0:.0f}s)", end="", flush=True))
     print()
-    out = ROOT / "data" / "research_advanced_design.json"
-    out.write_text(json.dumps(r, indent=1, default=float))
-    (ROOT / "data" / "research_advanced_design.md").write_text(markdown(r), encoding="utf-8")
+    # "x": create only - even a file that appeared meanwhile is never overwritten
+    with open(out_json, "x", encoding="utf-8") as fh:
+        fh.write(json.dumps(r, indent=1, default=float))
+    with open(out_md, "x", encoding="utf-8") as fh:
+        fh.write(markdown(r))
     print(markdown(r))
-    print(f"Saved {out} and research_advanced_design.md in {time.time() - t0:.0f}s")
+    print(f"Saved {out_json} and {out_md.name} in {time.time() - t0:.0f}s")
     return 0
 
 
