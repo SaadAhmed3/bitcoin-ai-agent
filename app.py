@@ -28,6 +28,7 @@ from services.signal_service import RANGES as SIGNAL_RANGES, SignalService
 from services.backtest_service import BacktestService, current_validation
 from services.backtesting import DESIGN_BADGE, FULL_BADGE
 from services.paper_trading import PaperTrading
+from services.forward_tests import ForwardTests
 from services.risk_manager import RISK_RANGES, RiskSettings, position_size
 from services.technical_analysis import analyze, chart_series
 from services.assistant import Assistant, AssistantBusy, load_study
@@ -42,7 +43,7 @@ from services import security
 from services.security import MAX_BODY_BYTES
 from werkzeug.exceptions import HTTPException
 
-APP_VERSION = "0.9.5 (batch 2: data checks)"
+APP_VERSION = "0.9.6 (research-1: forward tests)"
 DOC_FILES = ("README.md", "USER_GUIDE.md", "SECURITY.md", "CHANGELOG.md")   # served read-only at /docs/<name>
 SIGNAL_STALE_WARNING = ("Changing these makes the current validation stale; the signal stays NO TRADE until a new "
                         "backtest validates the new settings.")
@@ -212,7 +213,17 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         if res:
             last_background_exit.update(res, at=now_ms())
 
-    monitor = AlertMonitor(alerts, interval=60.0, jobs=[paper_levels_check])
+    # Forward paper tests (research-1): simulated H1/H2/buy & hold on new daily candles. No live-signal change.
+    forward = ForwardTests(db)
+    app.config["BTC_FORWARD"] = forward
+
+    def forward_tests_job():
+        """Start once (next UTC midnight), refresh the daily candles (cached), append the newly closed days."""
+        forward.ensure_started()
+        market.get_candles("1d")
+        forward.process()
+
+    monitor = AlertMonitor(alerts, interval=60.0, jobs=[paper_levels_check, forward_tests_job])
     app.config["BTC_MONITOR"] = monitor
     if start_monitor:
         monitor.start()
@@ -410,6 +421,11 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     @app.get("/api/backtest/runs")
     def backtest_runs():
         return jsonify({"runs": db.backtest_runs(20)})
+
+    @app.get("/api/forward")
+    def forward_status():
+        """Forward paper tests (read-only; the background monitor starts and advances them)."""
+        return jsonify(forward.status())
 
     @app.get("/api/backtest/holdout")
     def backtest_holdout_registry():
