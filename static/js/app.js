@@ -143,11 +143,8 @@
   const route = () => { const r = parseHash(); showView(r.view, r.anchor); };
 
   // ---------------------------------------------------------------- theme / chrome
-  function closeMenu() {
-    $("sidebar").classList.remove("open");
-    $("menuBtn").setAttribute("aria-expanded", "false");
-    $("menuBtn").setAttribute("aria-label", "Open menu");
-  }
+  // The sidebar (collapse rail, mobile drawer) lives in sidebar.js.
+  const closeMenu = () => { if (window.BTCSidebar) window.BTCSidebar.close(); };
 
   function initChrome() {
     let saved = null;
@@ -165,17 +162,6 @@
       try { localStorage.setItem("btc-theme", next); } catch (_) {}
       if (state.lastSeries) drawChart(state.lastSeries);
     };
-    $("menuBtn").onclick = (e) => {
-      e.stopPropagation();
-      const open = !$("sidebar").classList.contains("open");
-      $("sidebar").classList.toggle("open", open);
-      $("menuBtn").setAttribute("aria-expanded", String(open));
-      $("menuBtn").setAttribute("aria-label", open ? "Close menu" : "Open menu");
-      if (open) { const cur = document.querySelector("#viewNav a[aria-current]"); if (cur) cur.focus(); }
-    };
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("sidebar").classList.contains("open")) { closeMenu(); $("menuBtn").focus(); } });
-    document.addEventListener("click", (e) => { if ($("sidebar").classList.contains("open") && !e.target.closest("#sidebar")) closeMenu(); });
-    $("viewNav").addEventListener("click", (e) => { if (e.target.closest("a")) closeMenu(); });
     $("tfSeg").addEventListener("click", (e) => {
       const tf = e.target.dataset.tf;
       if (!tf || tf === state.tf) return;
@@ -819,33 +805,63 @@
   async function loadForward() {
     let st;
     try { st = await getJson("/api/forward"); } catch (err) { $("fwdProgress").textContent = "Forward tests unavailable: " + err.message; return; }
-    const sec = $("forward");
+    const sec = $("forward"), bar = $("fwdBar"), note = $("fwdNote");
     if (st.state === "not_started") {
       $("fwdProgress").textContent = "Not started yet: starts at the next UTC midnight after the app's background monitor first runs (python app.py).";
+      bar.value = 0;
+      note.hidden = true;
       $("fwdBody").innerHTML = "";
       $("fwdFingerprint").textContent = "";
       sec.dataset.state = "ready";
       return;
     }
     const day = `Day ${st.days_elapsed} of ${st.target_days}`;
-    $("fwdProgress").textContent = `${day} · started ${st.start_date} (UTC)` + (st.waiting_for ? ` · ${st.waiting_for}` : "");
-    const pct = (x) => (x == null ? "no data yet" : fmtPct(x));
+    bar.max = st.target_days;
+    bar.value = Math.min(st.days_elapsed, st.target_days);
+    bar.setAttribute("aria-valuetext", day);
+    $("fwdProgress").textContent = `${day} · started ${st.start_date} (UTC)` + (st.waiting_for && st.days_elapsed ? ` · ${st.waiting_for}` : "");
+    note.hidden = st.days_elapsed > 0;
+    if (!st.days_elapsed) {
+      const first = st.start_day + 86_400_000;                       // the start day's candle closes then
+      note.textContent = `No completed days yet: first update ${new Date(first).toISOString().slice(0, 16).replace("T", " ")} UTC (${yourTime(first)} your time)`;
+    }
+    // Empty cells show a dash (drawn by CSS) whose meaning is in the note above and in its tooltip.
+    const na = '<span class="na" title="No data yet" aria-label="no data yet"></span>';
+    const num = (v, f) => (v == null ? na : esc(f(v)));
     $("fwdBody").innerHTML = st.strategies.map((s) => {
       const d = s.last_decision;
-      const last = d ? `${esc(d.date)}: ${d.in_market ? "in" : "out"}` : "none yet";
       const ev = s.evaluation ? ` · ${esc(s.evaluation.verdict === "NOT YET" ? `verdict after ${st.target_days} days` : s.evaluation.verdict)}` : "";
-      return `<tr data-rule="${esc(s.name)}"><td><b>${esc(s.label)}</b></td><td>${esc(s.role)}${ev}</td>
-        <td>${esc(s.position)}${s.pending ? ` · ${esc(s.pending)}` : ""}</td><td class="mono">${esc(pct(s.net_return_pct))}</td>
-        <td class="mono">${esc(s.max_drawdown_pct == null ? "no data yet" : fmtPct(-s.max_drawdown_pct))}</td>
-        <td class="mono">${esc(s.trades)}</td><td class="mono">${esc(s.time_in_market_pct == null ? "no data yet" : s.time_in_market_pct + "%")}</td>
-        <td>${last}</td></tr>`;
+      const prereg = s.name === "H2";
+      return `<tr data-rule="${esc(s.name)}"${prereg ? ' class="prereg"' : ""}>
+        <td class="rule-cell"><b>${esc(s.label)}</b>${prereg ? '<span class="prereg-tag">pre-registered test</span>' : ""}<span class="role">${esc(s.role)}${ev}</span></td>
+        <td><span class="pos-badge ${s.position === "in" ? "in" : "out"}">${s.position === "in" ? "IN" : "OUT"}</span>${s.pending ? `<span class="pending">→ ${esc(s.pending)}</span>` : ""}</td>
+        <td class="num">${num(s.net_return_pct, fmtPct)}</td>
+        <td class="num">${num(s.max_drawdown_pct, (x) => fmtPct(-x))}</td>
+        <td class="num">${s.days ? esc(s.trades) : na}</td>
+        <td class="num">${num(s.time_in_market_pct, (x) => x + "%")}</td>
+        <td>${d ? `${esc(d.date)}: ${d.in_market ? "in" : "out"}` : na}</td></tr>`;
     }).join("");
     labelCells($("fwdTable"));
     const changed = st.strategies.some((s) => s.code_changed);
     const fp = (st.strategies[0] || {}).fingerprint_at_start || "";
-    $("fwdFingerprint").textContent = `Rule code fingerprint at start: ${fp.slice(0, 16)}…`
-      + (changed ? " · WARNING: the rule code changed since the start; results are no longer a clean test." : " · unchanged since the start.");
+    $("fwdFingerprint").innerHTML = `<span>Rule code fingerprint</span> <code class="mono" title="${esc(fp)}">${esc(fp.slice(0, 12))}…</code>
+      <button type="button" class="btn ghost copy-btn" id="fwdCopy" aria-label="Copy the full rule code fingerprint">Copy</button>
+      <span class="fp-badge ${changed ? "bad" : "ok"}">${changed ? "changed since the start" : "unchanged since the start"}</span>
+      ${changed ? "<span>the rule code changed: results are no longer a clean test</span>" : ""}`;
+    $("fwdCopy").onclick = async (e) => {
+      const btn = e.currentTarget;
+      try { await navigator.clipboard.writeText(fp); btn.textContent = "Copied"; } catch (_) { btn.textContent = "Copy failed"; }
+      setTimeout(() => { btn.textContent = "Copy"; }, 1500);
+    };
     sec.dataset.state = "ready";
+  }
+
+  // A time in the display time zone (Settings → General), with the date when it differs from the UTC date.
+  function yourTime(ms) {
+    const opts = { hour: "2-digit", minute: "2-digit", hourCycle: "h23" };
+    const fmt = (o) => { try { return new Intl.DateTimeFormat(undefined, { ...o, timeZone: window.APP.displayTz }).format(ms); } catch (_) { return new Intl.DateTimeFormat(undefined, o).format(ms); } };
+    const dayOf = (tz) => { try { return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(ms); } catch (_) { return ""; } };
+    return dayOf(window.APP.displayTz) === dayOf("UTC") ? fmt(opts) : fmt({ ...opts, month: "short", day: "numeric" });
   }
 
   async function loadBacktest() {

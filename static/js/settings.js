@@ -29,7 +29,6 @@
       document.documentElement.dataset.theme = next;
       try { localStorage.setItem("btc-theme", next); } catch (_) {}
     };
-    $("menuBtn").onclick = () => $("sidebar").classList.toggle("open");
   }
 
   function input(key, f) {

@@ -8,30 +8,33 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
 <body class="settings-page">
+{% from "_icons.html" import icon, collapse_button %}
 <div class="shell">
   <aside class="sidebar" id="sidebar">
     <div class="brand">
-      <span class="brand-mark">₿</span>
-      <div><strong>BTC Signal Lab</strong><small>v{{ version }}</small></div>
+      <span class="brand-mark" aria-hidden="true">₿</span>
+      <div class="brand-text"><strong>BTC Signal Lab</strong><small title="v{{ version }}">v{{ version }}</small></div>
+      {{ collapse_button() }}
     </div>
-    <nav>
+    <nav aria-label="Settings sections">
       <p class="nav-label">Settings</p>
-      <a href="#general">General</a>
-      <a href="#market">Market data</a>
-      <a href="#signal">Signal</a>
-      <a href="#risk">Risk &amp; paper</a>
-      <a href="#alerts">Alerts</a>
-      <a href="#assistant">Assistant</a>
-      <a href="#watchlist">Watchlist</a>
+      <a href="#general" data-tip="General">{{ icon("general") }}<span class="label">General</span></a>
+      <a href="#market" data-tip="Market data">{{ icon("market") }}<span class="label">Market data</span></a>
+      <a href="#signal" data-tip="Signal">{{ icon("signal") }}<span class="label">Signal</span></a>
+      <a href="#risk" data-tip="Risk &amp; paper">{{ icon("paper") }}<span class="label">Risk &amp; paper</span></a>
+      <a href="#alerts" data-tip="Alerts">{{ icon("alerts") }}<span class="label">Alerts</span></a>
+      <a href="#assistant" data-tip="Assistant">{{ icon("assistant") }}<span class="label">Assistant</span></a>
+      <a href="#watchlist" data-tip="Watchlist">{{ icon("watchlist") }}<span class="label">Watchlist</span></a>
       <p class="nav-label">Back</p>
-      <a href="/">Dashboard</a>
+      <a href="/" data-tip="Dashboard">{{ icon("overview") }}<span class="label">Dashboard</span></a>
     </nav>
     <p class="sidebar-foot">Values come from an env override (read-only), the settings database, or the default. Keys stay in .env.</p>
   </aside>
+  <div class="scrim" id="navScrim" hidden></div>
 
   <main>
     <header class="topbar">
-      <button class="icon-btn menu-btn" id="menuBtn" aria-label="Toggle menu">☰</button>
+      <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false">☰</button>
       <div class="topbar-title"><h1>Settings</h1><span class="muted">Saved in the local SQLite settings table</span></div>
       <div class="topbar-actions">
         <a class="btn ghost settings-link" href="/">Dashboard</a>
@@ -63,6 +66,7 @@
   </main>
 </div>
 <script id="appConfig" type="application/json">{{ {"displayTz": display_tz, "theme": theme}|tojson }}</script>
+<script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
 <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
 </body>
 </html>

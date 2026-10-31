@@ -307,7 +307,12 @@ def test_research_shows_the_forward_tests_panel(browser, fresh_server):
         rules = [r.get_attribute("data-rule") for r in page.locator("#fwdBody tr").all()]
         assert rules == ["H1", "H2", "BH"]
         h2 = page.locator("#fwdBody tr[data-rule='H2']").text_content()
-        assert "pre-registered forward test" in h2 and "verdict after 365 days" in h2 and "no data yet" in h2
+        assert "pre-registered forward test" in h2 and "verdict after 365 days" in h2
+        # ui-sidebar-forward-table (deliberate): empty cells are a CSS dash labelled "no data yet", explained above
+        assert page.locator("#fwdBody tr[data-rule='H2'] .na[aria-label='no data yet']").count() == 5
+        first = dt.datetime.fromtimestamp(info["start_day"] / 1000 + 86_400, dt.timezone.utc).strftime("%Y-%m-%d 00:00")
+        note = page.locator("#fwdNote").text_content()
+        assert note.startswith(f"No completed days yet: first update {first} UTC (") and note.endswith(" your time)")
         assert "failed on design data" in page.locator("#fwdBody tr[data-rule='H1']").text_content()
         assert "unchanged since the start" in page.locator("#fwdFingerprint").text_content()
         assert p.errors == []

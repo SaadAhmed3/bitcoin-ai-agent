@@ -2,6 +2,20 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## UI: collapsible sidebar, Forward tests table — 2026-10-31
+
+**UI only.** No rule, tracker, signal or schema change; the forward-test fingerprint stays "unchanged since the start".
+
+- **Sidebar** (dashboard and Settings): the button next to the logo collapses it to an icon rail (tooltip per view,
+  alert badge still visible, main content takes the width); remembered in localStorage. Under 900 px it is an
+  off-canvas drawer opened from the header menu, with a dark overlay; it closes on an overlay click or Esc.
+- **Forward tests table**: rule name with its role underneath, IN/OUT badge, right-aligned monospace numbers, short
+  headers, the pre-registered H2 row highlighted, a Day N of 365 progress bar, "—" for no data with the first update
+  time (UTC and your time), and the fingerprint as a short hash with a Copy button and an unchanged/changed badge.
+  Stacked cards on phones.
+- Tests: new `tests/e2e/test_sidebar_e2e.py` (7, shown failing first); the forward-panel e2e test now checks the "—"
+  cells and the first-update note instead of the "no data yet" text.
+
 ## 0.9.7 (holdout contaminated; forward data only) — 2026-10-31
 
 Owner's decision: the 2025-10-29 holdout is contaminated for the live engine too (full run #1 replayed the live engine

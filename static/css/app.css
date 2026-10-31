@@ -492,3 +492,71 @@ h3.sub { margin: 12px 0 6px; }
   .table-wrap:has(> table.stack) { overflow-x: visible; }
   .bt-tiles { grid-template-columns: 1fr 1fr; }
 }
+
+/* ===================================================================== Sidebar: icon rail and drawer */
+.shell { transition: grid-template-columns .18s ease; }
+.ico { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+nav a { justify-content: flex-start; gap: 10px; position: relative; }
+nav a .label { flex: 1; min-width: 0; }
+.brand-text { flex: 1; min-width: 0; }
+.collapse-btn { width: 30px; height: 30px; padding: 0; display: grid; place-items: center; flex: none; color: var(--muted); }
+.collapse-btn:hover { color: var(--text); }
+.collapse-btn .ico { transition: transform .18s ease; }
+@media (min-width: 901px) {
+  .shell.collapsed { grid-template-columns: 64px 1fr; }
+  .shell.collapsed .sidebar { padding: 18px 8px; overflow: visible; z-index: 6; }
+  .shell.collapsed .brand { flex-direction: column; padding: 4px 0 14px; gap: 10px; }
+  .shell.collapsed .brand-text, .shell.collapsed .nav-label, .shell.collapsed .sidebar-foot { display: none; }
+  .shell.collapsed .collapse-btn .ico { transform: rotate(180deg); }
+  .shell.collapsed nav a { justify-content: center; padding: 10px 0; }
+  /* the name stays in the link for screen readers; sighted users get the tooltip below */
+  .shell.collapsed nav a .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .shell.collapsed nav a .nav-badge { position: absolute; top: 2px; right: 4px; font-size: 9px; padding: 0 4px; line-height: 14px; }
+  .shell.collapsed nav a:hover::after, .shell.collapsed nav a:focus-visible::after {
+    content: attr(data-tip); position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%);
+    background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 4px 9px;
+    font-size: 12px; font-weight: 500; white-space: nowrap; box-shadow: var(--shadow); z-index: 30; pointer-events: none;
+  }
+}
+@media (max-width: 900px) {
+  .collapse-btn { display: none; }
+  .sidebar { box-shadow: var(--shadow); }
+  .scrim { position: fixed; inset: 0; z-index: 15; background: rgba(0, 0, 0, .55); }
+}
+
+/* ===================================================================== Forward tests table */
+.fwd-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0 8px; }
+.fwd-head p { margin: 0; }
+#fwdBar { appearance: none; -webkit-appearance: none; flex: 0 1 220px; height: 8px; border: 0; border-radius: 999px; background: var(--card-2); overflow: hidden; }
+#fwdBar::-webkit-progress-bar { background: var(--card-2); border-radius: 999px; }
+#fwdBar::-webkit-progress-value { background: var(--accent); border-radius: 999px; }
+#fwdBar::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
+#fwdNote { margin: 0 0 8px; }
+#fwdTable th.num, #fwdTable td.num { text-align: right; white-space: nowrap; }
+#fwdTable td.num { font-family: "Cascadia Mono", "JetBrains Mono", ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+#fwdTable td { vertical-align: middle; }
+#fwdTable .role { display: block; font-size: 11px; color: var(--muted); margin-top: 1px; }
+#fwdTable tr.prereg td { background: var(--accent-soft); }
+#fwdTable tr.prereg td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.prereg-tag { display: inline-block; margin-left: 6px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; padding: 0 5px; vertical-align: 1px; }
+.pos-badge { display: inline-block; min-width: 38px; text-align: center; font-size: 11px; font-weight: 700; letter-spacing: .05em; border-radius: 999px; padding: 1px 9px; }
+.pos-badge.in { background: color-mix(in srgb, var(--up) 18%, transparent); color: var(--up); }
+.pos-badge.out { background: color-mix(in srgb, var(--neutral) 18%, transparent); color: var(--muted); }
+#fwdTable .pending { display: block; font-size: 11px; color: var(--muted); }
+.na::before { content: "—"; color: var(--muted); }
+.fp-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; color: var(--muted); }
+.fp-line code { color: var(--text); }
+.copy-btn { padding: 2px 10px; font-size: 12px; }
+.fp-badge { font-size: 11px; font-weight: 600; border-radius: 999px; padding: 1px 9px; }
+.fp-badge.ok { background: color-mix(in srgb, var(--up) 16%, transparent); color: var(--up); }
+.fp-badge.bad { background: color-mix(in srgb, var(--down) 16%, transparent); color: var(--down); }
+.brand-text strong, .brand-text small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#fwdTable { width: 100%; }
+#fwdTable td.num .na::before { font-family: "Segoe UI", system-ui, sans-serif; }   /* same dash in every column */
+@media (max-width: 600px) {
+  /* stacked cards: the rule name heads each card; labels use the normal font */
+  #fwdTable td.rule-cell { display: block; text-align: left; padding-bottom: 6px; }
+  #fwdTable td.rule-cell::before { content: none; }
+  #fwdTable td.num::before { font-family: "Segoe UI", system-ui, sans-serif; }
+  #fwdTable tr.prereg td { padding-left: 10px; }                  /* clear of the accent bar */
+}
