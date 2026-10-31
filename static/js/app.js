@@ -792,9 +792,11 @@
     if (!h) return;
     const spent = h.status === "spent", contaminated = h.status === "contaminated";
     $("btHoldoutStatus").textContent = `Holdout status: ${h.label}` + (h.status === "untouched" ? ` (reserved period from ${fmtD(h.start)})` : "");
-    $("btHoldout").textContent = `Holdout runs made: ${h.made}` + (h.made
-      ? ` · ${h.counted} counted for validation (only the first run in a holdout period counts, whatever its rules; later runs are stored, not valid for validation)`
-      : " · the reserved holdout period is untouched");
+    $("btHoldout").textContent = `Holdout runs made: ${h.made}` + (h.status === "contaminated"
+      ? " · period contaminated, cannot validate"
+      : h.made
+        ? ` · ${h.counted} counted for validation (only the first run in a holdout period counts, whatever its rules; later runs are stored, not valid for validation)`
+        : " · the reserved holdout period is untouched");
     $("btPeriod").querySelector("option[value='holdout']").textContent = `holdout (from ${fmtD(h.start)})`;
     $("btPeriod").querySelector("option[value='design']").textContent = `design (to ${fmtD(h.start)})`;
     const box = $("btNewHoldout");
