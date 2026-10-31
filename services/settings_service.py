@@ -97,6 +97,16 @@ SECTIONS: dict[str, dict[str, Field]] = {
                        env="OLLAMA_MODEL"),
         "timeout_s": Field(150, "int", "Seconds to wait for the local model", env="OLLAMA_TIMEOUT_SECONDS", lo=30, hi=600),
     },
+    "advanced": {
+        "shadow_enabled": Field(True, "bool", "Shadow mode: compute, show and store the regime / sweep / volume-profile "
+                                "components next to the live signal. They never change the live signal"),
+        "weight_regime": Field(0.10, "float", "Shadow weight of the regime component (shadow only, never live)",
+                               lo=0, hi=0.3),
+        "weight_liquidity_sweep": Field(0.10, "float", "Shadow weight of the liquidity-sweep component (shadow only)",
+                                        lo=0, hi=0.3),
+        "weight_volume_profile": Field(0.10, "float", "Shadow weight of the volume-profile component (shadow only)",
+                                       lo=0, hi=0.3),
+    },
     "watchlist": {
         "symbols": Field(list(DEFAULT_WATCHLIST), "list", "Up to 10 Binance spot symbols (display only - no signals)",
                          validator=_symbols),

@@ -12,11 +12,12 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
-SCHEMA_VERSION = 11  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
+SCHEMA_VERSION = 12  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
                      # 7: holdout_runs (0.9.2), 8: holdout_runs.holdout_start (0.9.3),
                      # 9: holdout_runs.verdict + criteria, write-once triggers (0.9.4),
                      # 10: forward_tests + forward_events, append-only (research-1),
-                     # 11: holdout_contaminations, append-only (0.9.7).
+                     # 11: holdout_contaminations, append-only (0.9.7),
+                     # 12: regime_changes, sweep_events, sweep_updates, shadow_context, append-only (advanced analysis).
                     # Migrations are additive; an upgrade backs the file up first.
 
 SCHEMA = """
@@ -243,6 +244,81 @@ CREATE TRIGGER IF NOT EXISTS holdout_contaminations_no_update BEFORE UPDATE ON h
     BEGIN SELECT RAISE(ABORT, 'holdout contamination rows are append-only'); END;
 CREATE TRIGGER IF NOT EXISTS holdout_contaminations_no_delete BEFORE DELETE ON holdout_contaminations
     BEGIN SELECT RAISE(ABORT, 'holdout contamination rows are append-only'); END;
+
+-- Advanced analysis (display + shadow mode, never part of the live score). Every row is decided at the close of a
+-- candle and stored with that close time; nothing is ever changed or deleted (no repainting).
+CREATE TABLE IF NOT EXISTS regime_changes (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    timeframe    TEXT    NOT NULL,
+    at           INTEGER NOT NULL,
+    regime       TEXT    NOT NULL,
+    previous     TEXT,
+    confidence   INTEGER,
+    detail       TEXT    NOT NULL,
+    created_at   INTEGER NOT NULL,
+    UNIQUE (timeframe, at)
+);
+CREATE TABLE IF NOT EXISTS sweep_events (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_key      TEXT    NOT NULL UNIQUE,
+    timeframe      TEXT    NOT NULL,
+    direction      TEXT    NOT NULL CHECK (direction IN ('buy_side', 'sell_side')),
+    level          REAL    NOT NULL,
+    equal_levels   INTEGER NOT NULL,
+    swing_time     INTEGER NOT NULL,
+    event_time     INTEGER NOT NULL,
+    sweep_extreme  REAL    NOT NULL,
+    reclaim_price  REAL    NOT NULL,
+    volume_ratio   REAL,
+    created_at     INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sweep_updates (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_key    TEXT    NOT NULL REFERENCES sweep_events (event_key),
+    status       TEXT    NOT NULL,
+    at           INTEGER NOT NULL,
+    strength     REAL,
+    factors      TEXT    NOT NULL,
+    note         TEXT,
+    created_at   INTEGER NOT NULL,
+    UNIQUE (event_key, status)
+);
+CREATE TABLE IF NOT EXISTS shadow_context (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    close_time         INTEGER NOT NULL UNIQUE,
+    regime             TEXT,
+    regime_confidence  INTEGER,
+    regime_score       REAL    NOT NULL,
+    sweep_score        REAL    NOT NULL,
+    vp_score           REAL    NOT NULL,
+    poc                REAL,
+    vah                REAL,
+    val                REAL,
+    live_signal        TEXT,
+    live_setup         TEXT,
+    live_score         REAL,
+    live_engine        TEXT,
+    weights            TEXT    NOT NULL,
+    combined_score     REAL,
+    detail             TEXT    NOT NULL,
+    created_at         INTEGER NOT NULL
+);
+CREATE TRIGGER IF NOT EXISTS regime_changes_no_update BEFORE UPDATE ON regime_changes
+    BEGIN SELECT RAISE(ABORT, 'advanced analysis rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS regime_changes_no_delete BEFORE DELETE ON regime_changes
+    BEGIN SELECT RAISE(ABORT, 'advanced analysis rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS sweep_events_no_update BEFORE UPDATE ON sweep_events
+    BEGIN SELECT RAISE(ABORT, 'advanced analysis rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS sweep_events_no_delete BEFORE DELETE ON sweep_events
+    BEGIN SELECT RAISE(ABORT, 'advanced analysis rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS sweep_updates_no_update BEFORE UPDATE ON sweep_updates
+    BEGIN SELECT RAISE(ABORT, 'advanced analysis rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS sweep_updates_no_delete BEFORE DELETE ON sweep_updates
+    BEGIN SELECT RAISE(ABORT, 'advanced analysis rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS shadow_context_no_update BEFORE UPDATE ON shadow_context
+    BEGIN SELECT RAISE(ABORT, 'advanced analysis rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS shadow_context_no_delete BEFORE DELETE ON shadow_context
+    BEGIN SELECT RAISE(ABORT, 'advanced analysis rows are append-only'); END;
 """
 DEFAULT_HOLDOUT_START = 1_761_696_000_000   # 2025-10-29 00:00 UTC = services.backtesting.HOLDOUT_START (asserted in tests)
 
@@ -546,6 +622,69 @@ class Database:
                                     WHERE t.name = ? ORDER BY e.day, CASE e.kind WHEN 'fill' THEN 0
                                     WHEN 'mark' THEN 1 ELSE 2 END""", (name,)).fetchall()
         return [{**dict(r), "in_market": bool(r["in_market"]), "detail": json.loads(r["detail"])} for r in rows]
+
+    # ---------------------------------------------------------------- advanced analysis (append-only, shadow mode)
+    def regime_add_change(self, row: dict, now: int) -> bool:
+        with self.connect() as conn:
+            cur = conn.execute("INSERT OR IGNORE INTO regime_changes (timeframe, at, regime, previous, confidence, "
+                               "detail, created_at) VALUES (?,?,?,?,?,?,?)",
+                               (row["timeframe"], row["at"], row["regime"], row.get("previous"), row.get("confidence"),
+                                json.dumps(row.get("detail") or {}), now))
+        return cur.rowcount == 1
+
+    def regime_changes(self, limit: int = 20, timeframe: str = "4h") -> list[dict]:
+        with self.connect() as conn:
+            rows = conn.execute("SELECT * FROM regime_changes WHERE timeframe=? ORDER BY at DESC LIMIT ?",
+                                (timeframe, limit)).fetchall()
+        return [{**dict(r), "detail": json.loads(r["detail"])} for r in rows]
+
+    def sweep_add(self, event: dict, updates: list[dict], now: int) -> tuple[int, int]:
+        """Store a sweep event once and each of its status updates once. Returns (events added, updates added)."""
+        with self.connect() as conn:
+            ev = conn.execute("INSERT OR IGNORE INTO sweep_events (event_key, timeframe, direction, level, equal_levels, "
+                              "swing_time, event_time, sweep_extreme, reclaim_price, volume_ratio, created_at) "
+                              "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                              (event["key"], event["timeframe"], event["direction"], event["level"],
+                               event["equal_levels"], event["swing_time"], event["event_time"], event["sweep_extreme"],
+                               event["reclaim_price"], event.get("volume_ratio"), now)).rowcount
+            up = 0
+            for u in updates:
+                up += conn.execute("INSERT OR IGNORE INTO sweep_updates (event_key, status, at, strength, factors, "
+                                   "note, created_at) VALUES (?,?,?,?,?,?,?)",
+                                   (event["key"], u["status"], u["at"], u.get("strength"),
+                                    json.dumps(u.get("factors") or {}), u.get("note"), now)).rowcount
+        return ev, up
+
+    def sweep_events(self, limit: int = 20) -> list[dict]:
+        """Newest events first, each with its stored status updates in order."""
+        with self.connect() as conn:
+            evs = conn.execute("SELECT * FROM sweep_events ORDER BY event_time DESC, id DESC LIMIT ?",
+                               (limit,)).fetchall()
+            out = []
+            for e in evs:
+                ups = conn.execute("SELECT status, at, strength, factors, note FROM sweep_updates WHERE event_key=? "
+                                   "ORDER BY at, id", (e["event_key"],)).fetchall()
+                out.append({**dict(e), "updates": [{**dict(u), "factors": json.loads(u["factors"])} for u in ups]})
+        return out
+
+    def shadow_add(self, row: dict, now: int) -> bool:
+        cols = ("close_time", "regime", "regime_confidence", "regime_score", "sweep_score", "vp_score", "poc", "vah",
+                "val", "live_signal", "live_setup", "live_score", "live_engine", "weights", "combined_score", "detail")
+        vals = [json.dumps(row.get(c) or {}) if c in ("weights", "detail") else row.get(c) for c in cols]
+        with self.connect() as conn:
+            cur = conn.execute(f"INSERT OR IGNORE INTO shadow_context ({', '.join(cols)}, created_at) "
+                               f"VALUES ({', '.join('?' * (len(cols) + 1))})", (*vals, now))
+        return cur.rowcount == 1
+
+    def shadow_rows(self, limit: int = 50) -> list[dict]:
+        with self.connect() as conn:
+            rows = conn.execute("SELECT * FROM shadow_context ORDER BY close_time DESC LIMIT ?", (limit,)).fetchall()
+        return [{**dict(r), "weights": json.loads(r["weights"]), "detail": json.loads(r["detail"])} for r in rows]
+
+    def shadow_last_time(self) -> int | None:
+        with self.connect() as conn:
+            r = conn.execute("SELECT MAX(close_time) AS t FROM shadow_context").fetchone()
+        return r["t"] if r else None
 
     def holdout_runs(self, limit: int = 50) -> list[dict]:
         with self.connect() as conn:

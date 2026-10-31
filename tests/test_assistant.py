@@ -374,7 +374,8 @@ def test_existing_database_upgrades_to_chat_table(tmp_path):
     # 0.9.4: version 9 (holdout verdict + criteria, write-once) - from "8".
     # research-1: version 10 (forward_tests + forward_events, append-only) - from "9".
     # 0.9.7: version 11 (holdout_contaminations, append-only) - from "10".
-    assert "chat_messages" in tables and version == "11" and d2.get_setting("keep_me") == {"x": 1}
+    # Advanced analysis: version 12 (regime_changes, sweep_events/updates, shadow_context, append-only) - from "11".
+    assert "chat_messages" in tables and version == "12" and d2.get_setting("keep_me") == {"x": 1}
     assert {"alerts", "alert_rules", "alert_state", "holdout_runs"} <= tables
     d2.add_chat("user", "hi", 1)
     assert d2.chat_history()[0]["content"] == "hi"
