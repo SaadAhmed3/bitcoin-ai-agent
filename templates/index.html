@@ -9,28 +9,31 @@
   <script src="{{ url_for('plotly_js') }}" charset="utf-8"></script>
 </head>
 <body>
+{% from "_icons.html" import icon, collapse_button %}
 <div class="shell">
   <aside class="sidebar" id="sidebar">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">₿</span>
-      <div><strong>BTC Signal Lab</strong><small>v{{ version }}</small></div>
+      <div class="brand-text"><strong>BTC Signal Lab</strong><small title="v{{ version }}">v{{ version }}</small></div>
+      {{ collapse_button() }}
     </div>
     <nav id="viewNav" aria-label="Views">
       <p class="nav-label">Views</p>
-      <a href="#/overview" data-view="overview">Overview</a>
-      <a href="#/market" data-view="market">Market &amp; chart</a>
-      <a href="#/news" data-view="news">News &amp; calendar</a>
-      <a href="#/signal" data-view="signal">Signal details</a>
-      <a href="#/research" data-view="research">Research (backtest)</a>
-      <a href="#/paper" data-view="paper">Risk &amp; paper</a>
-      <a href="#/alerts" data-view="alerts">Alerts <b class="nav-badge" id="navAlertBadge" hidden>0</b></a>
-      <a href="#/assistant" data-view="assistant">Ask the data</a>
-      <a href="#/system" data-view="system">System &amp; sources</a>
+      <a href="#/overview" data-view="overview" data-tip="Overview">{{ icon("overview") }}<span class="label">Overview</span></a>
+      <a href="#/market" data-view="market" data-tip="Market &amp; chart">{{ icon("market") }}<span class="label">Market &amp; chart</span></a>
+      <a href="#/news" data-view="news" data-tip="News &amp; calendar">{{ icon("news") }}<span class="label">News &amp; calendar</span></a>
+      <a href="#/signal" data-view="signal" data-tip="Signal details">{{ icon("signal") }}<span class="label">Signal details</span></a>
+      <a href="#/research" data-view="research" data-tip="Research (backtest)">{{ icon("research") }}<span class="label">Research (backtest)</span></a>
+      <a href="#/paper" data-view="paper" data-tip="Risk &amp; paper">{{ icon("paper") }}<span class="label">Risk &amp; paper</span></a>
+      <a href="#/alerts" data-view="alerts" data-tip="Alerts">{{ icon("alerts") }}<span class="label">Alerts</span> <b class="nav-badge" id="navAlertBadge" hidden>0</b></a>
+      <a href="#/assistant" data-view="assistant" data-tip="Ask the data">{{ icon("assistant") }}<span class="label">Ask the data</span></a>
+      <a href="#/system" data-view="system" data-tip="System &amp; sources">{{ icon("system") }}<span class="label">System &amp; sources</span></a>
       <p class="nav-label">Configure</p>
-      <a href="/settings">Settings</a>
+      <a href="/settings" data-tip="Settings">{{ icon("settings") }}<span class="label">Settings</span></a>
     </nav>
     <p class="sidebar-foot">Research tool only. Never places orders. Not financial advice.</p>
   </aside>
+  <div class="scrim" id="navScrim" hidden></div>
 
   <main id="main" data-view="overview" data-view-ready="0">
     <header class="topbar">
@@ -307,12 +310,16 @@
           <p class="muted">H1 and H2 run every day on NEW closed daily candles only, next to buy &amp; hold. Simulated: no real orders, no change to the live signal.</p></div>
         <div class="head-actions"><span class="tag hyp">Simulated</span></div>
       </div>
-      <p class="small" id="fwdProgress">Loading…</p>
-      <div class="table-wrap"><table class="stack" id="fwdTable">
-        <thead><tr><th>Rule</th><th>Role</th><th>Position</th><th>Net return</th><th>Max drawdown</th><th>Trades</th><th>Time in market</th><th>Last decision</th></tr></thead>
+      <div class="fwd-head">
+        <progress id="fwdBar" max="365" value="0" aria-label="Forward test progress, days of 365"></progress>
+        <p class="small" id="fwdProgress">Loading…</p>
+      </div>
+      <p class="muted small" id="fwdNote" hidden></p>
+      <div class="table-wrap"><table class="table stack" id="fwdTable">
+        <thead><tr><th>Rule</th><th>Position</th><th class="num">Net return</th><th class="num">Max DD</th><th class="num">Trades</th><th class="num">In market</th><th>Last decision</th></tr></thead>
         <tbody id="fwdBody"></tbody>
       </table></div>
-      <p class="muted small" id="fwdFingerprint"></p>
+      <div class="fp-line small" id="fwdFingerprint"></div>
       <p class="muted small">Rules and pass criteria: PREREGISTRATION_H1.md (failed on design data: tracked for information only) and PREREGISTRATION_H2.md (the pre-registered test, judged after 365 days). Decide at the daily close, act at the next open, 0.10% fee + 0.05% slippage per side.</p>
     </section>
 
@@ -447,6 +454,7 @@
   </main>
 </div>
 <script id="appConfig" type="application/json">{{ {"timeframes": timeframes, "displayTz": display_tz, "theme": theme, "version": version}|tojson }}</script>
+<script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
