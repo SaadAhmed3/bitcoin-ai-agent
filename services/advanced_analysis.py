@@ -38,6 +38,23 @@ def combined_score(live_score: float | None, comps: dict[str, float], weights: d
     return (1 - sum(w.values())) * float(live_score) + sum(w[k] * float(comps.get(k, 0.0)) for k in COMPONENTS)
 
 
+# Corrections to stored sweep events (append-only, sweep_corrections). The event rows stay as they were written.
+SWEEP_CORRECTIONS = [
+    ("4h:buy_side:1793289600000", "superseded", "duplicate of the same move (open-event rule, 0.9.8 follow-up)"),
+]
+
+
+def apply_sweep_corrections(db, by_version: str, now: int) -> int:
+    """Record each known correction once, for events that are stored here. Returns the number added."""
+    added = 0
+    for key, action, reason in SWEEP_CORRECTIONS:
+        try:
+            added += db.sweep_correct(key, action, reason, by_version, now)
+        except LookupError:
+            pass                                      # that event was never stored in this database
+    return added
+
+
 def persist_sweeps(db, events: list[dict], now: int) -> tuple[int, int]:
     """Append sweep events and their status updates; anything already stored is ignored (no duplicates)."""
     ev = up = 0
@@ -86,7 +103,8 @@ class AdvancedAnalysis:
         hist = regime_history(c4, c1, cd, bars=60) if regime["status"] == "ok" else {}
         regime.update(previous=hist.get("previous"), changed_at=hist.get("changed_at"))
         sweep_df = c4.iloc[-SWEEP_BARS:]
-        events = detect_sweeps(sweep_df, c1, cd)
+        superseded = self.db.superseded_sweep_keys()
+        events = [e for e in detect_sweeps(sweep_df, c1, cd) if e["key"] not in superseded]
         as_of = int(c4["close_time"].iloc[-1])
         core = {"key": key, "as_of": as_of, "close": float(c4["close"].iloc[-1]), "regime": regime,
                 "events": events, "sweep_score": sweep_score(sweep_df, events, as_of), "c4": c4}

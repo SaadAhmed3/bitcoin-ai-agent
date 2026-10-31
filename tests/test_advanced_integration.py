@@ -38,7 +38,7 @@ def test_protected_code_is_unchanged():
 
 def test_schema_12_tables_are_append_only(db):
     from database.db import SCHEMA_VERSION
-    assert SCHEMA_VERSION == 12
+    assert SCHEMA_VERSION >= 12              # 13: sweep_corrections (0.9.8 follow-up)
     db.regime_add_change({"timeframe": "4h", "at": 10, "regime": "TRENDING BULLISH", "previous": None,
                           "confidence": 80, "detail": {}}, now=1)
     db.shadow_add({"close_time": 10, "regime": "TRENDING BULLISH", "regime_confidence": 80, "regime_score": 0.8,
