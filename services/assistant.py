@@ -321,6 +321,8 @@ class Assistant:
             fs.add("signal", f"Signal {sig.get('signal')}; setup {sig.get('setup')}; score {_num(sig.get('score'), 2)} on a -1..+1 "
                              f"scale (weighted evidence, NOT a probability); {sig.get('direction')}, {sig.get('strength')}; "
                              f"engine {sig.get('engine')}; horizon {sig.get('horizon')}", "signal engine", t)
+            if sig.get("no_trade_summary"):
+                fs.add("no_trade_summary", sig["no_trade_summary"], "signal engine", t)
             for reason in sig.get("no_trade_reasons") or []:
                 fs.add("no_trade", f"NO TRADE reason: {reason}", "signal engine", t)
             dg = sig.get("diagnostics") or {}
@@ -532,7 +534,10 @@ class Assistant:
         if intent in ("why_no_trade", "signal"):
             lines = []
             if sig and "NO TRADE" in sig["text"] and reasons:
-                lines.append("The signal is NO TRADE because:")
+                short = fs.first("no_trade_summary")
+                if short:                         # the same sentence as the Overview, Signal details and alerts
+                    lines.append(f"The signal is NO TRADE. In short: {short['text']}{cite(short)}")
+                lines.append("The signal is NO TRADE because:" if not short else "All reasons:")
                 lines += [f"- {r['text'].replace('NO TRADE reason: ', '')}{cite(r)}" for r in reasons]
                 lines.append(f"Details: {sig['text']}{cite(sig)}")
             else:

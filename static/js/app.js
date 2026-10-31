@@ -178,8 +178,22 @@
     state.vpRange = store.get("btc-vp-range", "last") === "visible" ? "visible" : "last";
     $("vpRange").value = state.vpRange;
     $("vpRange").hidden = !state.overlays.vp;
+    state.preset = ["clean", "trend", "levels", "custom"].includes(store.get("btc-chart-preset", "custom"))
+      ? store.get("btc-chart-preset", "custom") : "custom";
+    $("chartPreset").value = state.preset;
     $("overlayToggles").addEventListener("change", async (e) => {
-      if (e.target.id === "vpRange") {
+      if (e.target.id === "chartPreset") {
+        state.preset = e.target.value;
+        store.set("btc-chart-preset", state.preset);
+        if (state.preset === "custom") return;                  // Custom: keep the toggles as they are
+        const on = PRESETS[state.preset];
+        document.querySelectorAll("#overlayToggles input[data-ov]").forEach((i) => {
+          i.checked = on.includes(i.dataset.ov);
+          state.overlays[i.dataset.ov] = i.checked;
+        });
+        store.set("btc-overlays", state.overlays);
+        $("vpRange").hidden = !state.overlays.vp;
+      } else if (e.target.id === "vpRange") {
         state.vpRange = e.target.value;
         store.set("btc-vp-range", state.vpRange);
         state.chartProfile = null;
@@ -187,6 +201,9 @@
         state.overlays[e.target.dataset.ov] = e.target.checked;
         store.set("btc-overlays", state.overlays);
         $("vpRange").hidden = !state.overlays.vp;
+        state.preset = "custom";                                 // a manual change is a custom set
+        $("chartPreset").value = "custom";
+        store.set("btc-chart-preset", "custom");
       } else return;
       await ensureOverlayInputs();
       if (state.lastSeries) drawChart(state.lastSeries);
@@ -321,6 +338,9 @@
     }
   }
 
+  // Chart presets only set the toggles (candles and volume bars are always drawn).
+  const PRESETS = { clean: [], trend: ["ema", "levels", "regime"], levels: ["levels", "vp", "sweeps"] };
+
   const SETUP_GROUP = (s) => (/BUY/.test(s || "") ? "BUY" : /SELL/.test(s || "") ? "SELL" : "HOLD");
 
   function overlayTraces(s, lo, hi, colors) {
@@ -335,8 +355,9 @@
           const major = l.touches >= 2;
           const label = `${kind} $${fmtNum(l.price, 0)} · ${l.touches} touch${l.touches > 1 ? "es" : ""}${major ? "" : " (minor)"}`;
           if (major) {
-            shapes.push({ type: "rect", xref: "paper", x0: 0, x1: 1, yref: "y", layer: "below", line: { width: 0 },
-              y0: Math.min(l.low, l.price * 0.999), y1: Math.max(l.high, l.price * 1.001), fillcolor: alpha(color, 0.13) });
+            // lighter under a volume profile, so the bands don't stack with its HVN / LVN bands
+            shapes.push({ name: "sr band", type: "rect", xref: "paper", x0: 0, x1: 1, yref: "y", layer: "below", line: { width: 0 },
+              y0: Math.min(l.low, l.price * 0.999), y1: Math.max(l.high, l.price * 1.001), fillcolor: alpha(color, state.overlays.vp ? 0.05 : 0.13) });
           }
           traces.push({ type: "scatter", mode: "lines", x: s.time, y: flat(l.price), name: label, showlegend: false, xaxis: "x", yaxis: "y",
             line: { color: alpha(color, major ? 0.55 : 0.85), width: 1, dash: major ? "solid" : "dash" }, hovertemplate: `${esc(label)}<extra></extra>` });
@@ -917,29 +938,6 @@
   const SIG_CLASS = (s) => s === "STRONG BUY SETUP" ? "strong" : s === "BUY SETUP" ? "buy" : s === "SELL / REDUCE EXPOSURE" ? "sell" : s === "NO TRADE" ? "notrade" : "hold";
   const pct = (x) => fmtPct(x, "n/a");
 
-  // One plain-language line from the first NO TRADE reason (the full reasons stay in the Signal view).
-  const PLAIN_REASONS = [
-    [/^Not validated: no backtest/i, "No proven edge yet: no validation backtest has been run"],
-    [/^Not validated: no holdout run yet/i, "No proven edge yet: no holdout run has been made"],
-    [/^Not validated: the rules changed/i, "No proven edge for the current rules: they changed since the holdout run"],
-    [/forward observation/i, "Validated, but still in the forward-observation period"],
-    [/^Not validated/i, "No proven edge: the validation backtest didn't pass"],
-    [/^No current BTC price/i, "No live price, so no decision can be made"],
-    [/price is stale/i, "The price is stale: waiting for fresh data"],
-    [/too little data|could not be calculated/i, "Not enough data to judge the market"],
-    [/candles are stale/i, "Chart data is stale: waiting for fresh candles"],
-    [/missing candles/i, "Gaps in the price history"],
-    [/^Price sources disagree/i, "Exchanges disagree on the price: waiting until they agree"],
-    [/volatility is extreme/i, "Volatility is extreme: too risky to judge"],
-    [/contradictory/i, "The evidence is mixed: indicators disagree"],
-    [/fights the daily/i, "The setup fights the daily trend"],
-    [/^(Fresh|Recent) high-impact (bearish|bullish) news/i, "High-impact news against this setup: letting the market digest it"],
-  ];
-  const plainReason = (r) => {
-    for (const [re, text] of PLAIN_REASONS) if (re.test(r)) return text;
-    return String(r).split(/(?<=\.)\s/)[0];
-  };
-
   async function loadSignal() {
     try {
       const s = await getJson("/api/signal");
@@ -957,8 +955,8 @@
     b.textContent = s.signal;
     b.className = "sig-badge " + SIG_CLASS(s.signal);
     const reasons = s.no_trade_reasons || [];
-    $("sumReason").textContent = reasons.length
-      ? plainReason(reasons[0]) + (reasons.length > 1 ? ` (+${reasons.length - 1} more reason${reasons.length > 2 ? "s" : ""})` : "") + "."
+    // The same sentence as Signal details, the signal-change alert and the assistant (services/no_trade_text.py).
+    $("sumReason").textContent = reasons.length ? (s.no_trade_summary || reasons[0])
       : "All safeguards passed. Still a research signal, not advice.";
     $("sumReason").title = reasons.join(" ");
     const pr = s.price || {};
@@ -999,7 +997,8 @@
       ? `<h4 class="note-head">Setup note</h4><ul>${s.setup_notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : "";
     if (s.no_trade_reasons.length) {
       g.className = "sig-gates";
-      g.innerHTML = `<h4>NO TRADE because</h4><ul>${s.no_trade_reasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>${notes}`;
+      g.innerHTML = `<h4>NO TRADE because</h4>${s.no_trade_summary ? `<p class="gate-summary">${esc(s.no_trade_summary)}</p>` : ""}`
+        + `<ul>${s.no_trade_reasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>${notes}`;
     } else {
       g.className = "sig-gates clear";
       g.innerHTML = `<h4>All safeguards passed</h4><ul><li>Data fresh, volatility not extreme, evidence consistent, no opposing fresh high-impact news.</li></ul>${notes}`;

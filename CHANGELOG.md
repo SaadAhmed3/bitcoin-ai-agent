@@ -2,6 +2,24 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## One NO TRADE sentence everywhere; chart presets — 2026-10-31
+
+UI / text only: no signal, weight, gate, backtest or paper-trading change; engine signal-1.8; protected files
+untouched; forward tests "unchanged".
+
+- **Shared NO TRADE summary** (`services/no_trade_text.py`): one plain sentence for the first reason, added to
+  `/api/signal` as `no_trade_summary` and used by the Overview, Signal details (above the full reasons), the
+  signal-change alert and the assistant ("The signal is NO TRADE. In short: …"). The Overview's own JavaScript mapping
+  is gone. With the contaminated holdout it now reads "No proven edge yet: validation needs forward data (Forward
+  tests start 2026-11-01, day 0 of 365)." (later "running, day N of 365") instead of the wrong "the validation
+  backtest didn't pass". "Did not pass" is only said when the reason says so.
+- **Chart presets** next to the toggles (remembered): Clean (candles + volume), Trend (EMAs, support/resistance,
+  regime), Levels (support/resistance, volume profile, sweeps), Custom (the current toggles; any manual change
+  switches to Custom). A preset only sets the toggles.
+- With the volume profile on, support/resistance bands are drawn lighter (5% instead of 13%) so they don't stack with
+  the HVN/LVN bands.
+- Tests (failed before): `tests/test_no_trade_text.py` (4), `tests/e2e/test_presets_e2e.py` (3).
+
 ## Chart overlays: regime, liquidity sweeps, volume profile on the price chart — 2026-10-31
 
 **Visualisation only.** No detection rule, signal, weight, gate, backtest or paper-trading change; engine signal-1.8;

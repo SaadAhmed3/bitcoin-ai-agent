@@ -589,3 +589,5 @@ nav a .label { flex: 1; min-width: 0; }
 
 /* chart overlays: the volume-profile range sits next to its toggle */
 .overlay-toggles .ov-select { font-size: 12px; padding: 2px 4px; max-width: 100%; }
+.overlay-toggles .ov-preset { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.sig-gates .gate-summary { margin: 0 0 6px; font-weight: 600; color: var(--text); }
