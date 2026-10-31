@@ -115,6 +115,11 @@ def event_row(rets: np.ndarray, mask: np.ndarray, block: int) -> dict:
             "positive_pct": round(float((x > 0).mean()) * 100, 1)}
 
 
+def drop_superseded(events: list[dict], superseded: set[str]) -> list[dict]:
+    """Sweep events recorded as superseded (sweep_corrections) are never used."""
+    return [e for e in events if e["key"] not in superseded]
+
+
 def _design_span(c1h, c4h, c1d, cfg: BacktestConfig) -> tuple[int, int]:
     """Exactly run_backtest's design window: warm-up on every timeframe, the last `years`, the design cut-off."""
     first_t = max(int(c4h["close_time"].iloc[min(cfg.window, len(c4h) - 1)]),
@@ -126,7 +131,7 @@ def _design_span(c1h, c4h, c1d, cfg: BacktestConfig) -> tuple[int, int]:
     return start, end
 
 
-def study(c1h_rows, c4h_rows, c1d_rows, progress=None) -> dict:
+def study(c1h_rows, c4h_rows, c1d_rows, progress=None, superseded: set[str] = frozenset()) -> dict:
     c1h, c4h, c1d = _frame(c1h_rows), _frame(c4h_rows), _frame(c1d_rows)
     cfg = BacktestConfig(period="design")
     ec = EngineConfig()
@@ -137,7 +142,7 @@ def study(c1h_rows, c4h_rows, c1d_rows, progress=None) -> dict:
     assert all(ct4[i] < HOLDOUT_START for i in bars), "a decision bar reaches the holdout"
 
     # Shadow components at each decision bar, from that bar's past only.
-    events = detect_sweeps(c4h.iloc[:bars[-1] + 1], c1h, c1d)
+    events = drop_superseded(detect_sweeps(c4h.iloc[:bars[-1] + 1], c1h, c1d), superseded)
     comps, labels = [], []
     for n, i in enumerate(bars):
         r = regime_at(c4h, i, c1h, c1d)
@@ -283,6 +288,10 @@ def load_rows() -> dict[str, list[dict]]:
     return {tf: db.get_candles_range(PROVIDER, SYMBOL, tf) for tf in ("1h", "4h", "1d")}
 
 
+def load_superseded() -> set[str]:
+    return Database(Config().db_path, read_only=True).superseded_sweep_keys()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Pre-registered design-data study (run once).")
     ap.add_argument("--confirm-rerun", action="store_true",
@@ -295,7 +304,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     rows = load_rows()
     t0 = time.time()
-    r = study(rows["1h"], rows["4h"], rows["1d"],
+    r = study(rows["1h"], rows["4h"], rows["1d"], superseded=load_superseded(),
               progress=lambda f, m: print(f"\r{m}  ({time.time() - t0:.0f}s)", end="", flush=True))
     print()
     # "x": create only - even a file that appeared meanwhile is never overwritten

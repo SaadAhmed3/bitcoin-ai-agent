@@ -29,7 +29,7 @@ from services.backtest_service import BacktestService, current_validation, recor
 from services.backtesting import DESIGN_BADGE, FULL_BADGE
 from services.paper_trading import PaperTrading
 from services.forward_tests import ForwardTests
-from services.advanced_analysis import AdvancedAnalysis
+from services.advanced_analysis import AdvancedAnalysis, apply_sweep_corrections
 from services.risk_manager import RISK_RANGES, RiskSettings, position_size
 from services.technical_analysis import analyze, chart_series
 from services.assistant import Assistant, AssistantBusy, load_study
@@ -91,6 +91,7 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     app.config["BTC_BACKTESTS"] = backtests
     # 0.9.7: a stored full run that reached into a holdout period makes that period contaminated (append-only).
     record_contaminations(db)
+    apply_sweep_corrections(db, APP_VERSION, now_ms())     # known duplicates: superseded, never deleted
     def _price_at_day_open(ts: int) -> float | None:
         """BTC price at 00:00 UTC: the stored 1h candle opening then, else a price snapshot within 10 minutes."""
         for p in market.providers:

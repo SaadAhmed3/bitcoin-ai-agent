@@ -2,6 +2,19 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## 0.9.8 follow-up: sweep correction records (schema 13) — 2026-10-31
+
+- **New append-only table `sweep_corrections`** (event_id, action = 'superseded', reason, corrected_at, by_version;
+  one per event, update/delete triggers). Additive schema change, DB backed up first. Stored sweep events stay exactly
+  as written.
+- The known duplicate `4h:buy_side:1793289600000` (second row of the 2026-10-29 move at $81,823) is recorded as
+  superseded: "duplicate of the same move (open-event rule, 0.9.8 follow-up)". Applied once at app start, a no-op in
+  databases that never stored it.
+- **Every reader excludes superseded events:** `Database.sweep_events()` (an audit flag shows them), the context
+  panels and the shadow rows (they drop superseded keys from detection too), and `scripts/research_advanced.py` on a
+  confirmed rerun. The original design-study result is unchanged.
+- Tests (failed before): `tests/test_sweep_corrections.py` (5). test_assistant: schema version 13 (deliberate).
+
 ## 0.9.8 follow-up: real-data review of the context panels — 2026-10-31
 
 New modules only (regime.py, liquidity_sweeps.py) plus the panel text. **No live-signal change (signal-1.8);** the

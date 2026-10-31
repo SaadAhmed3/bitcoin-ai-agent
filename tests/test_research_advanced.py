@@ -90,6 +90,7 @@ def offline(ra, tmp_path, monkeypatch):
     calls = []
     monkeypatch.setattr(ra, "DATA_DIR", tmp_path)
     monkeypatch.setattr(ra, "load_rows", lambda: {"1h": [], "4h": [], "1d": []})
+    monkeypatch.setattr(ra, "load_superseded", lambda: set())
     monkeypatch.setattr(ra, "study", lambda *a, **k: calls.append(1) or {"run": len(calls)})
     monkeypatch.setattr(ra, "markdown", lambda r: f"# run {r['run']}\n")
     monkeypatch.setattr(ra, "utc_stamp", lambda: "20261031T150000Z")

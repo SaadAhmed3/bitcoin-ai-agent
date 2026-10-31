@@ -12,12 +12,13 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
-SCHEMA_VERSION = 12  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
+SCHEMA_VERSION = 13  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
                      # 7: holdout_runs (0.9.2), 8: holdout_runs.holdout_start (0.9.3),
                      # 9: holdout_runs.verdict + criteria, write-once triggers (0.9.4),
                      # 10: forward_tests + forward_events, append-only (research-1),
                      # 11: holdout_contaminations, append-only (0.9.7),
-                     # 12: regime_changes, sweep_events, sweep_updates, shadow_context, append-only (advanced analysis).
+                     # 12: regime_changes, sweep_events, sweep_updates, shadow_context, append-only (advanced analysis),
+                     # 13: sweep_corrections, append-only (0.9.8 follow-up).
                     # Migrations are additive; an upgrade backs the file up first.
 
 SCHEMA = """
@@ -303,6 +304,20 @@ CREATE TABLE IF NOT EXISTS shadow_context (
     detail             TEXT    NOT NULL,
     created_at         INTEGER NOT NULL
 );
+-- A stored sweep event is never changed or deleted; a later finding (e.g. a duplicate of the same move) is recorded
+-- here, once per event, and every reader excludes superseded events.
+CREATE TABLE IF NOT EXISTS sweep_corrections (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id      INTEGER NOT NULL UNIQUE REFERENCES sweep_events (id),
+    action        TEXT    NOT NULL CHECK (action IN ('superseded')),
+    reason        TEXT    NOT NULL,
+    corrected_at  INTEGER NOT NULL,
+    by_version    TEXT    NOT NULL
+);
+CREATE TRIGGER IF NOT EXISTS sweep_corrections_no_update BEFORE UPDATE ON sweep_corrections
+    BEGIN SELECT RAISE(ABORT, 'sweep corrections are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS sweep_corrections_no_delete BEFORE DELETE ON sweep_corrections
+    BEGIN SELECT RAISE(ABORT, 'sweep corrections are append-only'); END;
 CREATE TRIGGER IF NOT EXISTS regime_changes_no_update BEFORE UPDATE ON regime_changes
     BEGIN SELECT RAISE(ABORT, 'advanced analysis rows are append-only'); END;
 CREATE TRIGGER IF NOT EXISTS regime_changes_no_delete BEFORE DELETE ON regime_changes
@@ -655,17 +670,38 @@ class Database:
                                     json.dumps(u.get("factors") or {}), u.get("note"), now)).rowcount
         return ev, up
 
-    def sweep_events(self, limit: int = 20) -> list[dict]:
-        """Newest events first, each with its stored status updates in order."""
+    def sweep_events(self, limit: int = 20, include_superseded: bool = False, since: int | None = None) -> list[dict]:
+        """Newest events first, each with its stored status updates in order. Superseded events (sweep_corrections)
+        are left out; include_superseded=True is for audits only. since: event_time >= since (ms)."""
+        where = "" if include_superseded else \
+            " WHERE NOT EXISTS (SELECT 1 FROM sweep_corrections c WHERE c.event_id = e.id AND c.action = 'superseded')"
+        if since is not None:
+            where += (" AND" if where else " WHERE") + " e.event_time >= ?"
         with self.connect() as conn:
-            evs = conn.execute("SELECT * FROM sweep_events ORDER BY event_time DESC, id DESC LIMIT ?",
-                               (limit,)).fetchall()
+            evs = conn.execute(f"SELECT e.* FROM sweep_events e{where} ORDER BY e.event_time DESC, e.id DESC LIMIT ?",
+                               (*(() if since is None else (since,)), limit)).fetchall()
             out = []
             for e in evs:
                 ups = conn.execute("SELECT status, at, strength, factors, note FROM sweep_updates WHERE event_key=? "
                                    "ORDER BY at, id", (e["event_key"],)).fetchall()
                 out.append({**dict(e), "updates": [{**dict(u), "factors": json.loads(u["factors"])} for u in ups]})
         return out
+
+    def sweep_correct(self, event_key: str, action: str, reason: str, by_version: str, now: int) -> bool:
+        """Append a correction for a stored event (once per event). The event row itself is never changed."""
+        with self.connect() as conn:
+            ev = conn.execute("SELECT id FROM sweep_events WHERE event_key = ?", (event_key,)).fetchone()
+            if ev is None:
+                raise LookupError(f"No stored sweep event {event_key}")
+            cur = conn.execute("INSERT OR IGNORE INTO sweep_corrections (event_id, action, reason, corrected_at, "
+                               "by_version) VALUES (?,?,?,?,?)", (ev["id"], action, reason, now, by_version))
+        return cur.rowcount == 1
+
+    def superseded_sweep_keys(self) -> set[str]:
+        with self.connect() as conn:
+            rows = conn.execute("SELECT e.event_key FROM sweep_corrections c JOIN sweep_events e ON e.id = c.event_id "
+                                "WHERE c.action = 'superseded'").fetchall()
+        return {r["event_key"] for r in rows}
 
     def shadow_add(self, row: dict, now: int) -> bool:
         cols = ("close_time", "regime", "regime_confidence", "regime_score", "sweep_score", "vp_score", "poc", "vah",
