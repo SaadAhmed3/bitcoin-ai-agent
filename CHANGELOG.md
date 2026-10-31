@@ -2,6 +2,23 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## 0.9.8 follow-up: real-data review of the context panels — 2026-10-31
+
+New modules only (regime.py, liquidity_sweeps.py) plus the panel text. **No live-signal change (signal-1.8);** the
+rule-set hash and the forward-test fingerprint are unchanged. Classification rules unchanged.
+
+- **Regime confidence for HIGH / LOW VOLATILITY** read 100/100 from two yes/no percentile checks (e.g. ATR% at the
+  94.5th percentile, just past 90). It is now 50 + 50 × the average distance past the threshold (each 0..1: 90 → 100th
+  percentile, or 10 → 0th; a check not past it adds 0). Every regime reports how many checks its confidence rests on
+  (`checks_used`, `confidence_basis`); the panel shows e.g. "85 / 100 · 2 checks".
+- **One move, one sweep.** On 2026-10-29 the 12:00 UTC candle swept the $81,823 swing high and the 16:00 UTC candle
+  wicked higher while that event was still open; the wick stayed within the 0.1 × ATR "taken" tolerance, so it was
+  counted as a second buy-side sweep. A level now cannot start a new event while its event is open (potential, or
+  confirmed within its 3-candle window), including on the candle that closes it. Already stored rows are append-only
+  and stay as they are: `sweep_events` may hold the earlier duplicate (event key `4h:buy_side:1793289600000`).
+- Tests (failed before): a regression test with the real candles (`tests/fixtures/btc_4h_sweep_2026-10.json`), a
+  synthetic open-event test, three regime-confidence tests; the e2e panel test checks the "· N checks" text.
+
 ## 0.9.8 (advanced analysis) — 2026-10-31
 
 Version for everything since 0.9.7: the collapsible sidebar and Forward tests table, and the advanced market analysis

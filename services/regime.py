@@ -12,8 +12,12 @@ Rules (first match wins):
   4. LOW VOLATILITY    ATR% percentile <= 10 or Bollinger bandwidth percentile <= 10 (squeeze)
   5. SIDEWAYS/RANGING  ADX < 20 and |structure| < 0.6
   6. TRANSITIONAL / UNCERTAIN otherwise
-Confidence (0-100) is a HEURISTIC, not a probability: the share of the regime's own checks that hold; a trend loses
-15 points for each of 1D and 1h that disagrees. Transitional: 100 - 100 x (larger side's checks / 5).
+Confidence (0-100) is a HEURISTIC, not a probability, and says how many checks it rests on (checks_used):
+  trends, sideways: the share of the regime's own checks that hold (5 / 4 checks); a trend loses 15 points for each
+                    of 1D and 1h that disagrees. Transitional: 100 - 100 x (larger side's checks / 5).
+  high / low volatility (2 checks: ATR% and Bollinger-bandwidth percentile): 50 + 50 x the average distance past the
+                    threshold, each scaled to 0..1 (90 -> 100th percentile, or 10 -> 0th); a check not past it adds 0.
+                    A percentile just past the threshold therefore reads near 50, not 100.
 """
 from __future__ import annotations
 
@@ -63,6 +67,12 @@ def _pct(series: pd.Series, window: int) -> float | None:
     if len(s) < 50:
         return None
     return round(float((s <= s.iloc[-1]).mean() * 100), 1)
+
+
+def _vol_confidence(pcts: list[float | None], thr: float, high: bool) -> float:
+    """50 + 50 x mean distance past the percentile threshold (0..1 each; missing or not past = 0)."""
+    d = [0.0 if p is None else min(1.0, max(0.0, (p - thr) / (100 - thr) if high else (thr - p) / thr)) for p in pcts]
+    return 50 + 50 * sum(d) / len(d)
 
 
 def _num(x: Any, nd: int = 2) -> float | None:
@@ -132,7 +142,8 @@ def classify(c4h: pd.DataFrame, c1h: pd.DataFrame | None = None, c1d: pd.DataFra
     if atr_pct is not None and atr_pct >= cfg.vol_high:
         regime = HIGH
         checks = [atr_pct >= cfg.vol_high, bbw_pct is not None and bbw_pct >= cfg.vol_high]
-        conf = 100 * sum(checks) / 2
+        conf = _vol_confidence([atr_pct, bbw_pct], cfg.vol_high, True)
+        used, basis = 2, f"2 checks, scaled by distance past the {cfg.vol_high:g}th percentile"
         evidence.append(f"ATR% at the {atr_pct:g}th percentile of {cfg.pct_window} bars")
         if checks[1]:
             evidence.append(f"Bollinger bandwidth expanding ({bbw_pct:g}th percentile)")
@@ -142,6 +153,7 @@ def classify(c4h: pd.DataFrame, c1h: pd.DataFrame | None = None, c1d: pd.DataFra
         regime = BULL if is_bull else BEAR
         side, k = (bull, 0) if is_bull else (bear, 1)
         conf = 100 * sum(side.values()) / 5
+        used, basis = 5, "share of 5 trend checks; -15 for each of 1D and 1h that disagrees"
         evidence += [TXT[n][k] for n, ok in side.items() if ok]
         conflicts += [f"not: {TXT[n][k]}" for n, ok in side.items() if not ok]
         want = "bullish" if is_bull else "bearish"
@@ -156,7 +168,8 @@ def classify(c4h: pd.DataFrame, c1h: pd.DataFrame | None = None, c1d: pd.DataFra
     elif (atr_pct is not None and atr_pct <= cfg.vol_low) or (bbw_pct is not None and bbw_pct <= cfg.bb_squeeze):
         regime = LOW
         checks = [atr_pct is not None and atr_pct <= cfg.vol_low, bbw_pct is not None and bbw_pct <= cfg.bb_squeeze]
-        conf = 100 * sum(checks) / 2
+        conf = _vol_confidence([atr_pct, bbw_pct], cfg.vol_low, False)
+        used, basis = 2, f"2 checks, scaled by distance below the {cfg.vol_low:g}th percentile"
         if checks[0]:
             evidence.append(f"ATR% at the {atr_pct:g}th percentile of {cfg.pct_window} bars")
         if checks[1]:
@@ -167,6 +180,7 @@ def classify(c4h: pd.DataFrame, c1h: pd.DataFrame | None = None, c1d: pd.DataFra
         mixed = not (v21 > v50 > v200) and not (v21 < v50 < v200)
         checks = [True, True, mixed, abs(slope) < 0.5]
         conf = 100 * sum(checks) / 4
+        used, basis = 4, "share of 4 range checks"
         evidence += [f"ADX {adx_v:.1f} < {cfg.adx_weak:g}: weak trend", f"no clear swing structure ({s:+.2f})"]
         evidence += ["EMAs not aligned"] if mixed else []
         conflicts += [] if mixed else ["EMAs still aligned"]
@@ -175,6 +189,7 @@ def classify(c4h: pd.DataFrame, c1h: pd.DataFrame | None = None, c1d: pd.DataFra
     else:
         regime = TRANS
         conf = 100 - 100 * max(nb, nr) / 5
+        used, basis = 5, "100 minus the larger side's share of 5 trend checks"
         lean = "bullish" if nb >= nr else "bearish"
         evidence.append(f"bullish checks {nb}/5, bearish checks {nr}/5: leaning {lean}" if nb != nr
                         else f"bullish checks {nb}/5, bearish checks {nr}/5: no lean")
@@ -184,6 +199,7 @@ def classify(c4h: pd.DataFrame, c1h: pd.DataFrame | None = None, c1d: pd.DataFra
 
     return {
         "status": "ok", "regime": regime, "confidence": int(round(max(0.0, min(100.0, conf)))),
+        "checks_used": used, "confidence_basis": basis,
         "direction": direction, "trend_strength": strength, "volatility": vol_cls,
         "evidence": evidence, "conflicts": conflicts, "checks": dict(side),
         "bullish_checks": nb, "bearish_checks": nr,

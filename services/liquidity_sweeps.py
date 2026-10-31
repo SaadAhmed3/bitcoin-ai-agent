@@ -13,6 +13,8 @@ Statuses (buy-side shown; sell-side is the mirror):
   FAILED SWEEP       a close above the level (acceptance), before or within 3 candles after confirmation.
   RECLAIM CONFIRMED  within 3 candles after confirmation, a close below the sweep candle's low.
   NO CONFIRMATION    3 candles without confirmation or failure, or a missing candle (gap) before confirmation.
+One move is one event: while a level's event is open (potential, or confirmed within its 3-candle window), later
+wicks through the same level belong to that event and start no new one.
 Strength (0-100) is a HEURISTIC, not a probability: penetration 20 + rejection wick 25 + close back inside 15 +
 relative volume 20 + confirmation 10 (+5 when a 1h close confirmed first) + 1D context in favour of the reversal 5.
 """
@@ -153,6 +155,9 @@ def detect_sweeps(c4h: pd.DataFrame, c1h: pd.DataFrame | None = None, c1d: pd.Da
 
     for t in range(1, n):
         contiguous = ot[t] - ot[t - 1] == step
+        # Levels whose event was still open when this candle started: the same move, never a second sweep - also
+        # for the candle that closes that event (e.g. its third new extreme).
+        busy = {(e["direction"], e["level"]) for e in tracking}
         for e in list(tracking):
             buy = e["direction"] == "buy_side"
             beyond = c[t] > e["level"] if buy else c[t] < e["level"]
@@ -196,8 +201,8 @@ def detect_sweeps(c4h: pd.DataFrame, c1h: pd.DataFrame | None = None, c1d: pd.Da
         rv = float(v[t] / prev.mean()) if np.isfinite(v[t]) and v[t] > 0 and len(prev) else None
         for direction, levels in (("buy_side", highs), ("sell_side", lows)):
             buy = direction == "buy_side"
-            hit = [lv for lv in levels
-                   if ((h[t] >= lv["level"] + cfg.min_pen_atr * a and c[t] < lv["level"]) if buy
+            hit = [lv for lv in levels if (direction, lv["level"]) not in busy
+                   and ((h[t] >= lv["level"] + cfg.min_pen_atr * a and c[t] < lv["level"]) if buy
                        else (l[t] <= lv["level"] - cfg.min_pen_atr * a and c[t] > lv["level"]))]
             if not hit:
                 continue

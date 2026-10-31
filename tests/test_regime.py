@@ -140,3 +140,38 @@ def test_history_reports_previous_regime_and_change_time():
     assert all(h["labels"][t] == h["current"] for t in run)          # the current run starts at changed_at
     before = times[times.index(h["changed_at"]) - 1]
     assert h["previous"] == h["labels"][before] != h["current"]
+
+
+# ---------------------------------------------------------------- real-data review (0.9.8): volatility confidence
+def scaled(pcts, thr, high=True):
+    d = [min(1.0, max(0.0, (p - thr) / (100 - thr) if high else (thr - p) / thr)) for p in pcts]
+    return int(round(50 + 50 * sum(d) / len(d)))
+
+
+def test_high_volatility_confidence_scales_with_distance_past_the_threshold():
+    rf = np.full(600, 0.004)
+    rf[-12:] = 0.03
+    r = classify(frame(trend(), rf))
+    m = r["metrics"]
+    assert r["regime"] == "HIGH VOLATILITY"                               # classification unchanged
+    assert r["confidence"] == scaled([m["atr_pct_percentile"], m["bb_width_percentile"]], 90)
+    assert r["checks_used"] == 2 and "past the 90th percentile" in r["confidence_basis"]
+    assert r["confidence"] < 100                                          # a percentile just past 90 is not 100
+
+
+def test_low_volatility_confidence_scales_with_distance_below_the_threshold():
+    close = ranging()
+    close[-60:] = 30_000 * (1 + 0.001 * np.sin(2 * np.pi * np.arange(60) / 24))
+    rf = np.full(600, 0.004)
+    rf[-60:] = 0.0005
+    r = classify(frame(close, rf))
+    m = r["metrics"]
+    assert r["regime"] == "LOW VOLATILITY"
+    assert r["confidence"] == scaled([m["atr_pct_percentile"], m["bb_width_percentile"]], 10, high=False)
+    assert r["checks_used"] == 2 and "below the 10th percentile" in r["confidence_basis"]
+
+
+def test_every_regime_says_how_many_checks_its_confidence_uses():
+    assert classify(frame(trend(), DECLINING))["checks_used"] == 5
+    assert classify(frame(mean_reverting(3)))["checks_used"] == 4            # sideways
+    assert classify(frame(mean_reverting(1)))["checks_used"] == 5            # transitional

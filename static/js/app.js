@@ -475,7 +475,7 @@
     const regimeBody = r.status !== "ok"
       ? `<p class="muted">${r.status === "insufficient_data" ? "Not enough closed 4h candles yet." : r.status === "error" ? "Could not calculate: " + esc(r.error) : MISSING.data}</p>`
       : `<div class="adv-head"><span class="adv-label adv-${esc(r.direction)}">${esc(r.regime)}</span>
-          <span class="adv-conf mono" title="Heuristic: share of the checks that agree, not a probability">${r.confidence} / 100</span></div>
+          <span class="adv-conf mono" title="Heuristic, not a probability: ${esc(r.confidence_basis)}">${r.confidence} / 100 · ${r.checks_used} check${r.checks_used === 1 ? "" : "s"}</span></div>
         <dl class="adv-dl">
           <div><dt>Direction</dt><dd>${esc(DIR[r.direction] || r.direction)}</dd></div>
           <div><dt>Trend strength</dt><dd>${esc(r.trend_strength)} · ADX ${esc(plain(r.metrics.adx, MISSING.nodata))}</dd></div>
