@@ -216,6 +216,12 @@ weights, not NO TRADE. They use closed candles only, so a value never changes af
   "Volume profile" above the chart to draw it. Candles do not record the price of every trade, so the volume of each
   candle is spread evenly over its range: an approximation.
 
+**On the chart** (Market & chart, tick *Market regime*, *Liquidity sweeps* or *Volume profile* above it): faint
+background colours show the 4-hour regime (green trending up, red trending down, grey ranging, amber unusually
+volatile; a `|` at the top marks a change), arrows show stored sweeps at the candle that made the high or low (filled =
+confirmed, open amber = potential, open grey = failed), and the volume profile sits on the right edge. The profile
+uses the last 200 candles of the chart, or choose "visible range" to follow your zoom. All of it is context only.
+
 **Shadow mode** (Settings → Advanced analysis) stores these three readings every 4 hours next to the live signal, so
 that one day they can be tested on data nobody has seen yet. Turning it off stops the storing; the panels stay.
 

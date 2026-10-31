@@ -15,7 +15,9 @@ from typing import Any, Callable
 
 import pandas as pd
 
+from config import TIMEFRAMES
 from database import now_ms
+from services.chart_overlays import RegimeCache, regime_bars, regime_segments, regime_transitions, sweep_markers
 from services.liquidity_sweeps import ACTIVE, SweepConfig, detect_sweeps, status_at, sweep_score
 from services.regime import classify, regime_history, regime_score
 from services.volume_profile import LOOKBACK, ProfileConfig, volume_profile, vp_score
@@ -28,6 +30,7 @@ SHADOW_NOTE = ("Shadow mode: the three components are computed, shown and stored
                "change the live signal, its score, weights, thresholds or NO TRADE gates (signal-1.8).")
 PROFILE_TIMEFRAMES = tuple(LOOKBACK)
 SWEEP_BARS = 300                 # 4h candles scanned for sweeps (50 days)
+H4_MS = TIMEFRAMES["4h"] * 1000
 
 
 def combined_score(live_score: float | None, comps: dict[str, float], weights: dict[str, float]) -> float | None:
@@ -79,6 +82,7 @@ class AdvancedAnalysis:
         self._lock = threading.Lock()
         self._core: dict = {}
         self._profiles: dict = {}
+        self._regimes = RegimeCache()
 
     # ---------------------------------------------------------------- data
     def _frame(self, tf: str) -> pd.DataFrame:
@@ -171,11 +175,62 @@ class AdvancedAnalysis:
         return out
 
     # ---------------------------------------------------------------- write (monitor job, once per 4h candle)
+    # ---------------------------------------------------------------- chart overlays (read-only)
+    def overlays(self, tf: str, limit: int = 300) -> dict:
+        """Regime shading and stored sweep markers for the chart's own closed candles (services/chart_overlays.py)."""
+        if tf not in TIMEFRAMES:
+            raise ValueError(f"Unsupported timeframe '{tf}'. Use one of: {', '.join(TIMEFRAMES)}")
+        notes: list[str] = []
+        chart_res = self.market.get_candles(tf, limit)
+        chart = chart_res.df if chart_res.df is not None else pd.DataFrame()
+        out: dict[str, Any] = {"tf": tf, "analysis_tf": "4h", "regime": {"bars": [], "segments": [], "transitions": []},
+                               "sweeps": [], "notes": notes, "as_of": None}
+        res4 = self.market.get_candles("4h")
+        c4 = res4.df if res4.df is not None else pd.DataFrame()
+        if chart.empty:
+            notes.append("No chart candles: overlays need the chart's closed candles.")
+        if c4.empty:
+            notes.append("No 4h candles available: the regime and sweep overlays need them.")
+        if chart.empty or c4.empty:
+            return out
+        start, as_of = int(chart["open_time"].iloc[0]), int(chart["close_time"].iloc[-1])
+        out["as_of"] = as_of
+        if res4.is_stale:
+            notes.append("4h candles are stale: regime and sweep overlays may be out of date.")
+        bars = regime_bars(c4, self._frame("1h"), self._frame("1d"), start, as_of, self._regimes)
+        if bars and bars[0]["start"] > start + H4_MS:
+            notes.append("Regime shading covers only the part of the chart with enough 4h history.")
+        out["regime"] = {"bars": bars, "segments": regime_segments(bars), "transitions": regime_transitions(bars)}
+        stored = self.db.sweep_events(500, since=start - H4_MS)       # superseded events are excluded here
+        out["sweeps"] = sweep_markers(stored, chart, tf, as_of)
+        if not out["sweeps"]:
+            notes.append("No stored liquidity sweeps in this range (the background monitor stores them).")
+        return out
+
+    def chart_profile(self, tf: str, limit: int = 300, mode: str = "last", start: int | None = None,
+                      end: int | None = None) -> dict:
+        """Volume profile of the chart's closed candles: the last 200, or the visible range [start, end]."""
+        if tf not in TIMEFRAMES:
+            raise ValueError(f"Unsupported timeframe '{tf}'. Use one of: {', '.join(TIMEFRAMES)}")
+        if mode not in ("last", "visible"):
+            raise ValueError("mode must be 'last' or 'visible'")
+        df = self.market.get_candles(tf, limit).df
+        if df is None or df.empty:
+            return {"status": "no_data", "timeframe": tf, "mode": mode}
+        if mode == "last":
+            return {**volume_profile(df, ProfileConfig(lookback=200), timeframe=tf), "mode": mode}
+        if start is None or end is None:
+            raise ValueError("A visible-range profile needs 'from' and 'to' (ms)")
+        sub = df[(df["open_time"] >= start) & (df["open_time"] <= end)]      # every chart candle here is closed
+        if len(sub) < 10:
+            return {"status": "too_few_candles", "timeframe": tf, "mode": mode, "candles_used": int(len(sub))}
+        return {**volume_profile(sub, ProfileConfig(lookback=len(sub)), timeframe=tf), "mode": mode}
+
+    # ---------------------------------------------------------------- write (monitor job, once per 4h candle)
     def record(self) -> bool:
-        """Store the shadow row for the newest closed 4h candle (once), the regime change and new sweep updates.
-        Returns True when a shadow row was added. Never touches the live signal."""
-        if not self.setting("shadow_enabled"):
-            return False
+        """Store new sweep status updates and a regime change (always: the chart overlays read them) and, in shadow
+        mode, the shadow row for the newest closed 4h candle (once). Returns True when a shadow row was added.
+        Never touches the live signal."""
         try:
             core = self._core_state()
         except Exception:
@@ -192,6 +247,8 @@ class AdvancedAnalysis:
                                        "regime": reg["regime"], "previous": reg.get("previous") if last is None
                                        else last["regime"], "confidence": reg["confidence"],
                                        "detail": {"evidence": reg["evidence"], "conflicts": reg["conflicts"]}}, now)
+        if not self.setting("shadow_enabled"):
+            return False
         if (self.db.shadow_last_time() or 0) >= core["as_of"]:
             return False
         p4 = self.profile("4h")
