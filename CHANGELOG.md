@@ -2,6 +2,29 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## Advanced market analysis: regime, liquidity sweeps, volume profile (shadow mode) — 2026-10-31
+
+**No live-signal change: engine signal-1.8, its score, weights, thresholds and NO TRADE gates are unchanged.** The
+four protected files (signal_engine.py, technical_analysis.py, backtesting.py, forward_tests.py) are untouched: the
+rule-set hash (code fingerprint 404e15bcd900001e) and the forward-test fingerprint (5e4b8a0e…) are the same and
+pinned in a test. **No holdout run, no full-period run.**
+
+- **New modules** `services/regime.py`, `liquidity_sweeps.py`, `volume_profile.py`, `advanced_analysis.py`
+  (they import the existing indicators). Closed candles only; sweep levels only from swings confirmed before the sweep
+  candle; every sweep status decided at a candle close and stored with that time; rolling VPVR = the previous 200
+  closed candles. EMA 21 is reused where the spec said EMA 20.
+- **Display:** Market & chart → "Advanced market analysis" (regime, sweeps, volume profile) and a "Volume profile"
+  chart overlay (histogram + POC/VAH/VAL, HVN/LVN bands, off by default); a "Context, not part of the score" line on
+  the Overview and Signal views. No sweep alerts.
+- **Shadow mode** (Settings → Advanced analysis, on by default; weights 0.10 each, max 0.3, never in EngineConfig):
+  one row per closed 4h candle in `shadow_context` with the three components, the live signal and a "what if" score.
+- **Schema 12** (additive, DB backed up first): `regime_changes`, `sweep_events`, `sweep_updates`, `shadow_context`,
+  append-only (triggers). API: `GET /api/advanced`, `GET /api/advanced/shadow`.
+- **Design-data study** pre-registered in `PREREGISTRATION_ADVANCED.md` (committed before the run), run once:
+  `data/research_advanced_design.md`. No evidence of added value (see README). Design-data evidence only.
+- Tests: test_regime (11), test_volume_profile (10), test_liquidity_sweeps (13), test_advanced_integration (8),
+  test_research_advanced (5), e2e test_advanced_e2e (6). test_assistant: schema version 12 (deliberate).
+
 ## UI: collapsible sidebar, Forward tests table — 2026-10-31
 
 **UI only.** No rule, tracker, signal or schema change; the forward-test fingerprint stays "unchanged since the start".

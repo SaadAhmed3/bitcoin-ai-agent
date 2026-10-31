@@ -91,6 +91,7 @@
         <dl class="sum-facts" id="sumFacts"></dl>
       </div>
       <div id="sumPending"></div>
+      <p class="ctx-note small" aria-live="polite"></p>
       <a class="btn ghost sum-link" href="#/signal" id="sumLink">See full reasoning →</a>
     </section>
 
@@ -109,6 +110,7 @@
         </div>
         <div class="sig-gates" id="sigGates"></div>
       </div>
+      <p class="ctx-note small" aria-live="polite"></p>
       <details class="fold" id="fdEvidence"><summary>Evidence for / against</summary>
         <div class="sig-grid two">
           <div><h3>Bullish evidence</h3><ul class="ev up-list" id="sigFor"></ul></div>
@@ -159,6 +161,7 @@
         <label><input type="checkbox" data-ov="levels"> Support / resistance</label>
         <label><input type="checkbox" data-ov="alerts"> Alert prices</label>
         <label><input type="checkbox" data-ov="markers"> Signal markers</label>
+        <label><input type="checkbox" data-ov="vp"> Volume profile</label>
       </div>
       <div id="chartBox" class="chart-box" role="figure" aria-label="BTC candlestick chart with volume and RSI for the selected timeframe"><div class="empty">Loading chart…</div></div>
       <p class="muted small" id="chartNote"></p>
@@ -186,6 +189,35 @@
         </div>
         <div class="kpi-warn" id="anaWarn"></div>
       </article>
+    </section>
+
+    <section id="advanced" class="card" data-views="market" data-state="loading">
+      <div class="card-head">
+        <div><h2>Advanced market analysis</h2>
+          <p class="muted" id="advMeta">Context, not part of the score · closed candles only</p></div>
+        <span class="tag calc">Context</span>
+      </div>
+      <div class="adv-grid">
+        <article class="adv-panel" id="advRegime" aria-labelledby="advRegimeH">
+          <h3 id="advRegimeH">Market regime <small class="muted">4h</small></h3>
+          <div class="adv-body"><p class="empty">Loading…</p></div>
+        </article>
+        <article class="adv-panel" id="advSweep" aria-labelledby="advSweepH">
+          <h3 id="advSweepH">Liquidity sweeps <small class="muted">4h</small></h3>
+          <div class="adv-body"><p class="empty">Loading…</p></div>
+        </article>
+        <article class="adv-panel" id="advProfile" aria-labelledby="advProfileH">
+          <div class="adv-panel-head"><h3 id="advProfileH">Volume profile</h3>
+            <select id="advProfileTf" aria-label="Volume profile timeframe">
+              <option value="4h">4h · 200 candles</option><option value="1h">1h · 240 candles</option>
+              <option value="1d">1d · 180 candles</option></select></div>
+          <div class="adv-body"><p class="empty">Loading…</p></div>
+        </article>
+      </div>
+      <p class="disclaimer">Context, not part of the score. The live signal (engine signal-1.8), its score, weights,
+        thresholds and NO TRADE gates do not use these panels. Shadow mode only stores them next to the signal for
+        later research. Confidence and strength are heuristic scores, not probabilities; a sweep is never a BUY or
+        SELL signal.</p>
     </section>
 
     <section id="mtf" class="card" data-views="market">

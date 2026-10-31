@@ -29,6 +29,7 @@ from services.backtest_service import BacktestService, current_validation, recor
 from services.backtesting import DESIGN_BADGE, FULL_BADGE
 from services.paper_trading import PaperTrading
 from services.forward_tests import ForwardTests
+from services.advanced_analysis import AdvancedAnalysis
 from services.risk_manager import RISK_RANGES, RiskSettings, position_size
 from services.technical_analysis import analyze, chart_series
 from services.assistant import Assistant, AssistantBusy, load_study
@@ -225,7 +226,17 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         market.get_candles("1d")
         forward.process()
 
-    monitor = AlertMonitor(alerts, interval=60.0, jobs=[paper_levels_check, forward_tests_job])
+    # Advanced analysis (regime, sweeps, volume profile): display + SHADOW mode. It reads the live signal to store
+    # it next to its own components and never feeds anything back (signal-1.8 unchanged).
+    advanced = AdvancedAnalysis(db, market, signal_fn=_signal_throttled,
+                                setting=lambda key: settings.get("advanced", key))
+    app.config["BTC_ADVANCED"] = advanced
+
+    def advanced_shadow_job():
+        """Once per newly closed 4h candle: the shadow row, a regime change and new sweep status updates."""
+        advanced.record()
+
+    monitor = AlertMonitor(alerts, interval=60.0, jobs=[paper_levels_check, forward_tests_job, advanced_shadow_job])
     app.config["BTC_MONITOR"] = monitor
     if start_monitor:
         monitor.start()
@@ -423,6 +434,17 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     @app.get("/api/backtest/runs")
     def backtest_runs():
         return jsonify({"runs": db.backtest_runs(20)})
+
+    @app.get("/api/advanced")
+    def advanced_snapshot():
+        """Regime, liquidity sweeps and volume profile from closed candles: context, not part of the score."""
+        return jsonify(advanced.snapshot(request.args.get("profile_tf", "4h")))
+
+    @app.get("/api/advanced/shadow")
+    def advanced_shadow():
+        limit = min(max(int(request.args.get("limit", 50)), 1), 500)
+        return jsonify({"rows": db.shadow_rows(limit),
+                        "note": "Shadow mode: stored next to the live signal for later research; never used by it."})
 
     @app.get("/api/forward")
     def forward_status():

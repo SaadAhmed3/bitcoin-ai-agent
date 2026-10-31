@@ -5,7 +5,7 @@
   // Every request carries the app's own header; the server rejects cross-site writes without it (CSRF guard).
   const fetch = (url, opts = {}) => window.fetch(url, { ...opts, headers: { "X-Requested-With": "BTCSignalLab", ...(opts.headers || {}) } });
   const state = { tf: "1h", view: null, lastSeries: null, loaded: {}, ran: new Map(), priceMs: 15000, lastUpdate: 0,
-    priceStatus: "wait", sourceErrors: [], analysis: {}, chartExtras: {} };
+    priceStatus: "wait", sourceErrors: [], analysis: {}, chartExtras: {}, advanced: null, vpTf: "4h" };
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   // Links from data (feeds, alerts) only ever become http(s) or same-site paths; anything else is inert.
@@ -170,13 +170,21 @@
       loadChart(); loadAnalysis();
     });
     const mobile = window.innerWidth < 700;
-    const defaults = { ema: true, bb: true, vwap: false, levels: !mobile, alerts: !mobile, markers: !mobile };
+    const defaults = { ema: true, bb: true, vwap: false, levels: !mobile, alerts: !mobile, markers: !mobile, vp: false };
     state.overlays = { ...defaults, ...store.get("btc-overlays", {}) };
     document.querySelectorAll("#overlayToggles input[data-ov]").forEach((i) => { i.checked = Boolean(state.overlays[i.dataset.ov]); });
-    $("overlayToggles").addEventListener("change", (e) => {
+    $("overlayToggles").addEventListener("change", async (e) => {
       state.overlays[e.target.dataset.ov] = e.target.checked;
       store.set("btc-overlays", state.overlays);
+      if (e.target.dataset.ov === "vp" && e.target.checked && !state.advanced) await getAdvanced().catch(() => null);
       if (state.lastSeries) drawChart(state.lastSeries);
+    });
+    state.vpTf = ["4h", "1h", "1d"].includes(store.get("btc-vp-tf", "4h")) ? store.get("btc-vp-tf", "4h") : "4h";
+    $("advProfileTf").value = state.vpTf;
+    $("advProfileTf").addEventListener("change", (e) => {
+      state.vpTf = e.target.value;
+      store.set("btc-vp-tf", state.vpTf);
+      loadAdvanced();
     });
     $("refreshBtn").onclick = () => refreshView(true);
     const tick = () => {
@@ -288,6 +296,7 @@
         history: hist.status === "fulfilled" ? hist.value.history : [],
       };
       state.lastSeries = data.series;
+      if (state.overlays.vp && !state.advanced) await getAdvanced().catch(() => null);
       drawChart(data.series);
     } catch (err) {
       $("chartBox").innerHTML = `<div class="empty">Chart failed to load: ${esc(err.message)}</div>`;
@@ -374,6 +383,8 @@
     if (state.overlays.vwap) traces.push(lineTrace(s.vwap, "VWAP", "#2dd4bf", { dash: "dash" }));
     const ov = overlayTraces(s, lo, hi, { up, down, info, muted });
     traces.push(...ov.traces);
+    const vp = profileOverlay(lo, hi, { info, muted, accent: css("--accent"), up, down });
+    traces.push(...vp.traces);
     traces.push({
       type: "bar", x: s.time, y: s.volume, name: "Volume", xaxis: "x", yaxis: "y2", hoverinfo: "y",
       marker: { color: s.close.map((c, i) => (c >= s.open[i] ? up : down)), opacity: 0.45 },
@@ -389,14 +400,170 @@
       yaxis: { domain: [0.38, 1], side: "right", gridcolor: line, tickformat: ",.0f", range: [lo, hi] },
       yaxis2: { domain: [0.2, 0.34], side: "right", gridcolor: line, showticklabels: false },
       yaxis3: { domain: [0, 0.16], side: "right", gridcolor: line, range: [0, 100], tickvals: [30, 50, 70] },
-      shapes: [...ov.shapes, ...[30, 70].map((y) => ({ type: "line", xref: "paper", x0: 0, x1: 1, yref: "y3", y0: y, y1: y, line: { color: muted, width: 1, dash: "dot" } }))],
-      annotations: ov.annotations,
+      ...(vp.axis ? { xaxis4: vp.axis } : {}),
+      shapes: [...ov.shapes, ...vp.shapes, ...[30, 70].map((y) => ({ type: "line", xref: "paper", x0: 0, x1: 1, yref: "y3", y0: y, y1: y, line: { color: muted, width: 1, dash: "dot" } }))],
+      annotations: [...ov.annotations, ...vp.annotations],
     };
     Plotly.newPlot("chartBox", traces, layout, { responsive: true, displaylogo: false, scrollZoom: true, modeBarButtonsToRemove: ["select2d", "lasso2d"] });
-    const on = ["levels", "alerts", "markers"].filter((k) => state.overlays[k]);
-    $("chartNote").textContent = (on.length ? "Overlays: support/resistance bands are levels with 2+ touches, dashed lines are minor levels; dotted lines are your price alerts; markers are stored signal records. " : "")
+    const on = ["levels", "alerts", "markers", "vp"].filter((k) => state.overlays[k]);
+    $("chartNote").textContent = (on.some((k) => k !== "vp") ? "Overlays: support/resistance bands are levels with 2+ touches, dashed lines are minor levels; dotted lines are your price alerts; markers are stored signal records. " : "")
+      + (vp.note ? vp.note + " " : "")
       + (ov.outside ? `${ov.outside} level${ov.outside > 1 ? "s" : ""} or alert price${ov.outside > 1 ? "s are" : " is"} outside the visible price range.` : "");
     $("chartBox").dataset.overlays = on.join(" ");
+  }
+
+  // ---------------------------------------------------------------- advanced analysis (context, not part of the score)
+  async function getAdvanced() {
+    const d = await getJson(`/api/advanced?profile_tf=${state.vpTf}`);
+    state.advanced = { ...d, fetched: Date.now() };
+    return state.advanced;
+  }
+
+  // Volume profile on the price chart: horizontal bars from the right edge (25% of the width at most), POC / VAH /
+  // VAL lines and HVN / LVN bands. The profile's own timeframe can differ from the chart's.
+  function profileOverlay(lo, hi, colors) {
+    const out = { traces: [], shapes: [], annotations: [], axis: null, note: "" };
+    const p = state.advanced && state.advanced.profile;
+    if (!state.overlays.vp || !p || p.status !== "ok") {
+      if (state.overlays.vp) out.note = "Volume profile: no profile data yet.";
+      return out;
+    }
+    const maxV = Math.max(...p.bins.map((b) => b.volume)) || 1;
+    const width = p.bins.length ? p.bins[0].high - p.bins[0].low : 1;
+    out.traces.push({ type: "bar", orientation: "h", name: "Volume profile", showlegend: false, xaxis: "x4", yaxis: "y",
+      y: p.bins.map((b) => b.mid), x: p.bins.map((b) => b.volume), width: width * 0.92,
+      marker: { color: p.bins.map((b) => (b.mid >= p.val && b.mid <= p.vah ? alpha(colors.info, 0.34) : alpha(colors.muted, 0.22))) },
+      hovertemplate: "$%{y:,.0f} · volume %{x:,.0f}<extra>Volume profile</extra>" });
+    out.axis = { overlaying: "x", side: "top", visible: false, range: [maxV * 4, 0], fixedrange: true };
+    const line = (name, y, color, dash) => {
+      out.shapes.push({ name, type: "line", xref: "paper", x0: 0, x1: 1, yref: "y", y0: y, y1: y, line: { color, width: name === "POC" ? 1.6 : 1.1, dash } });
+      if (y >= lo && y <= hi) out.annotations.push({ xref: "paper", x: 0.99, xanchor: "right", yref: "y", y, yanchor: "bottom", showarrow: false,
+        text: `${name} $${fmtNum(y, 0)}`, font: { size: 10, color } });
+    };
+    line("POC", p.poc, colors.accent, "solid");
+    line("VAH", p.vah, colors.info, "dash");
+    line("VAL", p.val, colors.info, "dash");
+    for (const [kind, arr, color] of [["HVN", p.hvn, colors.info], ["LVN", p.lvn, colors.muted]]) {
+      for (const n of arr || []) {
+        out.shapes.push({ name: kind, type: "rect", xref: "paper", x0: 0, x1: 1, yref: "y", y0: n.low, y1: n.high, layer: "below",
+          line: { width: 0 }, fillcolor: alpha(color, kind === "HVN" ? 0.08 : 0.05) });
+      }
+    }
+    out.note = `Volume profile: last ${p.candles_used} closed ${p.timeframe} candles, volume spread evenly over each candle's range (an approximation).`;
+    return out;
+  }
+
+  const DIR = { bullish: "Bullish", bearish: "Bearish", neutral: "No clear direction" };
+  const SWEEP_DIR = { buy_side: "Buy-side", sell_side: "Sell-side" };
+  const list = (items, cls = "") => (items && items.length ? `<ul class="ev ${cls}">${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p class="muted small">${MISSING.none}</p>`);
+
+  function sweepSentence(e) {
+    if (!e) return "";
+    const side = e.direction === "buy_side" ? "buy-side liquidity sweep above a previous 4H swing high" : "sell-side liquidity sweep below a previous 4H swing low";
+    const lvl = usd(e.level, 0);
+    switch (e.status) {
+      case "POTENTIAL SWEEP": return `Potential ${side} (${lvl}). Confirmation is pending.`;
+      case "CONFIRMED SWEEP": return `Confirmed ${side} (${lvl}): price moved beyond the level and closed back inside.`;
+      case "RECLAIM CONFIRMED": return `Confirmed ${side} (${lvl}) with a reclaim: price closed beyond the sweep candle's other end.`;
+      case "FAILED SWEEP": return `Failed ${side} (${lvl}): price closed beyond the level and stayed there.`;
+      default: return `Unconfirmed ${side} (${lvl}): no confirmation within 3 candles.`;
+    }
+  }
+
+  function renderAdvanced(d) {
+    const r = d.regime || {};
+    const regimeBody = r.status !== "ok"
+      ? `<p class="muted">${r.status === "insufficient_data" ? "Not enough closed 4h candles yet." : r.status === "error" ? "Could not calculate: " + esc(r.error) : MISSING.data}</p>`
+      : `<div class="adv-head"><span class="adv-label adv-${esc(r.direction)}">${esc(r.regime)}</span>
+          <span class="adv-conf mono" title="Heuristic: share of the checks that agree, not a probability">${r.confidence} / 100</span></div>
+        <dl class="adv-dl">
+          <div><dt>Direction</dt><dd>${esc(DIR[r.direction] || r.direction)}</dd></div>
+          <div><dt>Trend strength</dt><dd>${esc(r.trend_strength)} · ADX ${esc(plain(r.metrics.adx, MISSING.nodata))}</dd></div>
+          <div><dt>Volatility</dt><dd>${esc(r.volatility)} · ATR% ${esc(show(r.metrics.atr_pct_percentile, (x) => x + "th pct", MISSING.nodata))}</dd></div>
+          <div><dt>Previous</dt><dd>${r.previous ? `${esc(r.previous)} · changed <span title="${esc(utcTime(r.changed_at))}">${esc(localTime(r.changed_at))}</span>` : "Same regime for the last 60 candles"}</dd></div>
+        </dl>
+        <h4>Evidence</h4>${list(r.evidence)}
+        <h4>Conflicting evidence</h4>${list(r.conflicts)}
+        <p class="muted small">As of the 4h close <span title="${esc(utcTime(r.as_of))}">${esc(localTime(r.as_of))}</span>. EMA 21 is used where a guide would say EMA 20.</p>`;
+    $("advRegime").querySelector(".adv-body").innerHTML = regimeBody;
+
+    const sw = d.sweeps || {};
+    const e = sw.latest;
+    let sweepBody;
+    if (sw.status !== "ok") sweepBody = `<p class="muted">${sw.status === "error" ? "Could not calculate." : MISSING.data}</p>`;
+    else if (!e) sweepBody = `<p class="muted">No sweep in the last ${sw.scanned_bars} closed 4h candles.</p>`;
+    else {
+      const f = e.factors || {};
+      const chips = [["Penetration", f.penetration, 20], ["Rejection wick", f.rejection_wick, 25], ["Close inside", f.close_inside, 15],
+        ["Volume", f.volume, 20], ["Confirmation", f.confirmation, 15], ["1D context", f.higher_timeframe, 5]]
+        .map(([n, v, m]) => `<li><span>${n}</span><b class="mono">${fmtNum(v || 0, 0)}/${m}</b></li>`).join("");
+      const others = (sw.recent || []).slice(1, 4).map((x) => `<li><span title="${esc(utcTime(x.event_time))}">${esc(localTime(x.event_time))}</span> · ${esc(SWEEP_DIR[x.direction])} · ${esc(x.status.toLowerCase())} · ${esc(usd(x.level, 0))}</li>`).join("");
+      sweepBody = `<div class="adv-head"><span class="adv-label">${esc(SWEEP_DIR[e.direction])} · ${esc(e.status)}</span>
+          <span class="adv-conf mono" title="Heuristic strength, not a probability">${fmtNum(e.strength, 0)} / 100</span></div>
+        <p class="small">${esc(sweepSentence(e))}</p>
+        <dl class="adv-dl">
+          <div><dt>Swing level</dt><dd class="mono">${esc(usd(e.level))}${e.equal_levels > 1 ? ` <small class="muted">(${e.equal_levels} equal ${e.direction === "buy_side" ? "highs" : "lows"})</small>` : ""}</dd></div>
+          <div><dt>Sweep ${e.direction === "buy_side" ? "high" : "low"}</dt><dd class="mono">${esc(usd(e.sweep_extreme))}</dd></div>
+          <div><dt>Sweep candle close</dt><dd class="mono">${esc(usd(e.reclaim_price))}</dd></div>
+          <div><dt>Volume</dt><dd>${esc(show(e.volume_ratio, (x) => fmtNum(x, 2) + "x the 20-candle average", "Volume missing"))}</dd></div>
+          <div><dt>Event</dt><dd><span title="${esc(utcTime(e.event_time))}">${esc(localTime(e.event_time))}</span></dd></div>
+          <div><dt>Confirmed</dt><dd>${e.confirmed_at ? `<span title="${esc(utcTime(e.confirmed_at))}">${esc(localTime(e.confirmed_at))}</span>` : "Not confirmed"}</dd></div>
+        </dl>
+        <h4>Strength factors</h4><ul class="adv-factors">${chips}</ul>
+        ${others ? `<h4>Earlier</h4><ul class="ev small">${others}</ul>` : ""}`;
+    }
+    $("advSweep").querySelector(".adv-body").innerHTML = sweepBody;
+
+    const p = d.profile || {};
+    const nodes = (arr) => (arr && arr.length ? arr.map((n) => `<li class="mono">${esc(usd(n.price, 0))}</li>`).join("") : `<li class="muted">${MISSING.none}</li>`);
+    const profBody = p.status !== "ok"
+      ? `<p class="muted">${p.status === "no_volume" ? "No volume in this range: profile not available." : MISSING.data}</p>`
+      : `<div class="adv-kpis">
+          <div><small>POC</small><b class="mono">${esc(usd(p.poc, 0))}</b></div>
+          <div><small>VAH</small><b class="mono">${esc(usd(p.vah, 0))}</b></div>
+          <div><small>VAL</small><b class="mono">${esc(usd(p.val, 0))}</b></div></div>
+        <div class="adv-nodes"><div><h4>High-volume nodes</h4><ul>${nodes(p.hvn)}</ul></div>
+          <div><h4>Low-volume nodes</h4><ul>${nodes(p.lvn)}</ul></div></div>
+        <p class="muted small">Range: last ${p.candles_used} closed ${esc(p.timeframe)} candles · ${esc(localTime(p.range.from_open_time))} to ${esc(localTime(p.range.to_close_time))} · value area ${p.value_area_pct}%${p.skipped_missing_volume ? ` · ${p.skipped_missing_volume} candle(s) without volume skipped` : ""}</p>
+        <p class="muted small">Latest completed candle <span title="${esc(utcTime(p.last_candle_close))}">${esc(localTime(p.last_candle_close))}</span> · calculated ${esc(localTime(d.generated_at))}. ${esc(p.method)}</p>`;
+    $("advProfile").querySelector(".adv-body").innerHTML = profBody;
+    $("advMeta").textContent = `Context, not part of the score · closed candles only${d.as_of ? " · 4h as of " + localTime(d.as_of) : ""}`;
+  }
+
+  async function loadAdvanced() {
+    try {
+      const d = await getAdvanced();
+      renderAdvanced(d);
+      $("advanced").dataset.state = "ready";
+      if (state.overlays.vp && state.lastSeries) drawChart(state.lastSeries);
+      renderContext(d);
+    } catch (err) {
+      for (const id of ["advRegime", "advSweep", "advProfile"]) $(id).querySelector(".adv-body").innerHTML = `<p class="muted">Could not load: ${esc(err.message)}</p>`;
+      $("advanced").dataset.state = "error";
+    }
+  }
+
+  // One line next to the signal: what the three panels say, explicitly outside the score.
+  function renderContext(d) {
+    const r = d.regime || {}, e = (d.sweeps || {}).latest, p = d.profile || {};
+    const parts = [];
+    parts.push(r.status === "ok" ? `Regime ${r.regime} (${r.confidence}/100)` : "Regime: not enough data");
+    if (e) parts.push(`latest sweep: ${SWEEP_DIR[e.direction].toLowerCase()} ${e.status.toLowerCase()} at ${usd(e.level, 0)}`);
+    const close = r.metrics && r.metrics.close;
+    if (p.status === "ok" && has(close)) {
+      const where = close > p.vah ? "above the value area" : close < p.val ? "below the value area" : "inside the value area";
+      parts.push(`price ${where} (${p.timeframe} POC ${usd(p.poc, 0)})`);
+    }
+    document.querySelectorAll(".ctx-note").forEach((el) => { el.textContent = "Context, not part of the score: " + parts.join(" · ") + "."; });
+  }
+
+  async function loadContext() {
+    try {
+      const d = state.advanced && Date.now() - state.advanced.fetched < 60000 ? state.advanced : await getAdvanced();
+      renderContext(d);
+    } catch (_) {
+      document.querySelectorAll(".ctx-note").forEach((el) => { el.textContent = "Context, not part of the score: not available right now."; });
+    }
   }
 
   // ---------------------------------------------------------------- analysis
@@ -1455,10 +1622,10 @@
   // ---------------------------------------------------------------- per-view loading and refresh
   // Each view loads its data the first time it is opened; the overview loads first so the app starts fast.
   const LOADERS = {
-    overview: [() => loadPrice(false), loadOverview, loadChart, loadAnalysis, loadSignal, loadAlerts, loadWatchlist, loadCalendar],
-    market: [loadChart, loadAnalysis, loadMtf],
+    overview: [() => loadPrice(false), loadOverview, loadChart, loadAnalysis, loadSignal, loadAlerts, loadWatchlist, loadCalendar, loadContext],
+    market: [loadChart, loadAnalysis, loadMtf, loadAdvanced],
     news: [loadNews, loadCalendar],
-    signal: [loadSignal],
+    signal: [loadSignal, loadContext],
     research: [loadBacktest, loadForward],
     paper: [loadPaper, loadSignal],
     alerts: [loadAlerts, loadAlertRules],
@@ -1484,6 +1651,8 @@
     every(sec("refresh_analysis_s", 60), ["overview", "market"], loadAnalysis);
     every(120000, ["overview", "market"], loadChart);
     every(120000, ["market"], loadMtf);
+    every(300000, ["market"], loadAdvanced);
+    every(300000, ["overview", "signal"], loadContext);
     every(sec("refresh_news_s", 300), ["news"], loadNews);
     every(sec("refresh_news_s", 300), ["overview", "signal", "paper"], loadSignal);
     every(30000, ["paper"], loadPaper);

@@ -124,6 +124,30 @@ walk-forward windows positive.
 measurable predictive value at the 3-day horizon, and the reward/risk rule leaves very few trades (5 in three years
 of design data). That is why the app says NO TRADE.
 
+## Advanced market analysis (context, shadow mode)
+
+Market & chart has an **Advanced market analysis** card with three panels, and the signal shows one line
+"Context, not part of the score". **None of it is part of the live signal**: engine signal-1.8, its score, weights,
+thresholds and NO TRADE gates are unchanged, and the rule code (rule-set hash) and the forward-test code
+(fingerprint) are not modified (the new code lives in new modules that only import the existing indicators).
+
+| Panel | What it shows (closed candles only) |
+|---|---|
+| Market regime (4h) | TRENDING BULLISH / BEARISH, SIDEWAYS / RANGING, HIGH / LOW VOLATILITY or TRANSITIONAL, from EMA 21/50/200 (EMA 21 is used where guides say EMA 20: the app already has it), EMA 50 slope, ADX, ATR% and Bollinger-bandwidth percentiles and swing structure; 1D and 1h as context. Confidence 0-100 is a heuristic (how many checks agree), not a probability. |
+| Liquidity sweeps (4h) | A wick beyond an untaken swing high/low that closes back inside (POTENTIAL), then CONFIRMED / FAILED / RECLAIM CONFIRMED / NO CONFIRMATION, each decided at a candle close and stored with that time. Levels only from swings confirmed before the sweep candle. Strength 0-100 is a heuristic. Never a BUY or SELL signal; no alerts. |
+| Volume profile | POC, VAH, VAL (70% value area), high/low-volume nodes over the last 200 closed 4h candles (1h: 240, 1d: 180), 50 bins. Each candle's volume is spread evenly over its range: an approximation, candles carry no trade-by-trade prices. Optional histogram on the chart (overlay "Volume profile"). |
+
+**Shadow mode** (Settings → Advanced analysis, on by default): once per closed 4h candle the app stores the three
+components (each in -1..+1), the live signal at that time and a "what if" combined score
+`(1 - Σw) × live score + Σ w × component` (weights 0.10 each, max 0.3) in the append-only table `shadow_context`.
+Nothing reads it back into the signal. It is the forward data for any future, pre-registered test.
+
+Design-data study (run once, pre-registered in [PREREGISTRATION_ADVANCED.md](PREREGISTRATION_ADVANCED.md)):
+`python scripts\research_advanced.py` → `data\research_advanced_design.md`. Design-data evidence only. Result:
+no evidence of added value. The engine makes 5 design trades; the regime and sweep filters each remove the same one
+(+0.6%), the volume-profile and combined filters remove none. In the event study (+6 and +18 4h bars) no regime or
+confirmed-sweep group's 95% CI excludes the average of all bars.
+
 ## Paper trading and risk
 
 - The paper account is **simulated**: every order is stored with `simulated = 1` (a database rule) and labelled
@@ -170,6 +194,7 @@ Writes (POST/PUT/DELETE) from outside the dashboard need the header `X-Requested
 | `GET`/`POST /api/alerts/rules`, `GET /api/alerts` | Alert rules and alerts |
 | `GET /api/export/<dataset>?format=csv\|json` | candles, signals, news, backtest, paper_orders, alerts, chat |
 | `GET /api/settings`, `PUT /api/settings/<section>` | Settings (env values win and are shown read-only) |
+| `GET /api/advanced?profile_tf=4h\|1h\|1d`, `GET /api/advanced/shadow` | Regime, sweeps, volume profile (context); stored shadow rows |
 
 ## Project layout
 
@@ -186,6 +211,7 @@ services/paper_trading.py   SIMULATED account (atomic orders)
 services/news_*.py          RSS collection and rule-based news analysis
 services/assistant.py       grounded question answering (+ optional Ollama)
 services/alerts.py          alert rules, cooldowns, background monitor
+services/regime.py, liquidity_sweeps.py, volume_profile.py, advanced_analysis.py   context panels + shadow mode
 static/, templates/         dashboard (no build step)
 tests/                      unit/API tests; tests/e2e Playwright UI tests
 ```
@@ -219,6 +245,7 @@ See [SECURITY.md](SECURITY.md) and [SECURITY_AUDIT.md](SECURITY_AUDIT.md).
 | [QUANTITATIVE_AUDIT.md](QUANTITATIVE_AUDIT.md), [BACKTEST_VALIDATION_REPORT.md](BACKTEST_VALIDATION_REPORT.md), [SIGNAL_ENGINE_REPORT.md](SIGNAL_ENGINE_REPORT.md) | Indicators, evidence, backtest method |
 | [SECURITY.md](SECURITY.md), [SECURITY_AUDIT.md](SECURITY_AUDIT.md) | Threat model and controls |
 | [TEST_RESULTS.md](TEST_RESULTS.md), [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md) | Test results; what comes next |
+| [PREREGISTRATION_ADVANCED.md](PREREGISTRATION_ADVANCED.md), `data/research_advanced_design.md` | Regime / sweeps / volume profile: pre-registered design study and its result |
 
 ## Disclaimer
 

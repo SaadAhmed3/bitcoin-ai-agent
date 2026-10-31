@@ -560,3 +560,29 @@ nav a .label { flex: 1; min-width: 0; }
   #fwdTable td.num::before { font-family: "Segoe UI", system-ui, sans-serif; }
   #fwdTable tr.prereg td { padding-left: 10px; }                  /* clear of the accent bar */
 }
+
+/* ---------------------------------------------------------------- advanced market analysis (context, not the score) */
+.adv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 14px; }
+.adv-panel { background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+.adv-panel h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+.adv-panel h4 { margin: 10px 0 4px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.adv-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.adv-panel-head h3 { margin: 0; }
+#advProfileTf { font-size: 12px; max-width: 100%; }
+.adv-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.adv-label { font-weight: 700; font-size: 15px; color: var(--text); padding-left: 9px; border-left: 3px solid var(--neutral); }
+.adv-label.adv-bullish { border-color: var(--up); }
+.adv-label.adv-bearish { border-color: var(--down); }
+.adv-conf { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.adv-dl { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin: 6px 0; font-size: 12px; }
+.adv-dl dt { color: var(--muted); font-size: 11px; }
+.adv-dl dd { margin: 0; overflow-wrap: anywhere; }
+.adv-factors { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 12px; }
+.adv-factors li { display: flex; justify-content: space-between; gap: 6px; }
+.adv-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.adv-kpis div { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; min-width: 0; }
+.adv-kpis small { display: block; color: var(--muted); font-size: 11px; }
+.adv-kpis b { font-size: 14px; white-space: nowrap; }
+.adv-nodes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.adv-nodes ul { list-style: none; margin: 0; padding: 0; font-size: 12px; }
+.ctx-note { margin: 10px 0 0; color: var(--muted); border-left: 2px solid var(--line); padding-left: 8px; }

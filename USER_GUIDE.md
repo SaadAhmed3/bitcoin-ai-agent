@@ -142,7 +142,7 @@ The menu on the left switches between views. Labels on each card tell you what k
 | View | What it is for |
 |---|---|
 | **Overview** | The price, 24-hour change, the current signal with its main reason, the chart, recent alerts, the next important US economic event and your watchlist. The top bar shows how old the data is ("Updated 5 s ago"); it turns amber when data is stale and red when no price source answers. |
-| **Market & chart** | Candles from 5 minutes to 1 day, with optional lines: moving averages (EMA), Bollinger Bands, VWAP, support and resistance, your alert prices and past signals. Below, a table compares the timeframes. |
+| **Market & chart** | Candles from 5 minutes to 1 day, with optional lines: moving averages (EMA), Bollinger Bands, VWAP, support and resistance, your alert prices, past signals and a volume profile. Below: indicator readings, the **Advanced market analysis** card (see [Context panels](#context-panels-regime-sweeps-volume-profile)) and a table that compares the timeframes. |
 | **News & calendar** | Headlines grouped into events. Each shows whether it reads bullish or bearish, how important it is, whether it is **confirmed**, **unverified** (single source or "reportedly") or **speculative** (opinion, forecast, question), and whether it is fresh or probably already priced in. |
 | **Signal details** | The full reasoning behind the signal: every NO TRADE reason, evidence for and against, each component's score, a research trade plan and its risk. |
 | **Research (backtest)** | Test the signal on past data. See [Backtesting](#6-backtesting). |
@@ -150,7 +150,7 @@ The menu on the left switches between views. Labels on each card tell you what k
 | **Alerts** | Your alert rules and the alert history. |
 | **Ask the data** | Ask questions such as "Why is it NO TRADE?". Answers come from the app's own data and list their sources. |
 | **System & sources** | Which data sources are working, versions, and these documents. |
-| **Settings** (in the menu) | Refresh intervals, alerts, signal settings, risk settings, watchlist. Values set in `.env` are shown read-only. |
+| **Settings** (in the menu) | Refresh intervals, alerts, signal settings, risk settings, advanced analysis (shadow mode), watchlist. Values set in `.env` are shown read-only. |
 
 ---
 
@@ -197,6 +197,27 @@ cannot push the score up or down. Important news can only **block** a signal (ne
 - **Horizon**: the signal looks 1-3 days ahead.
 
 ---
+
+### Context panels (regime, sweeps, volume profile)
+
+The **Advanced market analysis** card on Market & chart, and the grey line under the signal that starts with
+"Context, not part of the score", describe the market. **They do not change the signal**: not its score, not its
+weights, not NO TRADE. They use closed candles only, so a value never changes after the candle that produced it.
+
+- **Market regime** (4-hour candles): is Bitcoin trending up, trending down, ranging, unusually volatile, unusually
+  quiet, or in between? The confidence (0-100) counts how many checks agree; it is **not** a probability. "Evidence"
+  and "Conflicting evidence" list the checks. The app uses its existing EMA 21 where some guides use EMA 20.
+- **Liquidity sweeps**: price pokes above a previous swing high (buy-side) or below a swing low (sell-side) and closes
+  back inside. It starts as **potential**; the next candles make it **confirmed**, **failed** (price stayed beyond the
+  level), **reclaim confirmed** or **no confirmation**. The strength (0-100) is a heuristic. A sweep is never a buy or
+  sell signal.
+- **Volume profile**: where most volume traded in the last 200 closed 4-hour candles (choose 1h or 1d in the panel).
+  **POC** is the busiest price, **VAH/VAL** bound the 70% value area, high/low-volume nodes are busy/thin areas. Tick
+  "Volume profile" above the chart to draw it. Candles do not record the price of every trade, so the volume of each
+  candle is spread evenly over its range: an approximation.
+
+**Shadow mode** (Settings → Advanced analysis) stores these three readings every 4 hours next to the live signal, so
+that one day they can be tested on data nobody has seen yet. Turning it off stops the storing; the panels stay.
 
 ## 5. Understanding NO TRADE
 
