@@ -175,10 +175,12 @@ def classify(c4h: pd.DataFrame, c1h: pd.DataFrame | None = None, c1d: pd.DataFra
     else:
         regime = TRANS
         conf = 100 - 100 * max(nb, nr) / 5
-        evidence.append(f"bullish checks {nb}/5, bearish checks {nr}/5")
+        lean = "bullish" if nb >= nr else "bearish"
+        evidence.append(f"bullish checks {nb}/5, bearish checks {nr}/5: leaning {lean}" if nb != nr
+                        else f"bullish checks {nb}/5, bearish checks {nr}/5: no lean")
+        evidence += [TXT[n][k] for n, ok in side.items() if ok]
         conflicts.append(f"no side has {cfg.min_checks} of 5 checks with ADX >= {cfg.adx_weak:g}")
-        conflicts += [TXT[n][0] for n, ok in bull.items() if ok and n != "adx_trending"]
-        conflicts += [TXT[n][1] for n, ok in bear.items() if ok and n != "adx_trending"]
+        conflicts += [f"not: {TXT[n][k]}" for n, ok in side.items() if not ok]
 
     return {
         "status": "ok", "regime": regime, "confidence": int(round(max(0.0, min(100.0, conf)))),

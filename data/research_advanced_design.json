@@ -1,0 +1,726 @@
+{
+ "generated_at": 1793457265103,
+ "label": "design-data evidence only",
+ "engine": "signal-1.8",
+ "preregistration": "PREREGISTRATION_ADVANCED.md",
+ "period": {
+  "first_decision": 1667303999999,
+  "last_decision": 1761681599999,
+  "decision_bars": 6555,
+  "holdout_start": 1761696000000
+ },
+ "variants": {
+  "A": {
+   "weights": {},
+   "trades": 5,
+   "net_return_pct": 9.08,
+   "cagr_pct": 2.95,
+   "max_drawdown_pct": 2.62,
+   "return_over_max_dd": 3.461,
+   "profit_factor": 8.73,
+   "win_rate_pct": 80.0,
+   "avg_trade_pct": 1.774,
+   "avg_r_multiple": 1.187,
+   "avg_bars_held": 13.4,
+   "exposure_pct": 1.0,
+   "turnover_sides": 10,
+   "costs_paid_pct": 1.5,
+   "sharpe_annualised": 0.95,
+   "exit_reasons": {
+    "target": 2,
+    "time stop": 3
+   },
+   "false_signal_rate_pct": 20.0,
+   "tradable_bars": 8,
+   "walk_forward": [
+    {
+     "start": 1667303999999,
+     "end": 1683028799999,
+     "return_pct": 4.01,
+     "trades": 1
+    },
+    {
+     "start": 1683043199999,
+     "end": 1698767999999,
+     "return_pct": 4.91,
+     "trades": 2
+    },
+    {
+     "start": 1698782399999,
+     "end": 1714507199999,
+     "return_pct": 1.12,
+     "trades": 1
+    },
+    {
+     "start": 1714521599999,
+     "end": 1730246399999,
+     "return_pct": 0.0,
+     "trades": 0
+    },
+    {
+     "start": 1730260799999,
+     "end": 1745985599999,
+     "return_pct": -1.15,
+     "trades": 1
+    },
+    {
+     "start": 1745999999999,
+     "end": 1761681599999,
+     "return_pct": 0.0,
+     "trades": 0
+    }
+   ],
+   "trade_list": [
+    {
+     "entry_time": 1670932800000,
+     "exit_time": 1671047999999,
+     "ret_pct": 4.014,
+     "reason": "target",
+     "regime_at_decision": "LOW VOLATILITY"
+    },
+    {
+     "entry_time": 1696449600000,
+     "exit_time": 1696708799999,
+     "ret_pct": 0.593,
+     "reason": "time stop",
+     "regime_at_decision": "TRANSITIONAL / UNCERTAIN"
+    },
+    {
+     "entry_time": 1697731200000,
+     "exit_time": 1697803199999,
+     "ret_pct": 4.289,
+     "reason": "target",
+     "regime_at_decision": "TRENDING BULLISH"
+    },
+    {
+     "entry_time": 1699603200000,
+     "exit_time": 1699862399999,
+     "ret_pct": 1.124,
+     "reason": "time stop",
+     "regime_at_decision": "TRENDING BULLISH"
+    },
+    {
+     "entry_time": 1742817600000,
+     "exit_time": 1743076799999,
+     "ret_pct": -1.148,
+     "reason": "time stop",
+     "regime_at_decision": "LOW VOLATILITY"
+    }
+   ]
+  },
+  "B": {
+   "weights": {
+    "regime": 0.15
+   },
+   "trades": 4,
+   "net_return_pct": 8.43,
+   "cagr_pct": 2.74,
+   "max_drawdown_pct": 2.62,
+   "return_over_max_dd": 3.216,
+   "profit_factor": 8.213,
+   "win_rate_pct": 75.0,
+   "avg_trade_pct": 2.07,
+   "avg_r_multiple": 1.344,
+   "avg_bars_held": 12.2,
+   "exposure_pct": 0.7,
+   "turnover_sides": 8,
+   "costs_paid_pct": 1.2,
+   "sharpe_annualised": 0.92,
+   "exit_reasons": {
+    "target": 2,
+    "time stop": 2
+   },
+   "false_signal_rate_pct": 25.0,
+   "tradable_bars": 7,
+   "walk_forward": [
+    {
+     "start": 1667303999999,
+     "end": 1683028799999,
+     "return_pct": 4.01,
+     "trades": 1
+    },
+    {
+     "start": 1683043199999,
+     "end": 1698767999999,
+     "return_pct": 4.29,
+     "trades": 1
+    },
+    {
+     "start": 1698782399999,
+     "end": 1714507199999,
+     "return_pct": 1.12,
+     "trades": 1
+    },
+    {
+     "start": 1714521599999,
+     "end": 1730246399999,
+     "return_pct": 0.0,
+     "trades": 0
+    },
+    {
+     "start": 1730260799999,
+     "end": 1745985599999,
+     "return_pct": -1.15,
+     "trades": 1
+    },
+    {
+     "start": 1745999999999,
+     "end": 1761681599999,
+     "return_pct": 0.0,
+     "trades": 0
+    }
+   ],
+   "trade_list": [
+    {
+     "entry_time": 1670932800000,
+     "exit_time": 1671047999999,
+     "ret_pct": 4.014,
+     "reason": "target",
+     "regime_at_decision": "LOW VOLATILITY"
+    },
+    {
+     "entry_time": 1697731200000,
+     "exit_time": 1697803199999,
+     "ret_pct": 4.289,
+     "reason": "target",
+     "regime_at_decision": "TRENDING BULLISH"
+    },
+    {
+     "entry_time": 1699603200000,
+     "exit_time": 1699862399999,
+     "ret_pct": 1.124,
+     "reason": "time stop",
+     "regime_at_decision": "TRENDING BULLISH"
+    },
+    {
+     "entry_time": 1742817600000,
+     "exit_time": 1743076799999,
+     "ret_pct": -1.148,
+     "reason": "time stop",
+     "regime_at_decision": "LOW VOLATILITY"
+    }
+   ]
+  },
+  "C": {
+   "weights": {
+    "liquidity_sweep": 0.15
+   },
+   "trades": 4,
+   "net_return_pct": 8.43,
+   "cagr_pct": 2.74,
+   "max_drawdown_pct": 2.62,
+   "return_over_max_dd": 3.216,
+   "profit_factor": 8.213,
+   "win_rate_pct": 75.0,
+   "avg_trade_pct": 2.07,
+   "avg_r_multiple": 1.344,
+   "avg_bars_held": 12.2,
+   "exposure_pct": 0.7,
+   "turnover_sides": 8,
+   "costs_paid_pct": 1.2,
+   "sharpe_annualised": 0.92,
+   "exit_reasons": {
+    "target": 2,
+    "time stop": 2
+   },
+   "false_signal_rate_pct": 25.0,
+   "tradable_bars": 7,
+   "walk_forward": [
+    {
+     "start": 1667303999999,
+     "end": 1683028799999,
+     "return_pct": 4.01,
+     "trades": 1
+    },
+    {
+     "start": 1683043199999,
+     "end": 1698767999999,
+     "return_pct": 4.29,
+     "trades": 1
+    },
+    {
+     "start": 1698782399999,
+     "end": 1714507199999,
+     "return_pct": 1.12,
+     "trades": 1
+    },
+    {
+     "start": 1714521599999,
+     "end": 1730246399999,
+     "return_pct": 0.0,
+     "trades": 0
+    },
+    {
+     "start": 1730260799999,
+     "end": 1745985599999,
+     "return_pct": -1.15,
+     "trades": 1
+    },
+    {
+     "start": 1745999999999,
+     "end": 1761681599999,
+     "return_pct": 0.0,
+     "trades": 0
+    }
+   ],
+   "trade_list": [
+    {
+     "entry_time": 1670932800000,
+     "exit_time": 1671047999999,
+     "ret_pct": 4.014,
+     "reason": "target",
+     "regime_at_decision": "LOW VOLATILITY"
+    },
+    {
+     "entry_time": 1697731200000,
+     "exit_time": 1697803199999,
+     "ret_pct": 4.289,
+     "reason": "target",
+     "regime_at_decision": "TRENDING BULLISH"
+    },
+    {
+     "entry_time": 1699603200000,
+     "exit_time": 1699862399999,
+     "ret_pct": 1.124,
+     "reason": "time stop",
+     "regime_at_decision": "TRENDING BULLISH"
+    },
+    {
+     "entry_time": 1742817600000,
+     "exit_time": 1743076799999,
+     "ret_pct": -1.148,
+     "reason": "time stop",
+     "regime_at_decision": "LOW VOLATILITY"
+    }
+   ]
+  },
+  "D": {
+   "weights": {
+    "volume_profile": 0.15
+   },
+   "trades": 5,
+   "net_return_pct": 9.08,
+   "cagr_pct": 2.95,
+   "max_drawdown_pct": 2.62,
+   "return_over_max_dd": 3.461,
+   "profit_factor": 8.73,
+   "win_rate_pct": 80.0,
+   "avg_trade_pct": 1.774,
+   "avg_r_multiple": 1.187,
+   "avg_bars_held": 13.4,
+   "exposure_pct": 1.0,
+   "turnover_sides": 10,
+   "costs_paid_pct": 1.5,
+   "sharpe_annualised": 0.95,
+   "exit_reasons": {
+    "target": 2,
+    "time stop": 3
+   },
+   "false_signal_rate_pct": 20.0,
+   "tradable_bars": 8,
+   "walk_forward": [
+    {
+     "start": 1667303999999,
+     "end": 1683028799999,
+     "return_pct": 4.01,
+     "trades": 1
+    },
+    {
+     "start": 1683043199999,
+     "end": 1698767999999,
+     "return_pct": 4.91,
+     "trades": 2
+    },
+    {
+     "start": 1698782399999,
+     "end": 1714507199999,
+     "return_pct": 1.12,
+     "trades": 1
+    },
+    {
+     "start": 1714521599999,
+     "end": 1730246399999,
+     "return_pct": 0.0,
+     "trades": 0
+    },
+    {
+     "start": 1730260799999,
+     "end": 1745985599999,
+     "return_pct": -1.15,
+     "trades": 1
+    },
+    {
+     "start": 1745999999999,
+     "end": 1761681599999,
+     "return_pct": 0.0,
+     "trades": 0
+    }
+   ],
+   "trade_list": [
+    {
+     "entry_time": 1670932800000,
+     "exit_time": 1671047999999,
+     "ret_pct": 4.014,
+     "reason": "target",
+     "regime_at_decision": "LOW VOLATILITY"
+    },
+    {
+     "entry_time": 1696449600000,
+     "exit_time": 1696708799999,
+     "ret_pct": 0.593,
+     "reason": "time stop",
+     "regime_at_decision": "TRANSITIONAL / UNCERTAIN"
+    },
+    {
+     "entry_time": 1697731200000,
+     "exit_time": 1697803199999,
+     "ret_pct": 4.289,
+     "reason": "target",
+     "regime_at_decision": "TRENDING BULLISH"
+    },
+    {
+     "entry_time": 1699603200000,
+     "exit_time": 1699862399999,
+     "ret_pct": 1.124,
+     "reason": "time stop",
+     "regime_at_decision": "TRENDING BULLISH"
+    },
+    {
+     "entry_time": 1742817600000,
+     "exit_time": 1743076799999,
+     "ret_pct": -1.148,
+     "reason": "time stop",
+     "regime_at_decision": "LOW VOLATILITY"
+    }
+   ]
+  },
+  "E": {
+   "weights": {
+    "regime": 0.1,
+    "liquidity_sweep": 0.1,
+    "volume_profile": 0.1
+   },
+   "trades": 5,
+   "net_return_pct": 9.08,
+   "cagr_pct": 2.95,
+   "max_drawdown_pct": 2.62,
+   "return_over_max_dd": 3.461,
+   "profit_factor": 8.73,
+   "win_rate_pct": 80.0,
+   "avg_trade_pct": 1.774,
+   "avg_r_multiple": 1.187,
+   "avg_bars_held": 13.4,
+   "exposure_pct": 1.0,
+   "turnover_sides": 10,
+   "costs_paid_pct": 1.5,
+   "sharpe_annualised": 0.95,
+   "exit_reasons": {
+    "target": 2,
+    "time stop": 3
+   },
+   "false_signal_rate_pct": 20.0,
+   "tradable_bars": 7,
+   "walk_forward": [
+    {
+     "start": 1667303999999,
+     "end": 1683028799999,
+     "return_pct": 4.01,
+     "trades": 1
+    },
+    {
+     "start": 1683043199999,
+     "end": 1698767999999,
+     "return_pct": 4.91,
+     "trades": 2
+    },
+    {
+     "start": 1698782399999,
+     "end": 1714507199999,
+     "return_pct": 1.12,
+     "trades": 1
+    },
+    {
+     "start": 1714521599999,
+     "end": 1730246399999,
+     "return_pct": 0.0,
+     "trades": 0
+    },
+    {
+     "start": 1730260799999,
+     "end": 1745985599999,
+     "return_pct": -1.15,
+     "trades": 1
+    },
+    {
+     "start": 1745999999999,
+     "end": 1761681599999,
+     "return_pct": 0.0,
+     "trades": 0
+    }
+   ],
+   "trade_list": [
+    {
+     "entry_time": 1670932800000,
+     "exit_time": 1671047999999,
+     "ret_pct": 4.014,
+     "reason": "target",
+     "regime_at_decision": "LOW VOLATILITY"
+    },
+    {
+     "entry_time": 1696449600000,
+     "exit_time": 1696708799999,
+     "ret_pct": 0.593,
+     "reason": "time stop",
+     "regime_at_decision": "TRANSITIONAL / UNCERTAIN"
+    },
+    {
+     "entry_time": 1697731200000,
+     "exit_time": 1697803199999,
+     "ret_pct": 4.289,
+     "reason": "target",
+     "regime_at_decision": "TRENDING BULLISH"
+    },
+    {
+     "entry_time": 1699603200000,
+     "exit_time": 1699862399999,
+     "ret_pct": 1.124,
+     "reason": "time stop",
+     "regime_at_decision": "TRENDING BULLISH"
+    },
+    {
+     "entry_time": 1742817600000,
+     "exit_time": 1743076799999,
+     "ret_pct": -1.148,
+     "reason": "time stop",
+     "regime_at_decision": "LOW VOLATILITY"
+    }
+   ]
+  }
+ },
+ "performance_by_regime_A": {
+  "LOW VOLATILITY": {
+   "trades": 2,
+   "sum_ret_pct": 2.866,
+   "wins": 1
+  },
+  "TRANSITIONAL / UNCERTAIN": {
+   "trades": 1,
+   "sum_ret_pct": 0.593,
+   "wins": 1
+  },
+  "TRENDING BULLISH": {
+   "trades": 2,
+   "sum_ret_pct": 5.413,
+   "wins": 2
+  }
+ },
+ "regime_bar_counts": {
+  "TRENDING BULLISH": 1315,
+  "TRENDING BEARISH": 743,
+  "SIDEWAYS / RANGING": 1025,
+  "HIGH VOLATILITY": 811,
+  "LOW VOLATILITY": 970,
+  "TRANSITIONAL / UNCERTAIN": 1691
+ },
+ "sweeps": {
+  "events_incl_warm_up": 631,
+  "confirmed_in_design_bars": {
+   "buy_side": 152,
+   "sell_side": 157
+  }
+ },
+ "event_study": {
+  "+6": {
+   "unconditional_mean_pct": 0.187,
+   "dropped_near_cutoff": 5,
+   "groups": {
+    "ALL BARS": {
+     "n": 6550,
+     "mean_pct": 0.187,
+     "vs_all_pct": 0.0,
+     "ci95_pct": [
+      0.078,
+      0.3102
+     ],
+     "positive_pct": 52.8
+    },
+    "TRENDING BULLISH": {
+     "n": 1315,
+     "mean_pct": 0.1406,
+     "vs_all_pct": -0.0464,
+     "ci95_pct": [
+      -0.1066,
+      0.3938
+     ],
+     "positive_pct": 51.7
+    },
+    "TRENDING BEARISH": {
+     "n": 743,
+     "mean_pct": 0.1648,
+     "vs_all_pct": -0.0222,
+     "ci95_pct": [
+      -0.2134,
+      0.5598
+     ],
+     "positive_pct": 54.9
+    },
+    "SIDEWAYS / RANGING": {
+     "n": 1025,
+     "mean_pct": 0.1027,
+     "vs_all_pct": -0.0843,
+     "ci95_pct": [
+      -0.1128,
+      0.3062
+     ],
+     "positive_pct": 52.1
+    },
+    "HIGH VOLATILITY": {
+     "n": 811,
+     "mean_pct": 0.4318,
+     "vs_all_pct": 0.2448,
+     "ci95_pct": [
+      0.0204,
+      0.8352
+     ],
+     "positive_pct": 56.8
+    },
+    "LOW VOLATILITY": {
+     "n": 970,
+     "mean_pct": 0.1526,
+     "vs_all_pct": -0.0344,
+     "ci95_pct": [
+      -0.0955,
+      0.4108
+     ],
+     "positive_pct": 50.0
+    },
+    "TRANSITIONAL / UNCERTAIN": {
+     "n": 1686,
+     "mean_pct": 0.1863,
+     "vs_all_pct": -0.0007,
+     "ci95_pct": [
+      0.0083,
+      0.3752
+     ],
+     "positive_pct": 52.8
+    },
+    "CONFIRMED SWEEP: buy-side": {
+     "n": 152,
+     "mean_pct": -0.0988,
+     "vs_all_pct": -0.2858,
+     "ci95_pct": [
+      -0.441,
+      0.2641
+     ],
+     "positive_pct": 46.7
+    },
+    "CONFIRMED SWEEP: sell-side": {
+     "n": 157,
+     "mean_pct": 0.0583,
+     "vs_all_pct": -0.1287,
+     "ci95_pct": [
+      -0.2953,
+      0.4002
+     ],
+     "positive_pct": 56.7
+    }
+   }
+  },
+  "+18": {
+   "unconditional_mean_pct": 0.5662,
+   "dropped_near_cutoff": 17,
+   "groups": {
+    "ALL BARS": {
+     "n": 6538,
+     "mean_pct": 0.5662,
+     "vs_all_pct": 0.0,
+     "ci95_pct": [
+      0.1911,
+      0.9192
+     ],
+     "positive_pct": 54.3
+    },
+    "TRENDING BULLISH": {
+     "n": 1315,
+     "mean_pct": 0.0976,
+     "vs_all_pct": -0.4686,
+     "ci95_pct": [
+      -0.6807,
+      0.834
+     ],
+     "positive_pct": 49.5
+    },
+    "TRENDING BEARISH": {
+     "n": 743,
+     "mean_pct": 0.8573,
+     "vs_all_pct": 0.2911,
+     "ci95_pct": [
+      0.0599,
+      1.6542
+     ],
+     "positive_pct": 62.7
+    },
+    "SIDEWAYS / RANGING": {
+     "n": 1023,
+     "mean_pct": 0.53,
+     "vs_all_pct": -0.0362,
+     "ci95_pct": [
+      -0.1161,
+      1.1964
+     ],
+     "positive_pct": 54.0
+    },
+    "HIGH VOLATILITY": {
+     "n": 811,
+     "mean_pct": 1.1767,
+     "vs_all_pct": 0.6105,
+     "ci95_pct": [
+      0.1402,
+      2.2348
+     ],
+     "positive_pct": 59.2
+    },
+    "LOW VOLATILITY": {
+     "n": 968,
+     "mean_pct": 0.9914,
+     "vs_all_pct": 0.4252,
+     "ci95_pct": [
+      0.2289,
+      1.7349
+     ],
+     "positive_pct": 57.0
+    },
+    "TRANSITIONAL / UNCERTAIN": {
+     "n": 1678,
+     "mean_pct": 0.2862,
+     "vs_all_pct": -0.28,
+     "ci95_pct": [
+      -0.2417,
+      0.772
+     ],
+     "positive_pct": 50.5
+    },
+    "CONFIRMED SWEEP: buy-side": {
+     "n": 152,
+     "mean_pct": 0.2853,
+     "vs_all_pct": -0.2809,
+     "ci95_pct": [
+      -0.4843,
+      1.0477
+     ],
+     "positive_pct": 50.7
+    },
+    "CONFIRMED SWEEP: sell-side": {
+     "n": 157,
+     "mean_pct": 0.293,
+     "vs_all_pct": -0.2732,
+     "ci95_pct": [
+      -0.4373,
+      1.0234
+     ],
+     "positive_pct": 52.9
+    }
+   }
+  }
+ }
+}

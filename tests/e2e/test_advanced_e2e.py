@@ -66,6 +66,21 @@ def test_signal_view_shows_the_context_line_and_the_live_engine_is_unchanged(bro
         p.context.close()
 
 
+def test_settings_has_the_shadow_switch_and_weights(browser, live_server):
+    p = Page(browser, live_server.url, viewport={"width": 1280, "height": 900})
+    try:
+        page = p.goto("/settings", ready=False)
+        page.wait_for_selector("#advanced[data-state='ready']")
+        sec = page.locator("#advanced")
+        assert "never part of its score" in sec.text_content()
+        assert sec.locator("input[name='shadow_enabled']").is_checked()
+        assert sec.locator("input[name='weight_regime']").input_value() == "0.1"
+        assert sec.locator("input[name='weight_regime']").get_attribute("max") == "0.3"
+        assert p.errors == []
+    finally:
+        p.context.close()
+
+
 def test_panels_fit_a_phone(browser, live_server):
     p = Page(browser, live_server.url, viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
     try:
