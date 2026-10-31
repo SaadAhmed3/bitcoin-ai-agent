@@ -2,6 +2,25 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## 0.9.6 (research-1: H1/H2 and forward tests) — 2026-10-31
+
+**No live-signal change (engine signal-1.8). No holdout run.** Research only, simulated only.
+
+- **H1** (daily close vs SMA 200, long or cash): researched on design data only (`scripts/research_h1.py`,
+  `data/research_h1_design.md`). +209.81%, max drawdown 31.90%, return/drawdown 6.58, 15 trades vs buy & hold
+  +161.27% / 66.73% / 2.42; beats 84.7% of random entries. Sensitivity (SMA 150/200/250, band 0-2%) stable. **Failed
+  on design data (C3 84.7% < 90%)**; criteria not changed after seeing results; holdout not run
+  (`PREREGISTRATION_H1.md`).
+- **Holdout contamination:** run #1 displayed buy & hold and EMA 50/200 through the 2025-10-29 holdout year, so that
+  holdout is not used for trend-following hypotheses (noted in the research documents).
+- **H2** (daily EMA 50/200 crossover): pre-registered (`PREREGISTRATION_H2.md`) for a **forward** test only; criteria
+  C1-C3 fixed now; verdict on exactly the first 365 processed days.
+- **Forward paper tracker** (`services/forward_tests.py`, fingerprint `5e4b8a0e…`): H1, H2 and buy & hold on new
+  closed daily candles from the next UTC midnight after the background monitor first runs it; decisions, simulated
+  fills and marks appended to the database (append-only, schema 10). New Research panel "Forward tests" (day N of
+  365) and `GET /api/forward` (read-only).
+- Tests: 592 → 607 unit, 88 → 89 e2e.
+
 ## 0.9.5 (batch 2: data checks, signal-1.8) — 2026-10-31
 
 Changes **live signal behaviour**. **Engine signal-1.7 → signal-1.8.** **The holdout was not run**; the full 4-year
