@@ -196,6 +196,7 @@ Writes (POST/PUT/DELETE) from outside the dashboard need the header `X-Requested
 | `GET /api/export/<dataset>?format=csv\|json` | candles, signals, news, backtest, paper_orders, alerts, chat |
 | `GET /api/settings`, `PUT /api/settings/<section>` | Settings (env values win and are shown read-only) |
 | `GET /api/advanced?profile_tf=4h\|1h\|1d`, `GET /api/advanced/shadow` | Regime, sweeps, volume profile (context); stored shadow rows |
+| `GET /api/advanced/overlays?tf=1h`, `GET /api/advanced/profile?tf=1h&mode=last\|visible&from=&to=` | Chart overlays: regime shading, stored sweep markers, the chart's volume profile |
 
 ## Project layout
 
@@ -213,6 +214,7 @@ services/news_*.py          RSS collection and rule-based news analysis
 services/assistant.py       grounded question answering (+ optional Ollama)
 services/alerts.py          alert rules, cooldowns, background monitor
 services/regime.py, liquidity_sweeps.py, volume_profile.py, advanced_analysis.py   context panels + shadow mode
+services/chart_overlays.py  regime shading / sweep markers as chart coordinates (visualisation only)
 static/, templates/         dashboard (no build step)
 tests/                      unit/API tests; tests/e2e Playwright UI tests
 ```

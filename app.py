@@ -441,6 +441,20 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         """Regime, liquidity sweeps and volume profile from closed candles: context, not part of the score."""
         return jsonify(advanced.snapshot(request.args.get("profile_tf", "4h")))
 
+    @app.get("/api/advanced/overlays")
+    def advanced_overlays():
+        """Chart overlays: regime shading (closed 4h bars) and stored sweep markers on the chart's candles."""
+        limit = min(max(int(request.args.get("limit", 300)), 50), 1000)
+        return jsonify(advanced.overlays(tf_arg(), limit))
+
+    @app.get("/api/advanced/profile")
+    def advanced_chart_profile():
+        """Volume profile of the chart's closed candles: mode=last (200 candles) or mode=visible&from=&to= (ms)."""
+        limit = min(max(int(request.args.get("limit", 300)), 50), 1000)
+        mode = request.args.get("mode", "last")
+        num = lambda k: int(float(request.args[k])) if request.args.get(k) else None  # noqa: E731
+        return jsonify(advanced.chart_profile(tf_arg(), limit, mode, num("from"), num("to")))
+
     @app.get("/api/advanced/shadow")
     def advanced_shadow():
         limit = min(max(int(request.args.get("limit", 50)), 1), 500)

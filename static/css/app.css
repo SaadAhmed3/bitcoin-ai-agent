@@ -586,3 +586,6 @@ nav a .label { flex: 1; min-width: 0; }
 .adv-nodes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .adv-nodes ul { list-style: none; margin: 0; padding: 0; font-size: 12px; }
 .ctx-note { margin: 10px 0 0; color: var(--muted); border-left: 2px solid var(--line); padding-left: 8px; }
+
+/* chart overlays: the volume-profile range sits next to its toggle */
+.overlay-toggles .ov-select { font-size: 12px; padding: 2px 4px; max-width: 100%; }

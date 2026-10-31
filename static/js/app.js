@@ -5,7 +5,8 @@
   // Every request carries the app's own header; the server rejects cross-site writes without it (CSRF guard).
   const fetch = (url, opts = {}) => window.fetch(url, { ...opts, headers: { "X-Requested-With": "BTCSignalLab", ...(opts.headers || {}) } });
   const state = { tf: "1h", view: null, lastSeries: null, loaded: {}, ran: new Map(), priceMs: 15000, lastUpdate: 0,
-    priceStatus: "wait", sourceErrors: [], analysis: {}, chartExtras: {}, advanced: null, vpTf: "4h" };
+    priceStatus: "wait", sourceErrors: [], analysis: {}, chartExtras: {}, advanced: null, vpTf: "4h",
+    overlayData: {}, chartProfile: null, vpRange: "last" };
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   // Links from data (feeds, alerts) only ever become http(s) or same-site paths; anything else is inert.
@@ -170,13 +171,24 @@
       loadChart(); loadAnalysis();
     });
     const mobile = window.innerWidth < 700;
-    const defaults = { ema: true, bb: true, vwap: false, levels: !mobile, alerts: !mobile, markers: !mobile, vp: false };
+    const defaults = { ema: true, bb: true, vwap: false, levels: !mobile, alerts: !mobile, markers: !mobile, vp: false,
+      regime: false, sweeps: false };
     state.overlays = { ...defaults, ...store.get("btc-overlays", {}) };
     document.querySelectorAll("#overlayToggles input[data-ov]").forEach((i) => { i.checked = Boolean(state.overlays[i.dataset.ov]); });
+    state.vpRange = store.get("btc-vp-range", "last") === "visible" ? "visible" : "last";
+    $("vpRange").value = state.vpRange;
+    $("vpRange").hidden = !state.overlays.vp;
     $("overlayToggles").addEventListener("change", async (e) => {
-      state.overlays[e.target.dataset.ov] = e.target.checked;
-      store.set("btc-overlays", state.overlays);
-      if (e.target.dataset.ov === "vp" && e.target.checked && !state.advanced) await getAdvanced().catch(() => null);
+      if (e.target.id === "vpRange") {
+        state.vpRange = e.target.value;
+        store.set("btc-vp-range", state.vpRange);
+        state.chartProfile = null;
+      } else if (e.target.dataset.ov) {
+        state.overlays[e.target.dataset.ov] = e.target.checked;
+        store.set("btc-overlays", state.overlays);
+        $("vpRange").hidden = !state.overlays.vp;
+      } else return;
+      await ensureOverlayInputs();
       if (state.lastSeries) drawChart(state.lastSeries);
     });
     state.vpTf = ["4h", "1h", "1d"].includes(store.get("btc-vp-tf", "4h")) ? store.get("btc-vp-tf", "4h") : "4h";
@@ -276,8 +288,10 @@
   async function loadChart() {
     if (!state.lastSeries) $("chartBox").innerHTML = '<div class="empty">Loading chart…</div>';
     $("chartWarn").textContent = "";
+    const tf = state.tf;                      // a slower answer for a timeframe no longer selected is dropped
     try {
-      const data = await getJson(`/api/candles?tf=${state.tf}&limit=300`);
+      const data = await getJson(`/api/candles?tf=${tf}&limit=300`);
+      if (tf !== state.tf) return;
       const m = data.meta;
       $("chartMeta").innerHTML = m.count
         ? `${esc(m.provider)} · BTC/${esc(m.quote)} · ${m.count} closed candles · last close <span title="${esc(utcTime(m.last_closed_candle_close))}">${esc(localTime(m.last_closed_candle_close))}</span>${m.from_cache ? " · cached" : ""}`
@@ -288,16 +302,20 @@
         state.lastSeries = null;
         return;
       }
-      const [ana, rules, hist] = await Promise.allSettled([getAnalysis(state.tf), getJson("/api/alerts/rules"),
+      const [ana, rules, hist] = await Promise.allSettled([getAnalysis(tf), getJson("/api/alerts/rules"),
         getJson("/api/signal/history?limit=200")]);
+      if (tf !== state.tf) return;
       state.chartExtras = {
         levels: ana.status === "fulfilled" ? ana.value.levels : null,
         rules: rules.status === "fulfilled" ? rules.value.rules : [],
         history: hist.status === "fulfilled" ? hist.value.history : [],
       };
       state.lastSeries = data.series;
-      if (state.overlays.vp && !state.advanced) await getAdvanced().catch(() => null);
-      drawChart(data.series);
+      drawChart(data.series);                 // candles first; the overlays follow when their data is in
+      if (state.overlays.regime || state.overlays.sweeps || state.overlays.vp) {
+        await ensureOverlayInputs();
+        if (tf === state.tf && state.lastSeries === data.series) drawChart(data.series);
+      }
     } catch (err) {
       $("chartBox").innerHTML = `<div class="empty">Chart failed to load: ${esc(err.message)}</div>`;
     }
@@ -361,7 +379,8 @@
       $("chartBox").innerHTML = '<div class="empty">Plotly could not be loaded (offline?). Data is still available via the API.</div>';
       return;
     }
-    $("chartBox").innerHTML = "";
+    const box = $("chartBox");
+    if (!box.querySelector(".main-svg")) { Plotly.purge(box); box.innerHTML = ""; }
     const up = css("--up"), down = css("--down"), text = css("--text"), muted = css("--muted"), line = css("--line"), info = css("--info");
     const lows = s.low.filter(has), highs = s.high.filter(has);
     const pad = (Math.max(...highs) - Math.min(...lows)) * 0.04 || 1;
@@ -385,6 +404,9 @@
     traces.push(...ov.traces);
     const vp = profileOverlay(lo, hi, { info, muted, accent: css("--accent"), up, down });
     traces.push(...vp.traces);
+    const colors = { up, down, info, muted, warn: css("--warn") };
+    const rg = regimeOverlay(hi, colors), sw = sweepOverlay(s, colors);
+    traces.push(...rg.traces, ...sw.traces);
     traces.push({
       type: "bar", x: s.time, y: s.volume, name: "Volume", xaxis: "x", yaxis: "y2", hoverinfo: "y",
       marker: { color: s.close.map((c, i) => (c >= s.open[i] ? up : down)), opacity: 0.45 },
@@ -395,21 +417,158 @@
       paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", font: { color: text, size: 11 },
       margin: { l: 10, r: narrow ? 48 : 60, t: 10, b: 30 }, showlegend: !narrow,
       legend: { orientation: "h", y: 1.06, x: 0, font: { size: 10, color: muted } },
-      hovermode: "x unified", dragmode: "pan",
+      hovermode: "x unified", dragmode: "pan", uirevision: state.tf,
       xaxis: { rangeslider: { visible: false }, gridcolor: line, linecolor: line, type: "date" },
       yaxis: { domain: [0.38, 1], side: "right", gridcolor: line, tickformat: ",.0f", range: [lo, hi] },
       yaxis2: { domain: [0.2, 0.34], side: "right", gridcolor: line, showticklabels: false },
       yaxis3: { domain: [0, 0.16], side: "right", gridcolor: line, range: [0, 100], tickvals: [30, 50, 70] },
       ...(vp.axis ? { xaxis4: vp.axis } : {}),
-      shapes: [...ov.shapes, ...vp.shapes, ...[30, 70].map((y) => ({ type: "line", xref: "paper", x0: 0, x1: 1, yref: "y3", y0: y, y1: y, line: { color: muted, width: 1, dash: "dot" } }))],
+      shapes: [...rg.shapes, ...ov.shapes, ...vp.shapes, ...sw.shapes, ...[30, 70].map((y) => ({ type: "line", xref: "paper", x0: 0, x1: 1, yref: "y3", y0: y, y1: y, line: { color: muted, width: 1, dash: "dot" } }))],
       annotations: [...ov.annotations, ...vp.annotations],
     };
-    Plotly.newPlot("chartBox", traces, layout, { responsive: true, displaylogo: false, scrollZoom: true, modeBarButtonsToRemove: ["select2d", "lasso2d"] });
-    const on = ["levels", "alerts", "markers", "vp"].filter((k) => state.overlays[k]);
-    $("chartNote").textContent = (on.some((k) => k !== "vp") ? "Overlays: support/resistance bands are levels with 2+ touches, dashed lines are minor levels; dotted lines are your price alerts; markers are stored signal records. " : "")
-      + (vp.note ? vp.note + " " : "")
+    Plotly.react(box, traces, layout, { responsive: true, displaylogo: false, scrollZoom: true, modeBarButtonsToRemove: ["select2d", "lasso2d"] });
+    hookVisibleProfile(box);
+    const on = ["levels", "alerts", "markers", "vp", "regime", "sweeps"].filter((k) => state.overlays[k]);
+    $("chartNote").textContent = (on.some((k) => ["levels", "alerts", "markers"].includes(k)) ? "Overlays: support/resistance bands are levels with 2+ touches, dashed lines are minor levels; dotted lines are your price alerts; markers are stored signal records. " : "")
+      + (vp.note ? vp.note + " " : "") + [rg.note, sw.note].filter(Boolean).map((n) => n + " ").join("")
       + (ov.outside ? `${ov.outside} level${ov.outside > 1 ? "s" : ""} or alert price${ov.outside > 1 ? "s are" : " is"} outside the visible price range.` : "");
     $("chartBox").dataset.overlays = on.join(" ");
+  }
+
+  // ---------------------------------------------------------------- chart overlays: regime, sweeps, chart profile
+  // Data comes from /api/advanced/overlays (closed 4h regime labels, STORED sweep events) and /api/advanced/profile
+  // (the chart's closed candles). Nothing is recalculated here; cached per timeframe for a minute.
+  async function ensureOverlayInputs() {
+    const jobs = [];
+    if (state.overlays.regime || state.overlays.sweeps) jobs.push(ensureOverlayData());
+    if (state.overlays.vp) jobs.push(ensureChartProfile());
+    await Promise.allSettled(jobs);
+  }
+
+  async function ensureOverlayData() {
+    const tf = state.tf, c = state.overlayData[tf];
+    if (c && Date.now() - c.at < 60000) return c.data;
+    try {
+      const data = await getJson(`/api/advanced/overlays?tf=${tf}&limit=300`);
+      state.overlayData[tf] = { data, at: Date.now() };
+      return data;
+    } catch (err) {
+      state.overlayData[tf] = { data: { error: err.message, regime: { bars: [], segments: [], transitions: [] }, sweeps: [], notes: [] }, at: Date.now() };
+      return state.overlayData[tf].data;
+    }
+  }
+
+  const utcMs = (x) => { const t = String(x).replace(" ", "T"); return Date.parse(/Z|[+-]\d\d:\d\d$/.test(t) ? t : t + "Z"); };
+
+  function visibleRange() {
+    const xr = ($("chartBox").layout || {}).xaxis;
+    if (xr && xr.range && !xr.autorange) return xr.range.map(utcMs);
+    const t = state.lastSeries ? state.lastSeries.time : [];
+    return t.length ? [utcMs(t[0]), utcMs(t[t.length - 1]) + 1e12] : null;
+  }
+
+  async function ensureChartProfile(force) {
+    const tf = state.tf, mode = state.vpRange;
+    const c = state.chartProfile;
+    if (!force && c && c.tf === tf && c.mode === mode && Date.now() - c.at < 60000) return c.data;
+    let url = `/api/advanced/profile?tf=${tf}&limit=300&mode=${mode}`;
+    if (mode === "visible") {
+      const r = visibleRange();
+      if (!r) return null;
+      url += `&from=${Math.floor(r[0])}&to=${Math.ceil(r[1])}`;
+    }
+    try {
+      const data = await getJson(url);
+      state.chartProfile = { tf, mode, data, at: Date.now() };
+      return data;
+    } catch (_) {
+      state.chartProfile = { tf, mode, data: { status: "error" }, at: Date.now() };
+      return null;
+    }
+  }
+
+  // Visible-range profile: recomputed 300 ms after the last zoom / pan (debounced), keeping the zoom.
+  let vpTimer = null;
+  function hookVisibleProfile(box) {
+    if (box._vpHooked || typeof box.on !== "function") return;
+    box._vpHooked = true;
+    box.on("plotly_relayout", (ev) => {
+      if (!state.overlays.vp || state.vpRange !== "visible" || !Object.keys(ev || {}).some((k) => k.startsWith("xaxis"))) return;
+      clearTimeout(vpTimer);
+      vpTimer = setTimeout(async () => {
+        await ensureChartProfile(true);
+        if (state.lastSeries) drawChart(state.lastSeries);
+      }, 300);
+    });
+  }
+
+  function regimeOverlay(hi, colors) {
+    const out = { traces: [], shapes: [], note: "" };
+    const c = state.overlayData[state.tf];
+    if (!state.overlays.regime) return out;
+    if (!c) { out.note = "Market regime: loading."; return out; }
+    const d = c.data;
+    if (d.error) { out.note = `Market regime: not available (${d.error}).`; return out; }
+    const fill = { bullish: colors.up, bearish: colors.down, sideways: colors.muted, high_vol: colors.warn };
+    for (const seg of d.regime.segments) {
+      if (!seg.shade) continue;
+      out.shapes.push({ name: "regime", type: "rect", xref: "x", x0: isoUtc(seg.start), x1: isoUtc(seg.end), yref: "paper", y0: 0.38, y1: 1,
+        layer: "below", line: { width: 0 }, fillcolor: alpha(fill[seg.shade], seg.shade === "sideways" ? 0.09 : 0.07) });
+    }
+    const bars = d.regime.bars;
+    if (bars.length) {
+      out.traces.push({ type: "scatter", mode: "markers", name: "Market regime", showlegend: false, xaxis: "x", yaxis: "y",
+        x: bars.map((b) => isoUtc(b.start)), y: bars.map(() => hi), marker: { size: 6, opacity: 0 },
+        text: bars.map((b) => `${b.regime} · ${b.confidence}/100 · ${b.checks_used} check${b.checks_used === 1 ? "" : "s"}`),
+        hovertemplate: "%{text}<extra>Market regime (4h)</extra>" });
+    }
+    const tr = d.regime.transitions;
+    if (tr.length) {
+      out.traces.push({ type: "scatter", mode: "markers", name: "Regime change", showlegend: false, xaxis: "x", yaxis: "y",
+        x: tr.map((t) => isoUtc(t.time)), y: tr.map(() => hi), marker: { symbol: "line-ns-open", size: 16, color: colors.muted, line: { width: 1.5 } },
+        text: tr.map((t) => `${t.from} → ${t.to} · ${t.confidence}/100 · ${t.checks_used} checks`),
+        hovertemplate: "%{text}<extra>Regime change</extra>" });
+    }
+    out.note = "Market regime (4h, closed bars): green bullish, red bearish, grey sideways, amber high volatility; | marks a change."
+      + (d.notes || []).filter((n) => !n.startsWith("No stored")).map((n) => " " + n).join("");
+    return out;
+  }
+
+  function sweepOverlay(s, colors) {
+    const out = { traces: [], shapes: [], note: "" };
+    const c = state.overlayData[state.tf];
+    if (!state.overlays.sweeps) return out;
+    if (!c) { out.note = "Liquidity sweeps: loading."; return out; }
+    const d = c.data;
+    if (d.error) { out.note = `Liquidity sweeps: not available (${d.error}).`; return out; }
+    const t0 = utcMs(s.time[0]);
+    const groups = { confirmed: [], potential: [], failed: [] };
+    for (const m of d.sweeps) if (m.marker_time >= t0) groups[m.style].push(m);
+    const label = { confirmed: "confirmed / reclaim", potential: "potential", failed: "failed / unconfirmed" };
+    for (const [style, rows] of Object.entries(groups)) {
+      if (!rows.length) continue;
+      const color = (m) => (style === "potential" ? colors.warn : style === "failed" ? colors.muted : m.direction === "buy_side" ? colors.down : colors.up);
+      out.traces.push({ type: "scatter", mode: "markers", name: `Liquidity sweep: ${label[style]}`, showlegend: false, xaxis: "x", yaxis: "y",
+        x: rows.map((m) => isoUtc(m.marker_time)), y: rows.map((m) => m.marker_price),
+        customdata: rows.map((m) => m.key),
+        marker: { size: 11, color: rows.map(color), symbol: rows.map((m) => (m.direction === "buy_side" ? "triangle-down" : "triangle-up") + (style === "confirmed" ? "" : "-open")),
+          line: { width: 1.5, color: rows.map(color) } },
+        hovertext: rows.map((m) => esc([
+          `${SWEEP_DIR[m.direction]} sweep · ${m.status}`,
+          `Swing level ${usd(m.level)} · sweep ${m.direction === "buy_side" ? "high" : "low"} ${usd(m.sweep_extreme)}`,
+          `Reclaim close ${usd(m.reclaim_price)} · strength ${fmtNum(m.strength || 0, 0)}/100`,
+          `Detected ${localTime(m.event_time)} · ${m.confirmed_at ? "confirmed " + localTime(m.confirmed_at) : "not confirmed"}`].join("<br>"))
+          .replaceAll("&lt;br&gt;", "<br>")),
+        hoverinfo: "text" });
+      for (const m of rows) {
+        out.shapes.push({ name: "sweep level", type: "line", xref: "x", x0: isoUtc(Math.max(m.line_start, t0)), x1: isoUtc(m.line_end), yref: "y",
+          y0: m.level, y1: m.level, line: { color: alpha(color(m), 0.75), width: 1, dash: style === "confirmed" ? "solid" : "dot" } });
+      }
+    }
+    const n = Object.values(groups).reduce((a, r) => a + r.length, 0);
+    out.note = n ? `Liquidity sweeps (4h, stored events): ▼ buy-side, ▲ sell-side; filled = confirmed, open amber = potential, open grey = failed or unconfirmed; status as of the last closed candle.`
+      : "Liquidity sweeps: no stored sweep in this range.";
+    return out;
   }
 
   // ---------------------------------------------------------------- advanced analysis (context, not part of the score)
@@ -423,9 +582,12 @@
   // VAL lines and HVN / LVN bands. The profile's own timeframe can differ from the chart's.
   function profileOverlay(lo, hi, colors) {
     const out = { traces: [], shapes: [], annotations: [], axis: null, note: "" };
-    const p = state.advanced && state.advanced.profile;
+    const cp = state.chartProfile;
+    const p = cp && cp.tf === state.tf ? cp.data : null;
     if (!state.overlays.vp || !p || p.status !== "ok") {
-      if (state.overlays.vp) out.note = "Volume profile: no profile data yet.";
+      if (state.overlays.vp) out.note = !p ? "Volume profile: loading."
+        : p.status === "too_few_candles" ? "Volume profile: fewer than 10 closed candles in the visible range - zoom out."
+        : "Volume profile: no profile data for this timeframe.";
       return out;
     }
     const maxV = Math.max(...p.bins.map((b) => b.volume)) || 1;
@@ -449,7 +611,7 @@
           line: { width: 0 }, fillcolor: alpha(color, kind === "HVN" ? 0.08 : 0.05) });
       }
     }
-    out.note = `Volume profile: last ${p.candles_used} closed ${p.timeframe} candles, volume spread evenly over each candle's range (an approximation).`;
+    out.note = `Volume profile: ${p.mode === "visible" ? "the visible range" : "the last"} ${p.candles_used} closed ${p.timeframe} candles, volume spread evenly over each candle's range (an approximation).`;
     return out;
   }
 

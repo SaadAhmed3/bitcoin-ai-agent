@@ -161,7 +161,11 @@
         <label><input type="checkbox" data-ov="levels"> Support / resistance</label>
         <label><input type="checkbox" data-ov="alerts"> Alert prices</label>
         <label><input type="checkbox" data-ov="markers"> Signal markers</label>
+        <label><input type="checkbox" data-ov="regime"> Market regime</label>
+        <label><input type="checkbox" data-ov="sweeps"> Liquidity sweeps</label>
         <label><input type="checkbox" data-ov="vp"> Volume profile</label>
+        <select id="vpRange" class="ov-select" aria-label="Volume profile range" hidden>
+          <option value="last">last 200 candles</option><option value="visible">visible range</option></select>
       </div>
       <div id="chartBox" class="chart-box" role="figure" aria-label="BTC candlestick chart with volume and RSI for the selected timeframe"><div class="empty">Loading chart…</div></div>
       <p class="muted small" id="chartNote"></p>

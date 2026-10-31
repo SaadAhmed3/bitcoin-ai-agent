@@ -2,6 +2,32 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## Chart overlays: regime, liquidity sweeps, volume profile on the price chart — 2026-10-31
+
+**Visualisation only.** No detection rule, signal, weight, gate, backtest or paper-trading change; engine signal-1.8;
+the protected files are untouched (rule-set hash and forward-test fingerprint unchanged).
+
+- **Three independent toggles** next to the existing ones on Market & chart (remembered): *Market regime*,
+  *Liquidity sweeps* and the existing *Volume profile* (improved, not duplicated).
+- **Market regime:** faint shading behind the candles (layer below, ≤ 9% opacity): green bullish, red bearish, grey
+  sideways, amber high volatility; low volatility and transitional are not shaded. `|` marks a change. Hover shows the
+  regime, confidence and check count. Each closed 4h bar from its own past (regime_at), over its full 4h period also
+  on 1h/15m/5m; a bar is shaded only once it closed by the chart's last closed candle. Labels cached per bar.
+- **Liquidity sweeps:** only STORED events (superseded excluded), ▼ buy-side / ▲ sell-side at the chart candle that
+  made the actual high / low (on lower timeframes the 1h/15m/5m candle inside the 4h sweep candle; on 1d the closed
+  day that contains it), a line at the swing level; filled = confirmed / reclaim, open amber = potential, open grey =
+  failed / unconfirmed. Status as of the chart's last closed candle: never "confirmed" before its confirmation time.
+  Hover: direction, swing level, sweep high/low, reclaim close, strength, detection and confirmation times. The
+  monitor now stores sweep updates and regime changes also with shadow mode off (only the shadow row needs it on).
+- **Volume profile:** bars on the right of the price chart, POC/VAH/VAL lines, HVN/LVN bands, normal volume bars kept.
+  Default: the last 200 closed candles of the chart's timeframe; option "visible range", recomputed 300 ms after the
+  last zoom / pan (debounced), keeping the zoom.
+- Missing or stale data is named in the note under the chart; the chart itself keeps working. Candles are drawn first,
+  overlays follow; a late answer for a timeframe no longer selected is dropped (fixes a chart showing the previous
+  timeframe after quick switches). Redraws keep the user's zoom (Plotly.react + uirevision).
+- API: `GET /api/advanced/overlays?tf=`, `GET /api/advanced/profile?tf=&mode=last|visible&from=&to=`.
+- Tests (failed before): `tests/test_chart_overlays.py` (11), `tests/e2e/test_chart_overlays_e2e.py` (6).
+
 ## 0.9.8 follow-up: sweep correction records (schema 13) — 2026-10-31
 
 - **New append-only table `sweep_corrections`** (event_id, action = 'superseded', reason, corrected_at, by_version;
