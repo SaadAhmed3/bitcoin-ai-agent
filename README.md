@@ -151,9 +151,10 @@ confirmed-sweep group's 95% CI excludes the average of all bars.
 
 ## Strategy Lab (research strategies)
 
-A separate view with five independent spot research strategies (DCA now; trend, range, breakout and rotation in
-later rounds), each with its own rules, versioned settings, a pre-registered design backtest run once
-(`python scripts\research_strategy.py dca`) and its own forward test. Separate from signal-1.8 and never trades.
+A separate view with five independent spot research strategies (DCA and trend following now; range, breakout and
+rotation in later rounds), each with its own rules, versioned settings, a pre-registered design backtest run once
+(`python scripts\research_strategy.py dca` / `trend`) and its own forward test. Design results so far: DCA PASS, trend
+FAIL (design-data evidence only). Separate from signal-1.8 and never trades.
 Method, rules against data snooping and results: [STRATEGY_LAB.md](STRATEGY_LAB.md).
 
 ## Paper trading and risk

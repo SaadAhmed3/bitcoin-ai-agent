@@ -229,11 +229,15 @@ that one day they can be tested on data nobody has seen yet. Turning it off stop
 ### Strategy Lab
 
 **Strategy Lab** (in the menu) shows five research strategies side by side. Each card shows its current research
-signal, the data it used, its costs and its **validation status**. Only DCA (buying a fixed amount on a schedule) is
-active so far; the others say "planned".
+signal, the data it used, its costs and its **validation status**. DCA (buying a fixed amount on a schedule) and
+**trend following** (buying 4-hour trend pullbacks, with a stop and a target) are active so far; the others say
+"planned". Use the picker in the details card to see each one's backtest, forward test, settings and history.
 
 - **DCA** says ACCUMULATE on a scheduled buy day, WAIT on other days and PAUSE when the price data is not trustworthy.
   It does not try to time the market, and nothing is ever bought.
+- **Trend following** says BUY SETUP (with entry, stop and target) only when the 4-hour trend is confirmed and price
+  resumes after a pullback, HOLD while the trend holds without a new entry, EXIT / REDUCE EXPOSURE when the trend
+  breaks and NO TRADE otherwise. Its design backtest failed its pre-registered criteria. Nothing is ever traded.
 - The **comparison table** does not rank strategies. N/A means there is no valid number yet.
 - **Settings** can be changed in the DCA details. Saving creates a new version; if it differs from the
   pre-registered settings, the strategy shows **NOT VALIDATED (settings changed)** and its earlier results no longer

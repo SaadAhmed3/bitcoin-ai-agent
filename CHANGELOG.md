@@ -2,6 +2,26 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## Strategy Lab, round 2: Trend following — 2026-11-01
+
+**Research only, separate from signal-1.8** (unchanged; protected files untouched; forward tests "unchanged").
+
+- **Trend following** (4h pullback continuation), defined differently from H2 and pre-registered in
+  `PREREGISTRATION_TREND.md` before its first backtest (owner's changes: no RSI / volume filters; stop and 30-bar time
+  limit stated exactly; criteria trades ≥ 30 else INCONCLUSIVE, expectancy ≥ +0.15R, PF ≥ 1.3, max DD ≤ 15%, beats
+  ≥ 90% of random entries). Design backtest run once: **FAIL** (94 trades, −0.08R, PF 0.82, max DD 9.57%, beat 83% of
+  random runs); buy & hold, H2, walk-forward and sensitivity reported (`data/strategy_trend_design.md`).
+- **Generic strategy forward tracker:** per-strategy forward steps (trend uses its backtest's own step), per-strategy
+  fingerprint = its module + the tracker core. DCA's round-1 fingerprint re-based once before its first processed
+  day (schema 15, `strategy_forward_rebases`, append-only, refused after the first day).
+- **Strategy Lab:** trend card, a strategy picker in the details (backtest with criteria, comparisons, walk-forward,
+  sensitivity; forward test; settings; history).
+
+## DCA follow-ups — 2026-11-01
+
+- Deposit-neutral drawdown views for DCA (time-weighted index, return on invested), reported only, with a dated
+  addendum to `PREREGISTRATION_DCA.md` (original text unchanged); one status badge per strategy card.
+
 ## Strategy Lab, round 1: shared interface and DCA — 2026-11-01
 
 **Research only, separate from signal-1.8** (unchanged; protected files untouched; forward tests "unchanged").
