@@ -39,7 +39,9 @@ def open_db() -> Database:
 
 
 def load_rows(db: Database, timeframe: str) -> list[dict]:
-    return db.get_candles_range("binance", "BTCUSDT", timeframe)
+    """"1d" -> BTCUSDT; "1d:ETHUSDT" -> that symbol (strategies that rank several assets)."""
+    tf, _, symbol = timeframe.partition(":")
+    return db.get_candles_range("binance", symbol or "BTCUSDT", tf)
 
 
 def prereg_committed(path: Path) -> bool:

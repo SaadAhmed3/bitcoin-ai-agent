@@ -23,7 +23,8 @@ def test_strategy_lab_shows_five_cards_and_an_honest_comparison(browser, live_se
         assert len(badges) == 1 and (badges[0] == "Not validated" or badges[0].endswith(" on design data · not validated"))
         assert "Live data · calculated · simulated" in dca.locator(".strat-kinds").text_content()
         assert "not a prediction" in dca.text_content()
-        assert "round 5" in page.locator("#strat-rotation").text_content()   # trend, range, breakout: live
+        assert page.locator("#strat-rotation .strat-signal").text_content() in (
+            "BTC STRONGER", "ALTCOIN STRENGTH", "NEUTRAL", "NO TRADE")             # every strategy is live now
         assert page.locator("#strat-breakout .strat-signal").text_content() in (
             "BUY SETUP", "HOLD", "NO TRADE", "EXIT / REDUCE EXPOSURE")
         table = page.locator("#stratCompare")

@@ -95,6 +95,7 @@
         ${list((bt.criteria || []).map((c) => `${c.id} ${c.passed ? "passed" : "failed"}: ${c.rule} (DCA ${num(c.dca)}%, lump sum ${num(c.lump_sum)}%)`))}`;
       return;
     }
+    if (sid === "rotation") { renderRotationBacktest(bt, head); return; }
     const bh = bt.buy_and_hold || {}, h2 = bt.h2_rule || {}, rnd = bt.random_entries || {};
     const wf = (bt.walk_forward || []).map((w) => `<tr><td data-label="Window">${esc(day(w.start))} to ${esc(day(w.end))}</td><td data-label="Trades">${esc(w.trades)}</td>
       <td data-label="Return">${pct(w.return_pct)}</td><td data-label="Sum of R">${num(w.sum_r)}</td></tr>`).join("");
@@ -121,6 +122,32 @@
       <div class="table-wrap"><table class="table stack"><thead><tr><th>Window</th><th>Trades</th><th>Return</th><th>Sum of R</th></tr></thead><tbody>${wf}</tbody></table></div>
       <h4>Sensitivity (reported only, never used to choose parameters)</h4>
       <div class="table-wrap"><table class="table stack"><thead><tr>${sensKeys.map((k) => `<th>${SENS[k]}</th>`).join("")}<th>Trades</th><th>Expectancy</th><th>Profit factor</th><th>Max DD</th></tr></thead><tbody>${sens}</tbody></table></div>`;
+  }
+
+  // Rotation: judged against BTC buy & hold; survivorship bias stated next to the numbers.
+  function renderRotationBacktest(bt, head) {
+    const m = bt.metrics, b = bt.btc_buy_and_hold || {}, rr = bt.random_rotations || {}, a = bt.asset_buy_and_hold || {};
+    const name = { ETHUSDT: "ETH", SOLUSDT: "SOL", BNBUSDT: "BNB" };
+    const assets = Object.keys(name).map((s) => `<div><dt>${name[s]} buy &amp; hold (reported)</dt><dd>${a[s] ? `${pct(a[s].net_return_pct)} · max DD ${num(a[s].max_drawdown_pct)}%` : "N/A (not listed at the start)"}</dd></div>`).join("");
+    const wf = (bt.walk_forward || []).map((w) => `<tr><td data-label="Window">${esc(day(w.start))} to ${esc(day(w.end))}</td><td data-label="Switches">${esc(w.trades)}</td>
+      <td data-label="Return">${pct(w.return_pct)}</td></tr>`).join("");
+    const sens = (bt.sensitivity || []).map((x) => `<tr><td data-label="Lookback">${esc(x.lookback_days)} days${x.is_default ? " (default)" : ""}</td>
+      <td data-label="Cash filter">${esc(x.cash_filter)}</td><td data-label="Switches">${esc(x.switches)}</td><td data-label="Net return">${pct(x.net_return_pct)}</td>
+      <td data-label="Max DD">${num(x.max_drawdown_pct)}%</td><td data-label="Return / DD">${num(x.return_to_drawdown)}</td></tr>`).join("");
+    $("stratBacktest").innerHTML = `${head}<p class="set-warn small">${esc(bt.survivorship_note)}</p>
+      ${bt.sample_warning ? `<p class="set-warn small">${esc(bt.sample_warning)}</p>` : ""}
+      <dl class="adv-dl"><div><dt>Net return</dt><dd>${pct(m.net_return_pct)}</dd></div>
+        <div><dt>BTC buy &amp; hold (criterion basis)</dt><dd>${pct(b.net_return_pct)} · max DD ${num(b.max_drawdown_pct)}%</dd></div>
+        <div><dt>Max drawdown</dt><dd>${num(m.max_drawdown_pct)}%</dd></div><div><dt>Return / max drawdown</dt><dd>${num(m.return_to_drawdown)}</dd></div>
+        <div><dt>Switches</dt><dd>${esc(m.switches)} in ${esc(m.weeks)} weeks</dd></div>
+        <div><dt>Weeks in cash / BTC / altcoins</dt><dd>${num(m.weeks_in_cash_pct, 1)}% / ${num(m.weeks_in_btc_pct, 1)}% / ${num(m.weeks_in_alts_pct, 1)}%</dd></div>
+        <div><dt>Beats random weekly rotations</dt><dd>${num(rr.beaten_pct, 1)}% of ${esc(rr.runs)} runs</dd></div>
+        <div><dt>Fees and slippage</dt><dd>${num(m.costs_pct)}% of the account</dd></div>${assets}</dl>
+      ${list((bt.criteria || []).map((c) => `${c.id} ${c.passed ? "passed" : "failed"}: ${c.rule} (value ${num(c.value)}${c.btc !== undefined ? `, BTC ${num(c.btc)}` : ""})`))}
+      <h4>Walk-forward windows (182 days, fixed rules, reported only)</h4>
+      <div class="table-wrap"><table class="table stack"><thead><tr><th>Window</th><th>Switches</th><th>Return</th></tr></thead><tbody>${wf}</tbody></table></div>
+      <h4>Sensitivity (reported only, never used to choose parameters)</h4>
+      <div class="table-wrap"><table class="table stack"><thead><tr><th>Lookback</th><th>Cash filter</th><th>Switches</th><th>Net return</th><th>Max DD</th><th>Return / DD</th></tr></thead><tbody>${sens}</tbody></table></div>`;
   }
 
   // Deposit-neutral views (addendum 2026-11-01): reported only, never a criterion.

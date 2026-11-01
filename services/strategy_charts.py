@@ -27,7 +27,8 @@ import numpy as np
 import pandas as pd
 
 from services.backtesting import HOLDOUT_START
-from services.strategies import breakout as bo, dca, dca_metrics, range as rng, trend
+from services import asset_candles
+from services.strategies import breakout as bo, dca, dca_metrics, range as rng, rotation as rot, trend
 from services.technical_analysis import ema
 
 log = logging.getLogger(__name__)
@@ -43,6 +44,11 @@ HOW_TO = {
     "live_breakout": "Closed 4h candles with only what the breakout rule uses: the 20-bar high (the level), the 10-bar "
                      "low (the trailing exit) and the volume threshold. A setup draws its entry and stop (red); there is "
                      "no fixed target. The list under the chart shows each rule as met (✓) or not (✗).",
+    "live_rotation": "Bars: each asset's return over the lookback on closes up to the last closed day (the ranking the "
+                     "Monday rule uses; N/A = no data). Lines: the four prices over the last 90 days, started at 100. "
+                     "The rule acts only at the Monday 00:00 UTC open. News below is context only, never part of the rule.",
+    "history_rotation": "Design period: the strategy's account against BTC buy & hold (both start at 1), the drawdown, and "
+                        "the asset held each week (cash = none). Hypothetical; SOL and BNB were picked knowing they survived.",
     "history": "Every design-backtest trade: ▲ entry, ▼ exit, the line green for a win and red for a loss; click a "
                "trade in the list to zoom to it. Below: the account (equity) against buy & hold, and the drawdown.",
     "history_dca": "Design period: money invested so far (steps) against what the BTC bought is worth, the BTC price, "
@@ -192,7 +198,35 @@ def breakout_live(frames: dict, cfg: dict, result: dict) -> dict[str, Any]:
             "indicators": [f"{lb}-bar high (level)", f"{tb}-bar low (trailing exit)", f"volume {vm:g}× its average"]}
 
 
-LIVE = {"trend": trend_live, "range": range_live, "dca": dca_live, "breakout": breakout_live,
+def rotation_live(frames: dict, cfg: dict, result: dict) -> dict[str, Any]:
+    p = rot.panel(frames)
+    btc = frames["1d"].sort_values("open_time").reset_index(drop=True)
+    t = int(btc["close_time"].max()) + 1
+    L = cfg["lookback_days"]
+    ret, vol = rot.returns_at(p, t, L), rot.volume_change(p, t, L)
+    held = rot.replay_holding(p, t, cfg)
+    ranking = sorted(({"symbol": s, "name": rot.NAMES[s], "return_pct": None if ret[s] is None else ret[s] * 100,
+                       "volume_change_pct": None if vol[s] is None else vol[s] * 100, "held": s == held}
+                      for s in rot.ASSETS), key=lambda x: (x["return_pct"] is None, -(x["return_pct"] or 0)))
+    days = [int(d) for d in btc["open_time"].iloc[-90:]]
+    series: dict[str, list] = {"time": days}
+    for s in rot.ASSETS:
+        closes = [p["close"][s].get(d) for d in days]
+        base = next((c for c in closes if c), None)
+        series[s] = [c / base * 100 if c and base else None for c in closes]
+    ranked = [x["return_pct"] for x in ranking if x["return_pct"] is not None]
+    band = cfg["neutral_band_pct"]
+    checks = [{"rule": f"{L}-day returns for at least two assets (N/A ones are left out)", "met": len(ranked) >= 2},
+              {"rule": "the top asset's return is above 0 (else cash)" + (" — cash filter off" if cfg["cash_filter"] == "off" else ""),
+               "met": bool(ranked) and (ranked[0] > 0 or cfg["cash_filter"] == "off")},
+              {"rule": f"the top two are more than {band:g} points apart (else NEUTRAL: keep the holding)",
+               "met": len(ranked) >= 2 and ranked[0] - ranked[1] > band}]
+    return {"timeframe": "1d", "series": series, "ranking": ranking, "holding": held, "lookback_days": L,
+            "band_pct": band, "checklist": checks + [_data_check(result)], "plan": None, "how_to": HOW_TO["live_rotation"],
+            "names": rot.NAMES, "indicators": [f"{L}-day return ranking", "prices started at 100", "volume change (shown only)"]}
+
+
+LIVE = {"trend": trend_live, "rotation": rotation_live, "range": range_live, "dca": dca_live, "breakout": breakout_live,
         "breakout_05r": breakout_live}                 # the forward-only variant runs Breakout's own rules
 
 
@@ -228,12 +262,14 @@ class StrategyCharts:
         cfg = self.lab.config(sid)["config"]
         result = self.lab.evaluate(sid)
         frames = {tf: self.lab.market.get_candles(tf).df for tf in eng.EVAL_TIMEFRAMES}
+        frames.update(self.lab.extra_frames(eng, self.lab.clock()))
         if any(f is None or f.empty for f in frames.values()):
             return {"status": "no_data", "note": "No closed candles for this strategy's timeframe yet.", "how_to": HOW_TO["live"]}
         out = LIVE[sid](frames, cfg, result)
         how_to = out.pop("how_to", HOW_TO["live"])
         status = self.lab.validation(sid, self.lab.config(sid))
         return {"status": "ok", **out, "signal": result["signal"], "explanation": result["explanation"],
+                "news": result.get("news_context"),
                 "banner": (FAILED_BANNER if status.get("design_verdict") == "FAIL" else
                            eng.LABEL[0].upper() + eng.LABEL[1:] if getattr(eng, "FORWARD_ONLY", False) else None),
                 "how_to": how_to}
@@ -320,7 +356,46 @@ class StrategyCharts:
         res = res or self.lab.backtest_for(sid, self.lab.config(sid)["hash"])
         if sid == "dca":
             return self._history_dca(res)
+        if sid == "rotation":
+            return self._history_rotation(res)
         return self._history_trades(sid, res)
+
+    def _history_rotation(self, res: dict) -> dict:
+        per, cfg = res["period"], res["config"]
+        frames = asset_candles.frames(self.db, ("1d",) + rot.EXTRA_FRAMES, per["holdout_start"])
+        p = rot.panel(frames)
+        first, last = rot.design_span(p, per["holdout_start"])
+        out = rot.run(p, cfg, first, last)
+        m, sim = out["metrics"], out["sim"]
+        mismatches = [f"{k}: stored {res['metrics'].get(k)!r} vs recomputed {v!r}" for k, v in m.items()
+                      if res["metrics"].get(k) != v]
+        if [(w["monday"], w["holding"], w["signal"]) for w in sim["weeks"]] != [
+                (w["monday"], w["holding"], w["signal"]) for w in res["weeks"]]:
+            mismatches.append("weekly holdings differ from the stored ones")
+        if out["btc"]["net_return_pct"] != res["btc_buy_and_hold"]["net_return_pct"]:
+            mismatches.append("BTC buy & hold return differs from the stored one")
+        if first != per["first_monday"]:
+            mismatches.append("design window start differs from the stored one")
+        ok = not mismatches
+        if ok:
+            times = [e["day"] for e in sim["equity"]]
+            equity = {"time": times, "value": [e["equity"] for e in sim["equity"]]}
+            btc = {"time": times, "value": out["btc"]["curve"]}
+            dd = {"time": times, "value": _drawdown(equity["value"]), "source": "recomputed, verified"}
+        else:
+            es = res["equity_sample"]
+            equity = {"time": [e["time"] for e in es], "value": [e["equity"] for e in es]}
+            btc, dd = None, {"time": equity["time"], "value": _drawdown(equity["value"]), "source": "stored equity sample"}
+        return {"status": "ok", "strategy": "rotation", "verified": ok, "mismatches": mismatches, "equity": equity,
+                "btc_buy_hold": btc, "drawdown": dd, "names": rot.NAMES,
+                "weeks": [{"monday": w["monday"], "holding": w["holding"], "signal": w["signal"]} for w in res["weeks"]],
+                "switches": res["switch_list"], "metrics": res["metrics"], "verdict": res["verdict"],
+                "survivorship_note": res["survivorship_note"],
+                "source": ("stored weekly decisions and metrics; daily series recomputed in memory with the locked "
+                           "configuration and checked against every stored metric" if ok else
+                           "stored decisions and the stored equity sample only: the recomputation did not reproduce "
+                           "the stored result"),
+                "how_to": HOW_TO["history_rotation"]}
 
     def _history_trades(self, sid: str, res: dict) -> dict:
         holdout = res["period"]["holdout_start"]

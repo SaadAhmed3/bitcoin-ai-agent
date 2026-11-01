@@ -60,8 +60,10 @@
     banner.textContent = d.banner || "";
     how("stratLiveHow", d.how_to);
     $("stratChecklist").innerHTML = (d.checklist || []).map((c) => `<li class="${c.met ? "met" : "not"}">${c.met ? "✓" : "✗"} ${esc(c.rule)}</li>`).join("");
+    news(d.news);
     if (d.status !== "ok") { empty("stratLiveChart", d.note || "No chart data.", sid); return; }
     if (!ok()) { empty("stratLiveChart", "Plotly could not be loaded.", sid); return; }
+    if (sid === "rotation") { drawRotationLive(d); return; }
     const c = colors(), s = d.series, x = s.time.map(iso), last = x[x.length - 1];
     const traces = [{ type: "candlestick", name: "BTC", x, open: s.open, high: s.high, low: s.low, close: s.close,
       increasing: { line: { color: c.up }, fillcolor: c.up }, decreasing: { line: { color: c.down }, fillcolor: c.down }, xaxis: "x", yaxis: "y" },
@@ -131,12 +133,42 @@
     plot("stratLiveChart", traces, L, sid);
   }
 
+  // Rotation: the ranking the Monday rule uses (bars, N/A shown as such) and the four prices started at 100.
+  const ASSET_COLORS = { BTCUSDT: "#f59e0b", ETHUSDT: "#818cf8", SOLUSDT: "#2dd4bf", BNBUSDT: "#eab308" };
+  function drawRotationLive(d) {
+    const c = colors(), s = d.series, x = s.time.map(iso), names = d.names || {};
+    const rk = d.ranking || [];
+    const traces = [{ type: "bar", name: `${d.lookback_days}-day return`, xaxis: "x2", yaxis: "y2",
+      x: rk.map((r) => names[r.symbol] + (r.held ? " (held)" : "")), y: rk.map((r) => (r.return_pct === null ? 0 : r.return_pct)),
+      text: rk.map((r) => (r.return_pct === null ? "N/A" : `${r.return_pct >= 0 ? "+" : ""}${r.return_pct.toFixed(2)}%`)),
+      textposition: "outside", cliponaxis: false,
+      marker: { color: rk.map((r) => (r.return_pct === null ? alpha(c.muted, 0.3) : r.return_pct > 0 ? c.up : c.down)) },
+      hovertemplate: "%{x}: %{text}<extra></extra>" }];
+    Object.keys(names).forEach((sym) => traces.push(line(x, s[sym], names[sym], ASSET_COLORS[sym] || c.muted)));
+    const L = layout(c, { hovermode: "x unified",
+      xaxis: { type: "date", domain: [0, narrow() ? 1 : 0.62], gridcolor: c.line, anchor: "y" },
+      yaxis: axis(c, { domain: narrow() ? [0.5, 1] : [0, 1], title: { text: "price, start = 100", font: { size: 10 } } }),
+      xaxis2: { domain: narrow() ? [0, 1] : [0.7, 1], anchor: "y2", gridcolor: c.line },
+      yaxis2: axis(c, { domain: narrow() ? [0, 0.38] : [0, 1], anchor: "x2", ticksuffix: "%", zeroline: true, zerolinecolor: c.muted }) });
+    plot("stratLiveChart", traces, L, "rotation");
+  }
+
+  function news(n) {
+    const box = $("stratNews");
+    if (!box) return;
+    box.hidden = !n;
+    if (!n) return;
+    const items = (n.items || []).map((i) => `<li><a href="${esc(i.link)}" target="_blank" rel="noopener noreferrer">${esc(i.title)}</a>
+      <span class="muted">· ${esc(i.publisher)} · ${esc((i.assets || []).map((a) => a.replace("USDT", "")).join(", "))}</span></li>`).join("");
+    box.innerHTML = `<p class="muted">${esc(n.note)}</p>${items ? `<ul>${items}</ul>` : `<p class="muted">No headline in the last ${esc(n.hours)} hours names BTC, ETH, SOL or BNB.</p>`}`;
+  }
+
   // ---------------------------------------------------------------- B. history chart
   let histTimer = null;
   function drawHistory(sid, h, retry) {
     clearTimeout(histTimer);
     const tbody = $("stratTradeList").querySelector("tbody");
-    $("stratTradeList").closest(".strat-trades").hidden = sid === "dca";
+    $("stratTradeList").closest(".strat-trades").hidden = sid === "dca" || sid === "rotation";
     if (h.status === "preparing") {
       empty("stratHistChart", h.note);
       tbody.innerHTML = "";
@@ -152,6 +184,7 @@
     how("stratHistHow", h.how_to);
     $("stratHistSource").textContent = h.verified ? `Source: ${h.source} (verified).` : `Source: ${h.source}. ${h.mismatches.join("; ")}`;
     if (!ok()) { empty("stratHistChart", "Plotly could not be loaded.", sid); return; }
+    if (sid === "rotation") { drawRotationHistory(h); return; }
     const c = colors(), px = h.price.time.map(iso);
     let traces, L;
     if (sid === "dca") {
@@ -210,6 +243,27 @@
       };
     }
     plot("stratHistChart", traces, L, sid);
+  }
+
+  // Rotation history: account vs BTC buy & hold, drawdown, and which asset was held each week (cash = gap).
+  function drawRotationHistory(h) {
+    const c = colors(), names = h.names || {}, x = h.equity.time.map(iso);
+    const traces = [line(x, h.equity.value, "Rotation (account)", c.accent, { line: { width: 1.8 } })];
+    if (h.btc_buy_hold) traces.push(line(h.btc_buy_hold.time.map(iso), h.btc_buy_hold.value, "BTC buy & hold", c.muted, { line: { dash: "dot" } }));
+    traces.push({ type: "scatter", mode: "lines", name: "Drawdown", x: h.drawdown.time.map(iso), y: h.drawdown.value.map((v) => -v),
+      xaxis: "x", yaxis: "y3", line: { color: c.down, width: 1 }, fill: "tozeroy", fillcolor: alpha(c.down, 0.15) });
+    const held = [null, ...Object.keys(names)];
+    held.forEach((sym) => {
+      const wk = h.weeks.filter((w) => w.holding === sym);
+      traces.push({ type: "bar", name: sym ? `Held: ${names[sym]}` : "Held: cash", xaxis: "x", yaxis: "y2",
+        x: wk.map((w) => iso(w.monday + 3.5 * 86400000)), y: wk.map(() => 1), width: 7 * 86400000,
+        marker: { color: sym ? ASSET_COLORS[sym] : alpha(c.muted, 0.35) }, hovertemplate: `%{x|%Y-%m-%d}: ${sym ? names[sym] : "cash"}<extra></extra>` });
+    });
+    const L = layout(c, { barmode: "stack", bargap: 0, xaxis: { type: "date", gridcolor: c.line },
+      yaxis: axis(c, { domain: [0.34, 1], tickformat: ".2f", title: { text: "account (start = 1)", font: { size: 10 } } }),
+      yaxis2: axis(c, { domain: [0.22, 0.3], showticklabels: false, range: [0, 1] }),
+      yaxis3: axis(c, { domain: [0, 0.18], ticksuffix: "%", title: { text: "DD", font: { size: 10 } } }) });
+    plot("stratHistChart", traces, L, "rotation");
   }
 
   // ---------------------------------------------------------------- C. forward chart

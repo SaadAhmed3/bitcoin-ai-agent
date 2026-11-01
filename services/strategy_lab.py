@@ -14,12 +14,16 @@ from typing import Any, Callable
 from database import now_ms
 import pandas as pd
 
+from services import asset_candles
 from services.strategies import ENGINES, dca_metrics
 from services.strategies.base import (FORWARD_PASS, NOT_VALIDATED, STRATEGIES, config_hash, data_quality,
                                       validation_status)
 
 log = logging.getLogger(__name__)
 DAY = 86_400_000
+NEWS_HOURS = 72
+NEWS_NOTE = ("Context only: headlines that name an asset, shown next to the ranking. News is never used by the rule "
+             "and never part of the backtest.")
 
 # Fingerprint re-bases (append-only, strategy_forward_rebases). Round 2 made the forward tracker generic and narrowed
 # each strategy's fingerprint to its own module + the tracker core, so later rounds no longer disturb earlier
@@ -146,13 +150,16 @@ class StrategyLab:
         now = self.clock()
         results = {tf: self.market.get_candles(tf) for tf in eng.EVAL_TIMEFRAMES}
         main = results[eng.EVAL_TIMEFRAMES[0]]
+        frames = {tf: res.df for tf, res in results.items()}
+        frames.update(self.extra_frames(eng, now))
         try:
             regime = self.regime_fn()
         except Exception:                      # context only: never blocks the strategy
             log.exception("Regime context failed")
             regime = None
-        r = eng.evaluate_frames({tf: res.df for tf, res in results.items()}, cfg["config"], now,
-                                data_quality(main, now), regime, cfg["version"]).to_dict()
+        r = eng.evaluate_frames(frames, cfg["config"], now, data_quality(main, now), regime, cfg["version"]).to_dict()
+        if hasattr(eng, "NEWS_WORDS"):
+            r["news_context"] = self.news_context(eng, now)
         status = self.validation(sid, cfg)
         if status["status"] != FORWARD_PASS:
             r["labels"] = r["labels"] + ["NOT VALIDATED"]
@@ -160,6 +167,22 @@ class StrategyLab:
         r["design_warning"] = (FAILED_NOTE if status.get("design_verdict") == "FAIL" else
                                eng.LABEL[0].upper() + eng.LABEL[1:] if getattr(eng, "FORWARD_ONLY", False) else None)
         return r
+
+    def extra_frames(self, eng, now: int) -> dict:
+        """Stored closed candles of the other assets a strategy ranks ("1d:<SYMBOL>"), e.g. rotation's ETH/SOL/BNB."""
+        return asset_candles.frames(self.db, getattr(eng, "EXTRA_FRAMES", ()), now)
+
+    def news_context(self, eng, now: int, limit: int = 8) -> dict:
+        """Recent stored headlines that name one of the strategy's assets: shown, never used by the rule."""
+        items = []
+        for n in self.db.get_news(now - NEWS_HOURS * 3_600_000, 300):
+            assets = eng.news_assets(n["title"])
+            if assets:
+                items.append({"title": n["title"], "publisher": n["publisher"], "link": n["link"],
+                              "published_at": n.get("published_at") or n["collected_at"], "assets": assets})
+            if len(items) >= limit:
+                break
+        return {"note": NEWS_NOTE, "hours": NEWS_HOURS, "items": items}
 
     def card(self, meta: dict) -> dict:
         sid = meta["id"]
