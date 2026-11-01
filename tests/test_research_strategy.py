@@ -48,7 +48,7 @@ def test_refuses_when_the_defaults_no_longer_match_the_preregistration(rs, db, m
 
 
 def test_unimplemented_strategy_is_refused(rs):
-    assert rs.main(["range"]) == 2
+    assert rs.main(["breakout"]) == 2
 
 
 def test_trend_runs_once_on_its_own_timeframes(rs, db, tmp_path, monkeypatch):
