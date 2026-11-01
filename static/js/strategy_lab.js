@@ -16,11 +16,8 @@
   const day = (ms) => new Date(ms).toISOString().slice(0, 10);
   const pct = (v) => (v === null || v === undefined ? "N/A" : `${v >= 0 ? "+" : ""}${Number(v).toFixed(2)}%`);
   // One status badge per card (validation + what kind of number it is), the data kinds as plain text below it.
-  const BADGE = { "NOT VALIDATED": "Not validated", "BACKTESTED (design data)": "Backtested on design data · not validated",
-    "NOT VALIDATED (settings changed)": "Settings changed · not validated", "NOT VALIDATED (code changed)": "Code changed · not validated",
-    "FORWARD TESTING": "Forward testing · not validated", "FORWARD TESTED: PASS": "Forward tested: pass",
-    "FORWARD TESTED: FAIL": "Forward tested: fail · not validated" };
-  const badge = (status) => `<span class="tag ${status === "FORWARD TESTED: PASS" ? "live" : "nv"}" title="${esc(status)}">${esc(BADGE[status] || status)}</span>`;
+  // The label always carries the design verdict, e.g. "FAILED on design data · not validated".
+  const badge = (v) => `<span class="tag ${v.status === "FORWARD TESTED: PASS" ? "live" : "nv"}" title="${esc(v.status)}">${esc(v.label || v.status)}</span>`;
   const kinds = (labels) => {
     const k = labels.filter((l) => l !== "NOT VALIDATED").map((l) => l.toLowerCase()).join(" · ");
     return k ? `<p class="strat-kinds small muted">${esc(k.charAt(0).toUpperCase() + k.slice(1))}</p>` : "";
@@ -32,7 +29,7 @@
     const status = `<p class="strat-status"><b>${esc(s.validation.status)}</b><br><span class="muted small">${esc(s.validation.detail)}</span></p>`;
     if (!s.implemented) {
       return `<article class="strat-card planned" id="strat-${esc(s.id)}">${head}
-        <div class="strat-tags">${badge(s.validation.status)}</div>
+        <div class="strat-tags">${badge(s.validation)}</div>
         <p class="muted small">${esc(s.purpose)}</p><p class="strat-planned">Planned for round ${s.planned_round}: not implemented yet, so no signal.</p>${status}</article>`;
     }
     if (!s.result) {
@@ -48,8 +45,9 @@
     const warn = [...(r.contradictory || []), ...((r.data || {}).warnings || [])];
     const bt = s.backtest ? `Design backtest: ${esc(s.backtest.verdict)} on its pre-registered criteria` : "Design backtest: not run yet";
     return `<article class="strat-card" id="strat-${esc(s.id)}">${head}
-      <div class="strat-tags">${badge(s.validation.status)}</div>${kinds(r.labels)}
+      <div class="strat-tags">${badge(s.validation)}</div>${kinds(r.labels)}
       <p class="muted small">${esc(s.purpose)}</p>
+      ${r.design_warning ? `<p class="strat-design-warning">${esc(r.design_warning)}</p>` : ""}
       <div class="strat-signal sig-${esc(r.signal.toLowerCase().replace(/[^a-z]+/g, "-"))}">${esc(r.signal)}</div>
       <p class="small muted">${esc(r.asset)} · ${esc(r.timeframe)} · evaluated ${esc(when(r.evaluated_at))} · regime (context) ${esc(r.regime || "not available")}</p>
       <p class="small">${esc(r.explanation)}</p>

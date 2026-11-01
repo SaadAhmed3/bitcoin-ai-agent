@@ -18,7 +18,7 @@ def test_strategy_lab_shows_five_cards_and_an_honest_comparison(browser, live_se
         dca = page.locator("#strat-dca")
         assert dca.locator(".strat-signal").text_content() in ("ACCUMULATE", "WAIT", "PAUSE")
         badges = dca.locator(".tag").all_text_contents()                  # one combined status, not four badges
-        assert badges == ["Not validated"] or badges == ["Backtested on design data · not validated"]
+        assert len(badges) == 1 and (badges[0] == "Not validated" or badges[0].endswith(" on design data · not validated"))
         assert "Live data · calculated · simulated" in dca.locator(".strat-kinds").text_content()
         assert "not a prediction" in dca.text_content()
         for sid, rnd in (("range", 3), ("breakout", 4), ("rotation", 5)):                 # trend: live since round 2
@@ -67,7 +67,9 @@ def test_card_text_is_never_clipped_and_the_dca_status_is_one_badge(browser, fre
                 .filter((e) => e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1
                                || getComputedStyle(e).textOverflow === 'ellipsis').map((e) => e.textContent)""")
             assert clipped == []
-            assert page.locator("#strat-dca .tag").all_text_contents() == ["Backtested on design data · not validated"]
+            verdict = {"PASS": "PASSED", "FAIL": "FAILED", "INCONCLUSIVE": "INCONCLUSIVE"}[
+                fresh_server.db.strategy_backtests("dca")[0]["result"]["verdict"]]
+            assert page.locator("#strat-dca .tag").all_text_contents() == [f"{verdict} on design data · not validated"]
             assert p.errors == []
         finally:
             p.context.close()
@@ -97,7 +99,7 @@ def test_trend_card_and_details_round_2(browser, fresh_server):
         page.wait_for_selector("#stratLab[data-state='ready']")
         card = page.locator("#strat-trend")
         assert card.locator(".strat-signal").text_content() in ("BUY SETUP", "HOLD", "NO TRADE", "EXIT / REDUCE EXPOSURE")
-        assert card.locator(".tag").all_text_contents() == ["Backtested on design data · not validated"]
+        assert card.locator(".tag").all_text_contents() == ["INCONCLUSIVE on design data · not validated"]
         assert "4h" in card.text_content() and "differently from H2" in card.text_content()
         page.locator("#stratDetailPick").select_option("trend")
         page.wait_for_function("() => document.getElementById('stratDetailTitle').textContent.startsWith('Trend following')")
@@ -105,6 +107,26 @@ def test_trend_card_and_details_round_2(browser, fresh_server):
         for words in ("INCONCLUSIVE", "fewer than 30", "Buy & hold", "H2 rule", "random", "Walk-forward", "Sensitivity"):
             assert words in bt, words
         assert page.locator("#stratCfg-trend").count() == 1 and page.locator("#stratCfg-dca").count() == 0
+        assert p.errors == []
+    finally:
+        p.context.close()
+
+
+def test_a_failed_strategy_says_so_on_its_card_and_in_the_comparison(browser, fresh_server):
+    lab = fresh_server.app.config["BTC_STRATEGY_LAB"]
+    fresh_server.db.strategy_backtest_add("trend", 1, lab.config("trend")["hash"], "design", "x",
+                                          {"verdict": "FAIL", "metrics": {"trades": 94, "buy_hold_return_pct": 217.05}}, now=1)
+    p = Page(browser, fresh_server.url, viewport={"width": 1280, "height": 900})
+    try:
+        page = p.goto("/#/strategies")
+        page.wait_for_selector("#stratLab[data-state='ready']")
+        card = page.locator("#strat-trend")
+        assert card.locator(".tag").all_text_contents() == ["FAILED on design data · not validated"]
+        assert card.locator(".strat-design-warning").text_content() == "Failed on design data: research only"
+        row = page.locator("#stratCompare tbody tr", has_text="Validation status")
+        assert "FAILED on design data · not validated" in row.text_content()
+        bh = page.locator("#stratCompare tbody tr", has_text="Buy-and-hold comparison").text_content()
+        assert "(buy & hold, same window)" in bh
         assert p.errors == []
     finally:
         p.context.close()
