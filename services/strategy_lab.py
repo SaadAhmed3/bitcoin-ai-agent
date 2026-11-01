@@ -12,7 +12,9 @@ import logging
 from typing import Any, Callable
 
 from database import now_ms
-from services.strategies import ENGINES
+import pandas as pd
+
+from services.strategies import ENGINES, dca_metrics
 from services.strategies.base import (FORWARD_PASS, NOT_VALIDATED, STRATEGIES, config_hash, data_quality,
                                       validation_status)
 
@@ -46,6 +48,7 @@ class StrategyLab:
                  regime_fn: Callable[[], str | None] | None = None):
         self.db, self.market, self.forward, self.clock = db, market, forward, clock
         self.regime_fn = regime_fn or (lambda: None)
+        self._supplement: dict = {}
 
     # ---------------------------------------------------------------- configuration (versioned, append-only)
     def _engine(self, sid: str):
@@ -157,11 +160,50 @@ class StrategyLab:
         if not card["implemented"]:
             return card
         cfg = self.config(sid)
-        return {**card, "backtest": self.backtest_for(sid, cfg["hash"]), "forward": self.forward_status(sid),
+        bt = self.backtest_for(sid, cfg["hash"])
+        extra = {}
+        if sid == "dca":
+            extra = {"backtest_supplement": self._dca_supplement(bt), "forward_deposit_neutral": self._dca_forward_extra()}
+        return {**card, **extra, "backtest": bt, "forward": self.forward_status(sid),
                 "history": [{"day": h["day"], "signal": h["signal"], "config_version": h["config_version"],
                              "explanation": h["result"].get("explanation")} for h in self.db.strategy_signals(sid, 60)],
                 "config_history": [{"version": v["version"], "config_hash": v["config_hash"], "reason": v["reason"],
                                     "created_at": v["created_at"], "config": v["config"]} for v in self.db.strategy_configs(sid)]}
+
+    # ---------------------------------------------------------------- DCA: deposit-neutral, reported only
+    def _dca_supplement(self, bt: dict | None) -> dict | None:
+        """Time-weighted and return-on-invested views of the LOCKED study's own period and configuration, from the
+        stored design candles. Reported only (addendum 2026-11-01): the stored study and its verdict are untouched."""
+        if not bt or not bt.get("period") or not bt.get("config"):
+            return None
+        key = (bt["id"], bt["period"]["first_day"], bt["period"]["last_day"])
+        if key not in self._supplement:
+            eng = ENGINES["dca"]
+            cfg = eng.validate_config(bt["config"])
+            rows = self.db.get_candles_range("binance", "BTCUSDT", "1d", bt["period"]["first_day"], bt["period"]["last_day"])
+            df = pd.DataFrame(rows)
+            df = df[df["close_time"] < bt["period"]["holdout_start"]] if not df.empty else df
+            if df.empty:
+                return None
+            m = dca_metrics.deposit_neutral(eng.simulate(df, cfg, bt["period"]["first_day"], bt["period"]["last_day"]), cfg)
+            self._supplement = {key: {**{k: v for k, v in m.items() if k not in ("twr_index", "roi_series")},
+                                      "twr_index": dca_metrics.thin(m["twr_index"]),
+                                      "roi_series": dca_metrics.thin(m["roi_series"]),
+                                      "budget_basis_max_drawdown_pct": bt["metrics"]["max_drawdown_pct"],
+                                      "period": {"first_day": bt["period"]["first_day"], "last_day": bt["period"]["last_day"]}}}
+        return self._supplement[key]
+
+    def _dca_forward_extra(self) -> dict | None:
+        eng = ENGINES["dca"]
+        cfg = eng.validate_config({})
+        t = self.db.strategy_forward_test("dca", config_hash(cfg))
+        if t is None:
+            return None
+        events = self.db.strategy_forward_events(t["id"])
+        if not events:
+            return None
+        m = dca_metrics.from_forward_events(events, cfg)
+        return {k: v for k, v in m.items() if k not in ("twr_index", "roi_series")}
 
     # ---------------------------------------------------------------- background (monitor)
     def record_daily(self) -> int:

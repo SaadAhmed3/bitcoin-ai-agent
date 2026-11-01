@@ -60,3 +60,20 @@ and after 365 days gives a fixed verdict:
 
 Changing any setting creates a new configuration version, marked **NOT VALIDATED (settings changed)**; it inherits
 neither the design backtest nor the forward test.
+
+## Addendum (2026-11-01) — reported-only drawdown views; the original text above is unchanged
+
+Added after the design backtest, on the owner's review. **It changes nothing above:** not the defaults, not C1/C2, not
+F1, not the locked study or its verdict (PASS on design data, stored with the SHA-256 of the text above).
+
+- **Limitation of the pre-registered drawdown.** C1 measures max drawdown on the whole budget from day 1: equity =
+  cash not yet invested + BTC at liquidation value. No deposits are added, so new money does not inflate the value,
+  but the uninvested cash dampens the drawdown: early in a window most of the account is cash. Part of DCA's lower
+  drawdown therefore comes from holding cash, not from buying better.
+- **Two deposit-neutral views, reported only, no criterion** (`services/strategies/dca_metrics.py`), shown in
+  Strategy Lab for the locked study's own period and configuration and for the forward test:
+  1. a **time-weighted** return index of the invested BTC (each day split at the buy at the open; fee and slippage
+     included), with its max drawdown;
+  2. **(value − invested) / invested** over time, with its worst point.
+- They are computed from the simulation's own records (no new prices). They are never used to judge, tune or
+  re-label the strategy; the verdict stays as recorded.
