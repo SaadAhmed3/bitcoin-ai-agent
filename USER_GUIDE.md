@@ -150,6 +150,7 @@ The menu on the left switches between views. Labels on each card tell you what k
 | **Alerts** | Your alert rules and the alert history. |
 | **Ask the data** | Ask questions such as "Why is it NO TRADE?". Answers come from the app's own data and list their sources. |
 | **System & sources** | Which data sources are working, versions, and these documents. |
+| **Strategy Lab** | Five research strategies side by side (DCA active; four planned), their validation status, an unranked comparison and DCA settings. See [Strategy Lab](#strategy-lab). |
 | **Settings** (in the menu) | Refresh intervals, alerts, signal settings, risk settings, advanced analysis (shadow mode), watchlist. Values set in `.env` are shown read-only. |
 
 ---
@@ -224,6 +225,21 @@ uses the last 200 candles of the chart, or choose "visible range" to follow your
 
 **Shadow mode** (Settings → Advanced analysis) stores these three readings every 4 hours next to the live signal, so
 that one day they can be tested on data nobody has seen yet. Turning it off stops the storing; the panels stay.
+
+### Strategy Lab
+
+**Strategy Lab** (in the menu) shows five research strategies side by side. Each card shows its current research
+signal, the data it used, its costs and its **validation status**. Only DCA (buying a fixed amount on a schedule) is
+active so far; the others say "planned".
+
+- **DCA** says ACCUMULATE on a scheduled buy day, WAIT on other days and PAUSE when the price data is not trustworthy.
+  It does not try to time the market, and nothing is ever bought.
+- The **comparison table** does not rank strategies. N/A means there is no valid number yet.
+- **Settings** can be changed in the DCA details. Saving creates a new version; if it differs from the
+  pre-registered settings, the strategy shows **NOT VALIDATED (settings changed)** and its earlier results no longer
+  apply. "Reset" goes back to the pre-registered settings.
+- "BACKTESTED (design data)" is evidence about the past only. A strategy can only become "forward tested" after its
+  own 365-day forward test.
 
 ## 5. Understanding NO TRADE
 

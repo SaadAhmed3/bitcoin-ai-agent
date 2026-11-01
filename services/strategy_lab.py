@@ -70,7 +70,7 @@ class StrategyLab:
         return {"strategy_id": sid, "version": cur["version"], "config": cur["config"], "hash": cur["config_hash"],
                 "preregistered_hash": prereg, "settings_changed": cur["config_hash"] != prereg,
                 "reason": cur["reason"], "defaults": eng.DEFAULTS, "fields": eng.FIELDS,
-                "preregistration": eng.PREREGISTRATION}
+                "preregistration": eng.PREREGISTRATION, "order": list(eng.DEFAULTS)}
 
     def update_config(self, sid: str, payload: dict) -> dict:
         eng = self._engine(sid)

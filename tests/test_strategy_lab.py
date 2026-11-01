@@ -65,6 +65,7 @@ def test_changing_settings_makes_a_new_version_marked_not_validated_and_never_to
     assert c.put("/api/strategies/dca/config", json={"weights": {"trend": 1}}).status_code == 400
     r = c.put("/api/strategies/dca/config", json={"interval": "monthly"}).get_json()
     assert r["version"] == 2 and r["config"]["interval"] == "monthly" and r["settings_changed"] is True
+    assert r["order"] == ["amount_usd", "interval", "weekday", "month_day", "fee_pct", "slippage_pct", "horizon_days"]
     d = c.get("/api/strategies/dca").get_json()
     assert d["validation"]["status"] == "NOT VALIDATED (settings changed)"
     assert d["backtest"] is None                                      # never inherits the old result

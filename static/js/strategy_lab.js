@@ -96,7 +96,8 @@
 
   function renderConfig(cfg) {
     const box = $("stratCfg-dca");
-    box.querySelector(".strat-cfg-fields").innerHTML = Object.entries(cfg.fields).map(([k, f]) => field(k, f, cfg.config[k])).join("");
+    // in the documented order (JSON objects arrive with sorted keys)
+    box.querySelector(".strat-cfg-fields").innerHTML = cfg.order.map((k) => field(k, cfg.fields[k], cfg.config[k])).join("");
     box.querySelector(".strat-cfg-version").textContent = `Configuration version ${cfg.version} (${cfg.settings_changed
       ? "differs from the pre-registered settings: NOT VALIDATED (settings changed)" : "the pre-registered settings"}). Pre-registration: ${cfg.preregistration}.`;
     box.dataset.version = cfg.version;
