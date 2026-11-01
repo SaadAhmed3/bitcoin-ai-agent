@@ -121,6 +121,20 @@ def test_range_history_verifies(db):
     assert [t["entry_time"] for t in h["trades"]] == [t["entry_time"] for t in res["trade_list"]]
 
 
+def test_breakout_history_verifies_and_keeps_the_diagnostics(db):
+    from services.strategies import breakout as bo
+    from test_strategy_breakout import stairs
+    df4, df1 = stairs()
+    db.upsert_candles("binance", "BTCUSDT", "4h", df4.to_dict("records"), 1)
+    db.upsert_candles("binance", "BTCUSDT", "1d", df1.to_dict("records"), 1)
+    res = bo.backtest(df4.to_dict("records"), df1.to_dict("records"), bo.validate_config({}), random_runs=20)
+    db.strategy_backtest_add("breakout", 1, res["config_hash"], "design", "sha", res, now=1)
+    h = charts(db).history("breakout", wait=True)
+    assert h["verified"] is True and h["mismatches"] == []
+    assert [t["entry_time"] for t in h["trades"]] == [t["entry_time"] for t in res["trade_list"]]
+    assert all("failed_breakout" in t and t["target"] is None for t in h["trades"])
+
+
 # ---------------------------------------------------------------- live: the strategy's own rule code
 def test_live_trend_checklist_and_plan_come_from_the_strategy_result():
     from services.strategies import trend
@@ -170,6 +184,30 @@ def test_live_range_box_and_touches_match_the_features():
         bool(r["touches_bottom"] >= 2), bool(r["trigger"]), bool(r["close"] < r["mid"]), bool(r["stop_plan"] < r["close"])]
     assert all(c["met"] for c in live["checklist"]) == (result["signal"] == "BUY SETUP")
     assert live["touches"]["top"] and live["touches"]["bottom"]
+
+
+def test_live_breakout_level_trail_and_checklist_come_from_its_features():
+    from services.strategies import breakout as bo
+    from services.strategies.base import DataQuality
+    from services.strategy_charts import breakout_live
+    from test_strategy_breakout import stairs
+    df4, _ = stairs(n=900)
+    c = bo.validate_config({})
+    ft = bo.features(df4, c)
+    for i in (int(ft.index[ft["buy"]][-1]), len(df4) - 1):
+        frames = {"4h": df4.iloc[:i + 1]}
+        dq = DataQuality("binance", 1, int(df4["close_time"].iloc[i]), False, 0, [])
+        result = bo.evaluate_frames(frames, c, now=1, data=dq).to_dict()
+        live = breakout_live(frames, c, result)
+        r = ft.iloc[i]
+        assert live["series"]["level"][-1] == r["level"] and live["series"]["trail_low"][-1] == r["trail_low"]
+        assert live["series"]["vol_line"][-1] == pytest.approx(c["volume_mult"] * r["vol_avg"])
+        assert [x["met"] for x in live["checklist"]][:3] == [bool(r["close_above"]), bool(r["volume_ok"]),
+                                                              bool(r["stop_plan"] < r["close"])]
+        assert all(x["met"] for x in live["checklist"]) == (result["signal"] == "BUY SETUP")
+        if result["signal"] == "BUY SETUP":
+            assert live["plan"]["stop"] == result["stop"] and live["plan"]["targets"] == []
+        assert len(live["series"]["time"]) == min(200, i + 1)
 
 
 def test_live_dca_marks_scheduled_days_and_the_average_price():

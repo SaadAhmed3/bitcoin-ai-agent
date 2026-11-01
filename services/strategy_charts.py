@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 
 from services.backtesting import HOLDOUT_START
-from services.strategies import dca, dca_metrics, range as rng, trend
+from services.strategies import breakout as bo, dca, dca_metrics, range as rng, trend
 from services.technical_analysis import ema
 
 log = logging.getLogger(__name__)
@@ -40,6 +40,9 @@ FAILED_BANNER = "Failed on design data: research only"
 HOW_TO = {
     "live": "Closed candles of the strategy's own timeframe with only the indicators its rules use. A setup draws its "
             "entry band, stop (red) and target (green); the list under the chart shows each rule as met (✓) or not (✗).",
+    "live_breakout": "Closed 4h candles with only what the breakout rule uses: the 20-bar high (the level), the 10-bar "
+                     "low (the trailing exit) and the volume threshold. A setup draws its entry and stop (red); there is "
+                     "no fixed target. The list under the chart shows each rule as met (✓) or not (✗).",
     "history": "Every design-backtest trade: ▲ entry, ▼ exit, the line green for a win and red for a loss; click a "
                "trade in the list to zoom to it. Below: the account (equity) against buy & hold, and the drawdown.",
     "history_dca": "Design period: money invested so far (steps) against what the BTC bought is worth, the BTC price, "
@@ -170,7 +173,26 @@ def dca_live(frames: dict, cfg: dict, result: dict) -> dict[str, Any]:
             "indicators": ["scheduled buy days", "average price of the simulated buys in view"]}
 
 
-LIVE = {"trend": trend_live, "range": range_live, "dca": dca_live}
+def breakout_live(frames: dict, cfg: dict, result: dict) -> dict[str, Any]:
+    df = frames["4h"].sort_values("open_time").reset_index(drop=True)
+    ft = bo.features(df, cfg)
+    tail = ft.iloc[-LIVE_BARS:]
+    series = _ohlc(tail)
+    series.update(level=[_num(x) for x in tail["level"]], trail_low=[_num(x) for x in tail["trail_low"]],
+                  vol_line=[_num(cfg["volume_mult"] * x) for x in tail["vol_avg"]])
+    r = ft.iloc[-1]
+    lb, vm, tb = cfg["lookback"], cfg["volume_mult"], cfg["trail_bars"]
+    checks = [{"rule": f"4h close above the {lb}-bar high (a wick alone never counts)", "met": bool(r["close_above"])},
+              {"rule": f"volume >= {vm:g} × its {cfg['volume_window']}-bar average", "met": bool(r["volume_ok"])},
+              {"rule": "stop below the close", "met": bool(r["stop_plan"] < r["close"]) if not pd.isna(r["stop_plan"]) else False}]
+    return {"timeframe": "4h", "series": series, "checklist": _close_checklist(checks, result, "BUY SETUP"),
+            "plan": _plan(result, "BUY SETUP"), "how_to": HOW_TO["live_breakout"],
+            "names": {"level": f"{lb}-bar high (level)", "trail_low": f"{tb}-bar low (trailing exit)",
+                      "vol_line": f"Volume {vm:g}× average"},
+            "indicators": [f"{lb}-bar high (level)", f"{tb}-bar low (trailing exit)", f"volume {vm:g}× its average"]}
+
+
+LIVE = {"trend": trend_live, "range": range_live, "dca": dca_live, "breakout": breakout_live}
 
 
 # --------------------------------------------------------------------------- derived cache
@@ -208,9 +230,10 @@ class StrategyCharts:
         if any(f is None or f.empty for f in frames.values()):
             return {"status": "no_data", "note": "No closed candles for this strategy's timeframe yet.", "how_to": HOW_TO["live"]}
         out = LIVE[sid](frames, cfg, result)
+        how_to = out.pop("how_to", HOW_TO["live"])
         status = self.lab.validation(sid, self.lab.config(sid))
         return {"status": "ok", **out, "signal": result["signal"], "explanation": result["explanation"],
-                "banner": FAILED_BANNER if status.get("design_verdict") == "FAIL" else None, "how_to": HOW_TO["live"]}
+                "banner": FAILED_BANNER if status.get("design_verdict") == "FAIL" else None, "how_to": how_to}
 
     # ---------------------------------------------------------------- history
     def history(self, sid: str, wait: bool = False) -> dict:
@@ -295,11 +318,14 @@ class StrategyCharts:
     def _history_trades(self, sid: str, res: dict) -> dict:
         holdout = res["period"]["holdout_start"]
         cfg = res["config"]
-        mod = {"trend": trend, "range": rng}[sid]
+        mod = {"trend": trend, "range": rng, "breakout": bo}[sid]
         df4 = self._rows("4h", holdout)
         if sid == "trend":
             ind = trend.indicators(df4, self._rows("1d", holdout), cfg)
             start, end = trend.design_span(ind, holdout, cfg)
+        elif sid == "breakout":
+            ind = bo.features(df4, cfg)
+            start, end = bo.WARMUP, len(df4) - 1
         else:
             ind = rng.features(df4, rng.regime_labels(df4, start=rng.WARMUP - 1), cfg)
             start, end = rng.WARMUP, len(df4) - 1
@@ -310,7 +336,8 @@ class StrategyCharts:
         bh = [units * c * (1 - f - s) for c in ind["close"].iloc[start:end + 1]]
         mismatches = [f"{k}: stored {res['metrics'].get(k)!r} vs recomputed {v!r}" for k, v in m.items()
                       if res["metrics"].get(k) != v]
-        keys = ("entry_time", "exit_time", "fill", "exit", "stop", "target", "r", "reason", "bars", "return")
+        keys = ("entry_time", "exit_time", "fill", "exit", "stop", "target", "r", "reason", "bars", "return") + (
+            ("failed_breakout", "retest") if sid == "breakout" else ())
         if [{k: t[k] for k in keys} for t in sim["trades"]] != res["trade_list"]:
             mismatches.append("trade list differs from the stored one")
         if (bh[-1] - 1) * 100 != res["buy_and_hold"]["net_return_pct"]:

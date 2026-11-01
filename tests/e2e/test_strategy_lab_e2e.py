@@ -21,8 +21,9 @@ def test_strategy_lab_shows_five_cards_and_an_honest_comparison(browser, live_se
         assert len(badges) == 1 and (badges[0] == "Not validated" or badges[0].endswith(" on design data · not validated"))
         assert "Live data · calculated · simulated" in dca.locator(".strat-kinds").text_content()
         assert "not a prediction" in dca.text_content()
-        for sid, rnd in (("breakout", 4), ("rotation", 5)):              # trend: live since round 2, range since 3
-            assert f"round {rnd}" in page.locator(f"#strat-{sid}").text_content()
+        assert "round 5" in page.locator("#strat-rotation").text_content()   # trend, range, breakout: live
+        assert page.locator("#strat-breakout .strat-signal").text_content() in (
+            "BUY SETUP", "HOLD", "NO TRADE", "EXIT / REDUCE EXPOSURE")
         table = page.locator("#stratCompare")
         assert table.locator("thead th").all_text_contents() == ["Metric", "DCA", "Trend", "Range", "Breakout", "Rotation"]
         assert "N/A" in table.text_content() and "not ranked" in page.locator("#stratCompareNote").text_content()

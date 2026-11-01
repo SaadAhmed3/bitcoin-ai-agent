@@ -94,6 +94,13 @@ def test_dca_and_range_live_charts(browser, lab_server):
         page.wait_for_function("() => (document.getElementById('stratLiveChart').data || []).some((t) => t.name === 'Range high')",
                                timeout=60_000)
         assert {"Range high", "Range low", "Midpoint", "ADX(14)"} <= set(names(page, "stratLiveChart"))
+        page.locator("#stratDetailPick").select_option("breakout")
+        page.wait_for_function("() => (document.getElementById('stratLiveChart').data || []).some((t) => t.name === '20-bar high (level)')",
+                               timeout=60_000)
+        live = set(names(page, "stratLiveChart"))
+        assert {"20-bar high (level)", "10-bar low (trailing exit)", "Volume 1.2× average"} <= live
+        assert not {"ADX(14)", "EMA 21", "Range high"} & live                    # only what its rules use
+        assert page.locator("#stratChecklist li").count() >= 3
         assert p.errors == []
     finally:
         p.context.close()

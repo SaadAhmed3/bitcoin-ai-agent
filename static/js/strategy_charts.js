@@ -89,6 +89,11 @@
         } else k += 1;
       }
       adx = true;
+    } else if (sid === "breakout") {
+      const n = d.names || {};
+      traces.push(line(x, s.level, n.level || "Level", c.info, { line: { width: 1.6, shape: "hv" } }),
+        line(x, s.trail_low, n.trail_low || "Trailing low", c.down, { line: { dash: "dot", shape: "hv" } }),
+        line(x, s.vol_line, n.vol_line || "Volume threshold", c.warn, { yaxis: "y2", line: { dash: "dot" } }));
     } else if (sid === "dca") {
       const lowBy = Object.fromEntries(s.time.map((t, i) => [t, s.low[i]]));
       const days = (d.buy_days || []).filter((t) => lowBy[t] !== undefined);
@@ -106,7 +111,7 @@
       traces.push(line([x[Math.max(0, x.length - 30)], last], [d.plan.stop, d.plan.stop], `Stop ${usd(d.plan.stop)}`, c.down, { line: { width: 2 } }));
       (d.plan.targets || []).forEach((t, i) => traces.push(line([x[Math.max(0, x.length - 30)], last], [t, t], `Target ${i + 1} ${usd(t)}`, c.up, { line: { width: 2 } })));
       ann.push({ xref: "paper", x: 0.99, xanchor: "right", yref: "y", y: hi, yanchor: "bottom", showarrow: false,
-        text: `Entry ${usd(e.low)} · R:R ${d.plan.rr}`, font: { size: 11, color: c.text }, bgcolor: alpha(c.info, 0.2) });
+        text: `Entry ${usd(e.low)} · ${d.plan.rr === null || d.plan.rr === undefined ? "no fixed target" : `R:R ${d.plan.rr}`}`, font: { size: 11, color: c.text }, bgcolor: alpha(c.info, 0.2) });
     }
     const L = layout(c, { shapes, annotations: ann, hovermode: "x unified",
       xaxis: { type: "date", rangeslider: { visible: false }, gridcolor: c.line, linecolor: c.line },
@@ -159,7 +164,9 @@
           line: { color: win ? c.up : c.down, width: 2.5 }, hoverinfo: "skip" };
       };
       const hover = tr.map((t) => [`Entry ${when(t.entry_time)} at ${usd(t.fill)}`, `Exit ${when(t.exit_time)} at ${usd(t.exit)} (${t.reason})`,
-        `Stop ${usd(t.stop)} · target ${usd(t.target)}`, `Result ${t.r >= 0 ? "+" : ""}${t.r.toFixed(2)}R`,
+        `Stop ${usd(t.stop)} · ${t.target === null || t.target === undefined ? "no fixed target" : `target ${usd(t.target)}`}`,
+        `Result ${t.r >= 0 ? "+" : ""}${t.r.toFixed(2)}R`
+          + (t.failed_breakout !== undefined ? ` · ${t.failed_breakout ? "failed breakout" : t.retest ? "retested the level" : "no retest"}` : ""),
         `Fees ${t.fees_pct === null || t.fees_pct === undefined ? "N/A (not verified)" : t.fees_pct.toFixed(3) + "% of the account"}`].join("<br>"));
       traces = [line(px, h.price.close, "Price", alpha(c.muted, 0.9), { hoverinfo: "skip" }), seg(true), seg(false),
         { type: "scatter", mode: "markers", name: "Entries", x: tr.map((t) => iso(t.entry_time)), y: tr.map((t) => t.fill), xaxis: "x", yaxis: "y",
@@ -185,7 +192,7 @@
         const t = tr[Number(row.dataset.i)];
         const a = t.entry_time - 20 * bar, b = t.exit_time + 20 * bar;      // zoom in time and fit the price axis
         const inView = h.price.time.map((tm, i) => (tm >= a && tm <= b ? h.price.close[i] : null)).filter((v) => v !== null)
-          .concat([t.fill, t.exit, t.stop, t.target]);
+          .concat([t.fill, t.exit, t.stop, t.target]).filter((v) => v !== null && v !== undefined);
         const lo = Math.min(...inView), hi = Math.max(...inView), pad = (hi - lo) * 0.08 || hi * 0.01;
         Plotly.relayout("stratHistChart", { "xaxis.range": [iso(a), iso(b)], "xaxis.autorange": false,
           "yaxis.range": [lo - pad, hi + pad], "yaxis.autorange": false });

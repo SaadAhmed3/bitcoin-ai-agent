@@ -51,11 +51,13 @@ def test_api_lists_five_strategies_dca_live_the_rest_planned(config, db):
         "BUY SETUP", "HOLD", "NO TRADE", "EXIT / REDUCE EXPOSURE") and trend["result"]["timeframe"] == "4h"
     rng = d["strategies"][2]                                             # round 3
     assert rng["implemented"] is True and rng["result"]["timeframe"] == "4h" and rng["result"]["regime"]
-    for s in d["strategies"][3:]:
-        assert s["implemented"] is False and s["result"] is None and s["planned_round"] in (4, 5)
+    bo = d["strategies"][3]                                              # round 4
+    assert bo["implemented"] is True and bo["result"]["timeframe"] == "4h" and bo["result"]["targets"] == []
+    rot = d["strategies"][4]
+    assert rot["implemented"] is False and rot["result"] is None and rot["planned_round"] == 5
     cmp = d["comparison"]
     assert [r["metric"] for r in cmp["rows"]][:3] == ["Net return", "Win rate", "Profit factor"]
-    assert all(r["values"]["breakout"] == "N/A" for r in cmp["rows"])
+    assert all(r["values"]["rotation"] == "N/A" for r in cmp["rows"])
     assert "not ranked" in cmp["note"]
     assert c.get("/api/strategies/nope").status_code == 404
 
@@ -93,7 +95,7 @@ def test_monitor_records_one_signal_per_day_and_starts_the_strategy_forward_trac
     fwd = c.get("/api/strategies/dca").get_json()["forward"]
     assert fwd["state"] in ("waiting", "running") and fwd["fingerprint_now"]
     with db.connect() as conn:                                        # the H1/H2 tracker is separate
-        assert [r[0] for r in conn.execute("SELECT strategy_id FROM strategy_forward_tests ORDER BY id")] == ["dca", "trend", "range"]
+        assert [r[0] for r in conn.execute("SELECT strategy_id FROM strategy_forward_tests ORDER BY id")] == ["dca", "trend", "range", "breakout"]
 
 
 def test_comparison_shows_backtest_numbers_only_when_they_exist(config, db):

@@ -48,7 +48,7 @@ def test_refuses_when_the_defaults_no_longer_match_the_preregistration(rs, db, m
 
 
 def test_unimplemented_strategy_is_refused(rs):
-    assert rs.main(["breakout"]) == 2
+    assert rs.main(["rotation"]) == 2
 
 
 def test_trend_runs_once_on_its_own_timeframes(rs, db, tmp_path, monkeypatch):
@@ -69,3 +69,18 @@ def test_trend_runs_once_on_its_own_timeframes(rs, db, tmp_path, monkeypatch):
     stored = db.strategy_backtests("trend")
     assert len(stored) == 1 and stored[0]["result"]["verdict"] in ("PASS", "FAIL", "INCONCLUSIVE")
     assert (tmp_path / "strategy_trend_design.md").exists() and rs.main(["trend"]) == 2
+
+
+def test_breakout_runs_once_on_its_own_timeframes(rs, db, tmp_path, monkeypatch):
+    from functools import partial
+
+    from services.strategies import breakout
+    from test_strategy_breakout import stairs
+    df4, df1 = stairs()
+    seen = []
+    monkeypatch.setattr(rs, "load_rows", lambda db_, tf: seen.append(tf) or (df4 if tf == "4h" else df1).to_dict("records"))
+    monkeypatch.setattr(breakout, "backtest", partial(breakout.backtest, random_runs=20))
+    assert rs.main(["breakout"]) == 0 and seen == ["4h", "1d"]
+    stored = db.strategy_backtests("breakout")
+    assert len(stored) == 1 and stored[0]["result"]["period"]["kind"] == "design"
+    assert (tmp_path / "strategy_breakout_design.md").exists() and rs.main(["breakout"]) == 2
