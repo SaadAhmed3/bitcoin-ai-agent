@@ -209,3 +209,17 @@ def test_scatter_labels_never_overlap_when_one_strategy_dwarfs_the_others(browse
         assert len(set(colors)) == 4                                                 # one colour per strategy
     finally:
         p.context.close()
+
+
+def test_the_rotation_chart_has_a_legend_on_phones(browser, lab_server):
+    p, page = open_chart_tab(browser, lab_server, "rotation", viewport={"width": 390, "height": 844}, is_mobile=True,
+                             has_touch=True)
+    try:
+        lay = page.evaluate("() => { const l = document.getElementById('stratLiveChart')._fullLayout; "
+                            "return {show: l.showlegend, n: document.querySelectorAll('#stratLiveChart .legend .traces').length}; }")
+        assert lay["show"] is True and lay["n"] >= 5                                # bars + BTC, ETH, SOL, BNB lines
+        rendered(page, "stratHistChart", "rotation")
+        assert no_horizontal_scroll(page) == []
+        assert p.errors == []
+    finally:
+        p.context.close()

@@ -135,6 +135,9 @@
 
   // Rotation: the ranking the Monday rule uses (bars, N/A shown as such) and the four prices started at 100.
   const ASSET_COLORS = { BTCUSDT: "#f59e0b", ETHUSDT: "#818cf8", SOLUSDT: "#2dd4bf", BNBUSDT: "#f472b6" };
+  // On phones the legend goes under the chart (other charts hide it there): the asset lines need their names.
+  const phoneLegend = (c) => (narrow() ? { showlegend: true, margin: { l: 10, r: 44, t: 10, b: 30 },
+    legend: { orientation: "h", x: 0, y: -0.1, yanchor: "top", font: { size: 10, color: c.muted } } } : {});
   function drawRotationLive(d) {
     const c = colors(), s = d.series, x = s.time.map(iso), names = d.names || {};
     const rk = d.ranking || [];
@@ -149,7 +152,8 @@
       xaxis: { type: "date", domain: [0, narrow() ? 1 : 0.62], gridcolor: c.line, anchor: "y" },
       yaxis: axis(c, { domain: narrow() ? [0.5, 1] : [0, 1], title: { text: "price, start = 100", font: { size: 10 } } }),
       xaxis2: { domain: narrow() ? [0, 1] : [0.7, 1], anchor: "y2", gridcolor: c.line },
-      yaxis2: axis(c, { domain: narrow() ? [0, 0.38] : [0, 1], anchor: "x2", ticksuffix: "%", zeroline: true, zerolinecolor: c.muted }) });
+      yaxis2: axis(c, { domain: narrow() ? [0, 0.38] : [0, 1], anchor: "x2", ticksuffix: "%", zeroline: true, zerolinecolor: c.muted }),
+      ...phoneLegend(c) });
     plot("stratLiveChart", traces, L, "rotation");
   }
 
@@ -262,7 +266,7 @@
     const L = layout(c, { barmode: "stack", bargap: 0, xaxis: { type: "date", gridcolor: c.line },
       yaxis: axis(c, { domain: [0.34, 1], tickformat: ".2f", title: { text: "account (start = 1)", font: { size: 10 } } }),
       yaxis2: axis(c, { domain: [0.22, 0.3], showticklabels: false, range: [0, 1] }),
-      yaxis3: axis(c, { domain: [0, 0.18], ticksuffix: "%", title: { text: "DD", font: { size: 10 } } }) });
+      yaxis3: axis(c, { domain: [0, 0.18], ticksuffix: "%", title: { text: "DD", font: { size: 10 } } }), ...phoneLegend(c) });
     plot("stratHistChart", traces, L, "rotation");
   }
 
