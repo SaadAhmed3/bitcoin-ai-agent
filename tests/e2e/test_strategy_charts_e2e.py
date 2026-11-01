@@ -118,3 +118,16 @@ def test_chart_tab_fits_a_phone(browser, lab_server):
         assert p.errors == []
     finally:
         p.context.close()
+
+
+def test_empty_charts_take_little_space(browser, fresh_server):
+    p, page = open_chart_tab(browser, fresh_server, "trend")                    # no stored backtest, no forward data
+    try:
+        page.wait_for_function("() => document.getElementById('stratHistChart').classList.contains('is-empty')")
+        for box in ("stratHistChart", "stratFwdChart"):
+            page.wait_for_function(f"() => document.getElementById('{box}').classList.contains('is-empty')")
+            assert page.locator(f"#{box}").bounding_box()["height"] < 120
+        assert page.locator("#stratTradeList").is_hidden()
+        assert p.errors == []
+    finally:
+        p.context.close()

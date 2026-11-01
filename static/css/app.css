@@ -626,5 +626,5 @@ nav a .label { flex: 1; min-width: 0; }
 .how-to { margin-top: 4px; }
 .strat-cmp-charts { margin-top: 12px; }
 @media (max-width: 900px) { .strat-hist { grid-template-columns: 1fr; } .strat-trades { max-height: 260px; } }
-.strat-chart.is-empty { min-height: 0; }
+.strat-chart.is-empty { min-height: 0; height: auto; }
 .strat-chart.is-empty .empty { padding: 18px 0; }

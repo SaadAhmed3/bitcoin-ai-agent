@@ -132,7 +132,12 @@
       histTimer = setTimeout(retry, 3000);
       return;
     }
-    if (h.status !== "ok") { empty("stratHistChart", h.note || "No design backtest for these settings."); tbody.innerHTML = ""; return; }
+    if (h.status !== "ok") {
+      empty("stratHistChart", h.note || "No design backtest for these settings.");
+      tbody.innerHTML = "";
+      $("stratTradeList").closest(".strat-trades").hidden = true;          // nothing to list
+      return;
+    }
     how("stratHistHow", h.how_to);
     $("stratHistSource").textContent = h.verified ? `Source: ${h.source} (verified).` : `Source: ${h.source}. ${h.mismatches.join("; ")}`;
     if (!ok()) { empty("stratHistChart", "Plotly could not be loaded."); return; }
