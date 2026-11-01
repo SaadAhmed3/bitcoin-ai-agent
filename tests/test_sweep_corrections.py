@@ -24,7 +24,7 @@ def stored_pair(db):
 
 def test_schema_13_adds_a_write_once_corrections_table(db):
     from database.db import SCHEMA_VERSION
-    assert SCHEMA_VERSION == 13
+    assert SCHEMA_VERSION >= 13              # 14: Strategy Lab tables
     stored_pair(db)
     assert db.sweep_correct(DUP, "superseded", REASON, "0.9.8", now=5) is True
     assert db.sweep_correct(DUP, "superseded", REASON, "0.9.8", now=6) is False          # once per event

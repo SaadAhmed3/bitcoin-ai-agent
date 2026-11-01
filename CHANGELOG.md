@@ -2,6 +2,24 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## Strategy Lab, round 1: shared interface and DCA — 2026-11-01
+
+**Research only, separate from signal-1.8** (unchanged; protected files untouched; forward tests "unchanged").
+
+- **Strategy Lab** view (sidebar): five independent spot research strategies with a shared result schema
+  (`strategy-result-1`), an unranked comparison table (N/A where no data) and per-strategy validation status. Round 1
+  implements **DCA**; trend, range, breakout and rotation are listed as planned (rounds 2–5).
+- **DCA:** ACCUMULATE / WAIT / PAUSE on a fixed daily / weekly / monthly schedule; simulated buys at the daily open
+  with fee and slippage; missed buys never invented; DCA vs lump sum. Pre-registered in `PREREGISTRATION_DCA.md`
+  (committed before the backtest), design backtest run once: PASS on C1/C2 (lower drawdown and better worst case
+  than lump sum, lower mean return) — design-data evidence only, see `data/strategy_dca_design.md`.
+- **Versioned settings** per strategy; a changed configuration is NOT VALIDATED (settings changed) and inherits
+  nothing. **Separate strategy forward tracker** (`services/strategy_forward.py`, own fingerprint, own start date,
+  append-only, verdict after 365 days).
+- Schema 14 (additive, backed up): `strategy_configs`, `strategy_signals`, `strategy_backtests`,
+  `strategy_forward_tests`, `strategy_forward_events`, all append-only. Methodology: `STRATEGY_LAB.md`.
+- Tests: 25 unit + 2 e2e new (failed before); the e2e per-view checks now include the Strategy Lab view.
+
 ## One NO TRADE sentence everywhere; chart presets — 2026-10-31
 
 UI / text only: no signal, weight, gate, backtest or paper-trading change; engine signal-1.8; protected files

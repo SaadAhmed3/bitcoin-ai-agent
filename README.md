@@ -149,6 +149,13 @@ no evidence of added value. The engine makes 5 design trades; the regime and swe
 (+0.6%), the volume-profile and combined filters remove none. In the event study (+6 and +18 4h bars) no regime or
 confirmed-sweep group's 95% CI excludes the average of all bars.
 
+## Strategy Lab (research strategies)
+
+A separate view with five independent spot research strategies (DCA now; trend, range, breakout and rotation in
+later rounds), each with its own rules, versioned settings, a pre-registered design backtest run once
+(`python scripts\research_strategy.py dca`) and its own forward test. Separate from signal-1.8 and never trades.
+Method, rules against data snooping and results: [STRATEGY_LAB.md](STRATEGY_LAB.md).
+
 ## Paper trading and risk
 
 - The paper account is **simulated**: every order is stored with `simulated = 1` (a database rule) and labelled
@@ -196,6 +203,7 @@ Writes (POST/PUT/DELETE) from outside the dashboard need the header `X-Requested
 | `GET /api/export/<dataset>?format=csv\|json` | candles, signals, news, backtest, paper_orders, alerts, chat |
 | `GET /api/settings`, `PUT /api/settings/<section>` | Settings (env values win and are shown read-only) |
 | `GET /api/advanced?profile_tf=4h\|1h\|1d`, `GET /api/advanced/shadow` | Regime, sweeps, volume profile (context); stored shadow rows |
+| `GET /api/strategies`, `/api/strategies/<id>`, `GET`/`PUT /api/strategies/<id>/config`, `POST .../config/reset` | Strategy Lab: cards, comparison, details, versioned settings |
 | `GET /api/advanced/overlays?tf=1h`, `GET /api/advanced/profile?tf=1h&mode=last\|visible&from=&to=` | Chart overlays: regime shading, stored sweep markers, the chart's volume profile |
 
 ## Project layout
@@ -215,6 +223,7 @@ services/assistant.py       grounded question answering (+ optional Ollama)
 services/alerts.py          alert rules, cooldowns, background monitor
 services/regime.py, liquidity_sweeps.py, volume_profile.py, advanced_analysis.py   context panels + shadow mode
 services/chart_overlays.py  regime shading / sweep markers as chart coordinates (visualisation only)
+services/strategies/        Strategy Lab engines (base.py schema, dca.py); strategy_lab.py, strategy_forward.py
 static/, templates/         dashboard (no build step)
 tests/                      unit/API tests; tests/e2e Playwright UI tests
 ```

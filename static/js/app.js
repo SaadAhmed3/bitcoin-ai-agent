@@ -84,7 +84,7 @@
 
   // ---------------------------------------------------------------- views (hash routes)
   const VIEWS = { overview: "Overview", market: "Market & chart", news: "News & calendar", signal: "Signal details",
-    research: "Research (backtest)", paper: "Risk & paper", alerts: "Alerts", assistant: "Ask the data", system: "System & sources" };
+    research: "Research (backtest)", strategies: "Strategy Lab", paper: "Risk & paper", alerts: "Alerts", assistant: "Ask the data", system: "System & sources" };
 
   function parseHash() {
     const h = decodeURIComponent(location.hash || "");
@@ -1788,6 +1788,7 @@
     news: [loadNews, loadCalendar],
     signal: [loadSignal, loadContext],
     research: [loadBacktest, loadForward],
+    strategies: [() => window.BTCStrategyLab && window.BTCStrategyLab.load()],
     paper: [loadPaper, loadSignal],
     alerts: [loadAlerts, loadAlertRules],
     assistant: [loadAssistantStatus, loadChatHistory],
@@ -1813,6 +1814,7 @@
     every(120000, ["overview", "market"], loadChart);
     every(120000, ["market"], loadMtf);
     every(300000, ["market"], loadAdvanced);
+    every(300000, ["strategies"], () => window.BTCStrategyLab && window.BTCStrategyLab.load());
     every(300000, ["overview", "signal"], loadContext);
     every(sec("refresh_news_s", 300), ["news"], loadNews);
     every(sec("refresh_news_s", 300), ["overview", "signal", "paper"], loadSignal);

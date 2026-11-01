@@ -24,6 +24,7 @@
       <a href="#/news" data-view="news" data-tip="News &amp; calendar">{{ icon("news") }}<span class="label">News &amp; calendar</span></a>
       <a href="#/signal" data-view="signal" data-tip="Signal details">{{ icon("signal") }}<span class="label">Signal details</span></a>
       <a href="#/research" data-view="research" data-tip="Research (backtest)">{{ icon("research") }}<span class="label">Research (backtest)</span></a>
+      <a href="#/strategies" data-view="strategies" data-tip="Strategy Lab">{{ icon("lab") }}<span class="label">Strategy Lab</span></a>
       <a href="#/paper" data-view="paper" data-tip="Risk &amp; paper">{{ icon("paper") }}<span class="label">Risk &amp; paper</span></a>
       <a href="#/alerts" data-view="alerts" data-tip="Alerts">{{ icon("alerts") }}<span class="label">Alerts</span> <b class="nav-badge" id="navAlertBadge" hidden>0</b></a>
       <a href="#/assistant" data-view="assistant" data-tip="Ask the data">{{ icon("assistant") }}<span class="label">Ask the data</span></a>
@@ -362,6 +363,53 @@
       <p class="muted small">Rules and pass criteria: PREREGISTRATION_H1.md (failed on design data: tracked for information only) and PREREGISTRATION_H2.md (the pre-registered test, judged after 365 days). Decide at the daily close, act at the next open, 0.10% fee + 0.05% slippage per side.</p>
     </section>
 
+    <!-- ============================================================ Strategy Lab -->
+    <section id="stratLab" class="card" data-views="strategies" data-state="loading">
+      <div class="card-head">
+        <div><h2>Strategy Lab</h2>
+          <p class="muted">Five independent spot research strategies, each with its own rules, pre-registration and
+            validation. Separate from the live signal (engine signal-1.8). Nothing is ever bought or sold.</p></div>
+        <span class="tag sim">Simulated</span>
+      </div>
+      <div class="strat-grid" id="stratCards"><p class="empty">Loading…</p></div>
+      <p class="disclaimer">Signal strength is a heuristic score, not a probability of profit. Design-data backtests
+        never validate a strategy: only its separate forward test can, after 365 days.</p>
+    </section>
+
+    <section id="stratCompareCard" class="card" data-views="strategies">
+      <div class="card-head">
+        <div><h2>Comparison</h2><p class="muted" id="stratCompareNote">Loading…</p></div>
+        <span class="tag hyp">Hypothetical</span>
+      </div>
+      <div class="table-wrap">
+        <table class="table stack" id="stratCompare">
+          <thead><tr><th>Metric</th><th>DCA</th><th>Trend</th><th>Range</th><th>Breakout</th><th>Rotation</th></tr></thead>
+          <tbody><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="stratDetail" class="card" data-views="strategies">
+      <div class="card-head">
+        <div><h2>DCA details</h2><p class="muted" id="stratDetailMeta">Backtest, forward test, settings and history</p></div>
+        <span class="tag calc">Calculated</span>
+      </div>
+      <div class="grid-2 strat-detail">
+        <div><h3>Design backtest</h3><div id="stratBacktest"><p class="empty">Loading…</p></div>
+          <h3 class="sub">Forward test</h3><div id="stratForward"><p class="empty">Loading…</p></div></div>
+        <div><details class="fold strat-cfg" id="stratCfg-dca"><summary>Settings</summary>
+            <form class="set-form"><div class="strat-cfg-fields"></div>
+              <div class="set-actions"><button class="btn" type="submit">Save as a new version</button>
+                <button class="btn ghost" type="button" data-reset>Reset to the pre-registered defaults</button>
+                <span class="muted small set-msg" role="status"></span></div>
+              <p class="muted small strat-cfg-version"></p></form></details>
+          <h3 class="sub">Signal history (one record per UTC day)</h3>
+          <div class="table-wrap"><table class="table stack" id="stratHistory">
+            <thead><tr><th>Day (UTC)</th><th>Signal</th><th>Config</th><th>Why</th></tr></thead>
+            <tbody><tr><td colspan="4" class="empty">Loading…</td></tr></tbody></table></div></div>
+      </div>
+    </section>
+
     <!-- ============================================================ Paper -->
     <section id="risk" class="grid-2" data-views="paper">
       <article class="card">
@@ -494,6 +542,7 @@
 </div>
 <script id="appConfig" type="application/json">{{ {"timeframes": timeframes, "displayTz": display_tz, "theme": theme, "version": version}|tojson }}</script>
 <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
+<script src="{{ url_for('static', filename='js/strategy_lab.js') }}"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
