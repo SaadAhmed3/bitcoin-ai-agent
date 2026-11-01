@@ -247,6 +247,10 @@ the others say "planned". Use the picker in the details card to see each one's b
 - **Settings** can be changed in the DCA details. Saving creates a new version; if it differs from the
   pre-registered settings, the strategy shows **NOT VALIDATED (settings changed)** and its earlier results no longer
   apply. "Reset" goes back to the pre-registered settings.
+- **Chart tab** (in the details card): the strategy's own chart. When there is a setup it draws the entry, the stop
+  (red) and the target (green); when there is none, a box lists each rule with ✓ (met) or ✗ (not met), so you can see
+  why. Below: every trade of the design backtest (click one in the list to zoom to it), the account against buy &
+  hold, the drawdown, and the forward test once it has data. Each chart has a short "How to read this chart" note.
 - "BACKTESTED (design data)" is evidence about the past only. A strategy can only become "forward tested" after its
   own 365-day forward test.
 

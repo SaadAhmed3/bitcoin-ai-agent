@@ -171,6 +171,19 @@
   const store = { get(k, d) { try { return localStorage.getItem(k) || d; } catch (_) { return d; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (_) { /* private mode */ } } };
   let detailId = store.get("btc-strategy-detail", "dca");
+  let activeTab = store.get("btc-strategy-tab", "overview") === "chart" ? "chart" : "overview";
+
+  function showTab(tab) {
+    activeTab = tab;
+    store.set("btc-strategy-tab", tab);
+    document.querySelectorAll("#stratTabs button").forEach((b) => {
+      const on = b.dataset.tab === tab;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-selected", String(on));
+    });
+    $("stratTabOverview").hidden = tab !== "overview";
+    $("stratTabChart").hidden = tab !== "chart";
+  }
 
   async function load() {
     try {
@@ -189,7 +202,13 @@
       if (det.forward_deposit_neutral) $("stratForward").insertAdjacentHTML("beforeend", depositNeutral(det.forward_deposit_neutral));
       renderConfig(detailId, cfg);
       renderHistory(det.history || []);
+      $("stratDetail").dataset.sid = detailId;
       $("stratLab").dataset.state = "ready";
+      const charts = window.BTCStrategyCharts;
+      if (charts) {
+        charts.compare();
+        if (activeTab === "chart") charts.render(detailId);
+      }
     } catch (err) {
       $("stratCards").innerHTML = `<p class="empty">Strategy Lab could not load: ${esc(err.message)}</p>`;
       $("stratLab").dataset.state = "error";
@@ -201,6 +220,13 @@
     if (!box || box.dataset.ready) return;
     box.dataset.ready = "1";
     const form = box.querySelector("form"), msg = box.querySelector(".set-msg");
+    showTab(activeTab);
+    $("stratTabs").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-tab]");
+      if (!b) return;
+      showTab(b.dataset.tab);
+      if (b.dataset.tab === "chart" && window.BTCStrategyCharts) window.BTCStrategyCharts.render(detailId);
+    });
     $("stratDetailPick").addEventListener("change", (e) => {
       detailId = e.target.value;
       store.set("btc-strategy-detail", detailId);

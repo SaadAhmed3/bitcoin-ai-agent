@@ -33,6 +33,7 @@ from services.advanced_analysis import AdvancedAnalysis, apply_sweep_corrections
 from services.no_trade_text import summary as no_trade_summary
 from services.strategy_forward import StrategyForward
 from services.strategy_lab import StrategyLab
+from services.strategy_charts import StrategyCharts
 from services.risk_manager import RISK_RANGES, RiskSettings, position_size
 from services.technical_analysis import analyze, chart_series
 from services.assistant import Assistant, AssistantBusy, load_study
@@ -255,6 +256,8 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     lab.ensure_defaults()
     app.config["BTC_STRATEGY_LAB"] = lab
     app.config["BTC_STRATEGY_FORWARD"] = strategy_forward
+    strategy_charts = StrategyCharts(db, lab)            # read-only: stored results, verified in-memory series
+    app.config["BTC_STRATEGY_CHARTS"] = strategy_charts
 
     def strategy_lab_job():
         """Refresh the daily candles (cached), store today's strategy signals once, advance the strategy tracker."""
@@ -267,6 +270,7 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     app.config["BTC_MONITOR"] = monitor
     if start_monitor:
         monitor.start()
+        strategy_charts.warm()            # history charts are ready before anyone opens them
 
     def _candle_source() -> tuple[str, str]:
         return (market.providers[0].name, market.providers[0].symbol) if market.providers else ("binance", "BTCUSDT")
@@ -486,6 +490,23 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         """Strategy Lab: five research strategies (implemented ones evaluated now) and the comparison table."""
         cards = lab.cards()
         return jsonify({"strategies": cards, "comparison": lab.comparison(cards)})
+
+    @app.get("/api/strategies/compare-chart")
+    def strategy_compare_chart():
+        """Stored design equity curves normalised to 100 and net return vs max drawdown. Hypothetical, not ranked."""
+        return jsonify(strategy_charts.compare())
+
+    @app.get("/api/strategies/<sid>/chart/<part>")
+    def strategy_chart(sid: str, part: str):
+        """live: the strategy's own rule code on closed candles; history: the stored design result (series recomputed
+        in memory and verified, never written); forward: the strategy forward tracker's events."""
+        if part == "live":
+            return jsonify(strategy_charts.live(sid))
+        if part == "history":
+            return jsonify(strategy_charts.history(sid))
+        if part == "forward":
+            return jsonify(strategy_charts.forward(sid))
+        raise LookupError(f"Unknown chart '{part}'")
 
     @app.get("/api/strategies/<sid>")
     def strategy_detail(sid: str):
