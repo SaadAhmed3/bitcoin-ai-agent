@@ -22,7 +22,9 @@ def test_presets_set_the_toggles_and_are_remembered(browser, live_server):
         assert sel.locator("option").all_text_contents() == ["Clean", "Trend", "Levels", "Custom"]
         for name, on in PRESETS.items():
             sel.select_option(name)
-            page.wait_for_timeout(300)
+            want = sorted(on)
+            page.wait_for_function("""(want) => [...document.querySelectorAll('#overlayToggles input[data-ov]')]
+                .filter((i) => i.checked).map((i) => i.dataset.ov).sort().join() === want.join()""", arg=want)
             assert checked(page) == on, name
         sel.select_option("trend")
         page.locator("#overlayToggles input[data-ov='bb']").check()            # a manual change -> Custom

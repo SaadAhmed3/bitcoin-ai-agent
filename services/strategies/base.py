@@ -39,12 +39,15 @@ STRATEGIES: list[dict[str, Any]] = [
     {"id": "range", "name": "Range trading", "round": 3, "purpose": "Trade confirmed reactions inside a valid range."},
     {"id": "breakout", "name": "Breakout trading", "round": 4,
      "purpose": "Trade candle-close breakouts from established structures; never a wick alone."},
+    {"id": "breakout_05r", "name": "Breakout-0.5R (variant)", "round": 4, "variant_of": "breakout", "forward_only": True,
+     "purpose": "Breakout's identical rules at 0.5% risk per trade. Chosen after design results: forward test only, "
+                "no design verdict."},
     {"id": "rotation", "name": "Narrative / sector rotation", "round": 5,
      "purpose": "Relative strength of BTC vs ETH, SOL and BNB. Research only; never rotates funds."},
 ]
 _TRADE = ("BUY SETUP", "HOLD", "NO TRADE", "EXIT / REDUCE EXPOSURE")
 SIGNALS: dict[str, tuple[str, ...]] = {"dca": ("ACCUMULATE", "WAIT", "PAUSE"), "trend": _TRADE, "range": _TRADE,
-                                       "breakout": _TRADE,
+                                       "breakout": _TRADE, "breakout_05r": _TRADE,
                                        "rotation": ("BTC STRONGER", "ALTCOIN STRENGTH", "NEUTRAL", "NO TRADE")}
 LABELS = ("LIVE DATA", "CALCULATED", "MODEL ESTIMATE", "HYPOTHETICAL", "SIMULATED", "NOT VALIDATED")
 

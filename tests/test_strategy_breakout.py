@@ -213,4 +213,4 @@ def test_its_forward_fingerprint_is_its_own_and_the_others_are_unchanged():
     from services.strategy_forward import fingerprint_files
     assert [p.name for p in fingerprint_files("breakout")] == ["breakout.py", "strategy_forward.py"]
     from services.strategies import ENGINES
-    assert list(ENGINES) == ["dca", "trend", "range", "breakout"]
+    assert list(ENGINES)[:4] == ["dca", "trend", "range", "breakout"]

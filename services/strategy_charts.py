@@ -192,7 +192,8 @@ def breakout_live(frames: dict, cfg: dict, result: dict) -> dict[str, Any]:
             "indicators": [f"{lb}-bar high (level)", f"{tb}-bar low (trailing exit)", f"volume {vm:g}× its average"]}
 
 
-LIVE = {"trend": trend_live, "range": range_live, "dca": dca_live, "breakout": breakout_live}
+LIVE = {"trend": trend_live, "range": range_live, "dca": dca_live, "breakout": breakout_live,
+        "breakout_05r": breakout_live}                 # the forward-only variant runs Breakout's own rules
 
 
 # --------------------------------------------------------------------------- derived cache
@@ -233,10 +234,16 @@ class StrategyCharts:
         how_to = out.pop("how_to", HOW_TO["live"])
         status = self.lab.validation(sid, self.lab.config(sid))
         return {"status": "ok", **out, "signal": result["signal"], "explanation": result["explanation"],
-                "banner": FAILED_BANNER if status.get("design_verdict") == "FAIL" else None, "how_to": how_to}
+                "banner": (FAILED_BANNER if status.get("design_verdict") == "FAIL" else
+                           eng.LABEL[0].upper() + eng.LABEL[1:] if getattr(eng, "FORWARD_ONLY", False) else None),
+                "how_to": how_to}
 
     # ---------------------------------------------------------------- history
     def history(self, sid: str, wait: bool = False) -> dict:
+        eng = self.lab._engine(sid)
+        if getattr(eng, "FORWARD_ONLY", False):
+            return {"status": "forward_only", "note": f"{eng.LABEL[0].upper() + eng.LABEL[1:]}: it has no design "
+                                                      "backtest by design, only its forward test below."}
         cfg = self.lab.config(sid)
         res = self.lab.backtest_for(sid, cfg["hash"])
         if res is None:

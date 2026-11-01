@@ -2,6 +2,19 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## Breakout-0.5R variant and deterministic e2e waits — 2026-11-02
+
+- **Breakout-0.5R** (`services/strategies/breakout_05r.py`, `PREREGISTRATION_BREAKOUT_05R.md`): forward-only variant
+  of Breakout, identical rules (Breakout's own code), 0.5% risk. Labelled "chosen after design results: forward test
+  only, no design verdict" on the card, comparison table, chart banner, history panel and details; the research
+  script refuses it; own fingerprint, pins `breakout.py` by SHA-256 (a change pauses it). Breakout's FAIL unchanged.
+- **e2e without time waits:** each strategy chart sets `data-rendered` (its strategy id, or "compare") only after
+  Plotly has drawn it or its empty state is shown, cleared when a new render starts; tests wait for that instead of
+  for any `.main-svg` (which could be the previous strategy's chart). `Page.idle()` waits until no request is in
+  flight, replacing every fixed `wait_for_timeout` in the suite; the market and contrast tests wait for their state.
+  The export test now shows the saved body if a download is ever an error answer.
+- Long status labels wrap inside strategy cards (no horizontal scroll on phones).
+
 ## Strategy Lab, round 4: Breakout trading — 2026-11-02
 
 - `services/strategies/breakout.py` (self-contained, own forward fingerprint): 4h close above the 20-bar high on

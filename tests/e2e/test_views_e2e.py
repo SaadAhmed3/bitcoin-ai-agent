@@ -363,7 +363,7 @@ def visit_every_view(p: Page, open_details: bool = True) -> dict[str, list[str]]
         p.view(view)
         if view == "research":
             page.wait_for_selector("#btResult .verdict, #btResult .cta")
-        page.wait_for_timeout(400)
+        p.idle()                                                                # every answer of the view handled
         if open_details:
             page.evaluate("() => document.querySelectorAll('main details').forEach((d) => { d.open = true; })")
         found[view] = placeholder_problems(page)
@@ -391,7 +391,7 @@ def test_no_placeholder_text_or_console_errors_in_any_view_with_an_empty_databas
 @smoke
 def test_no_console_errors_in_any_view(ui):
     visit_every_view(ui, open_details=False)
-    ui.page.wait_for_timeout(500)
+    ui.idle()
     assert ui.errors == []
 
 
@@ -399,7 +399,8 @@ def test_no_console_errors_in_any_view(ui):
 @pytest.mark.parametrize("view", VIEWS)
 def test_no_horizontal_scroll_at_390_in_every_view(mobile, view):
     page = mobile.goto(f"/#/{view}")
-    page.wait_for_timeout(400)
+    wait_view_ready(page, view, timeout=60_000)                                    # its data loaded, not a fixed delay
+    page.wait_for_function("() => document.fonts.status === 'loaded'")
     page.evaluate("() => document.querySelectorAll('main details').forEach((d) => { d.open = true; })")
     assert no_horizontal_scroll(page) == [], view
     assert mobile.errors == []
@@ -506,6 +507,7 @@ def test_text_contrast_is_at_least_4_5_to_1(ui, theme):
         if page.locator("main").get_attribute("data-view") != view:
             ui.view(view)
             page.evaluate("(t) => { document.documentElement.dataset.theme = t; }", theme)
+        page.locator(sel).first.wait_for(state="visible", timeout=60_000)        # rendered before it is measured
         ratio = contrast(page, sel)
         if ratio is None or ratio < 4.5:
             low[sel] = ratio

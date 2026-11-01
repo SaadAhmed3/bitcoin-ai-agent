@@ -237,7 +237,23 @@ class Page:
         self.page.on("console", lambda m: self.errors.append(f"console.{m.type}: {m.text}") if m.type == "error" else None)
         self.page.on("pageerror", lambda e: self.errors.append(f"pageerror: {e}"))
         self.external: list[str] = []
+        self.pending: set = set()                       # in-flight requests, for idle(): a state, not a time
+        self.page.on("request", lambda r: self.pending.add(r))
+        self.page.on("requestfinished", lambda r: self.pending.discard(r))
+        self.page.on("requestfailed", lambda r: self.pending.discard(r))
         self.context.route("**/*", self._route)
+
+    def idle(self, timeout: float = 60_000, quiet: int = 3) -> None:
+        """Wait until no request is in flight (checked `quiet` times in a row, events pumped in between): every answer
+        already asked for has arrived and been handled. Fails after `timeout` ms."""
+        waited, calm = 0, 0
+        while calm < quiet:
+            self.page.evaluate("() => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)))")
+            calm = calm + 1 if not self.pending else 0
+            if self.pending:
+                self.page.wait_for_timeout(25)
+                waited += 25
+                assert waited < timeout, f"requests still in flight: {[r.url for r in self.pending]}"
 
     def _route(self, route):
         """No network from the browser: anything not on this machine gets a stub page and is recorded."""

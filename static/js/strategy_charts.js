@@ -32,13 +32,23 @@
   const axis = (c, extra) => ({ gridcolor: c.line, linecolor: c.line, side: "right", ...extra });
   const PCFG = { responsive: true, displaylogo: false, scrollZoom: true, modeBarButtonsToRemove: ["select2d", "lasso2d"] };
   const ok = () => typeof Plotly !== "undefined";
-  const empty = (id, text) => {
+  // data-rendered = the strategy id (or "compare") once a chart is fully drawn, plot or empty state; "" while pending.
+  // A deterministic "chart rendered" signal (tests wait for it instead of for time or for any svg).
+  const done = (el, tag, kind) => { el.dataset.rendered = tag || ""; el.dataset.kind = kind; };
+  const empty = (id, text, tag) => {
     const el = $(id);
     if (ok()) Plotly.purge(el);
     el.classList.add("is-empty");
     el.innerHTML = `<div class="empty">${esc(text)}</div>`;
+    done(el, tag, tag ? "empty" : "pending");
   };
-  const plot = (id, traces, L) => { const el = $(id); el.classList.remove("is-empty"); el.innerHTML = ""; Plotly.newPlot(id, traces, L, PCFG); };
+  const plot = (id, traces, L, tag) => {
+    const el = $(id);
+    el.classList.remove("is-empty");
+    el.innerHTML = "";
+    done(el, "", "pending");
+    return Plotly.newPlot(id, traces, L, PCFG).then(() => done(el, tag, "plot"));
+  };
   const how = (id, text) => { $(id).textContent = text ? `How to read this chart: ${text}` : ""; };
   const line = (x, y, name, color, extra = {}) => ({ type: "scatter", mode: "lines", x, y, name, line: { color, width: 1.3, ...(extra.line || {}) },
     xaxis: "x", yaxis: extra.yaxis || "y", hoverinfo: extra.hoverinfo || "x+y+name", connectgaps: false });
@@ -50,8 +60,8 @@
     banner.textContent = d.banner || "";
     how("stratLiveHow", d.how_to);
     $("stratChecklist").innerHTML = (d.checklist || []).map((c) => `<li class="${c.met ? "met" : "not"}">${c.met ? "✓" : "✗"} ${esc(c.rule)}</li>`).join("");
-    if (d.status !== "ok") { empty("stratLiveChart", d.note || "No chart data."); return; }
-    if (!ok()) { empty("stratLiveChart", "Plotly could not be loaded."); return; }
+    if (d.status !== "ok") { empty("stratLiveChart", d.note || "No chart data.", sid); return; }
+    if (!ok()) { empty("stratLiveChart", "Plotly could not be loaded.", sid); return; }
     const c = colors(), s = d.series, x = s.time.map(iso), last = x[x.length - 1];
     const traces = [{ type: "candlestick", name: "BTC", x, open: s.open, high: s.high, low: s.low, close: s.close,
       increasing: { line: { color: c.up }, fillcolor: c.up }, decreasing: { line: { color: c.down }, fillcolor: c.down }, xaxis: "x", yaxis: "y" },
@@ -89,7 +99,7 @@
         } else k += 1;
       }
       adx = true;
-    } else if (sid === "breakout") {
+    } else if (sid === "breakout" || sid === "breakout_05r") {
       const n = d.names || {};
       traces.push(line(x, s.level, n.level || "Level", c.info, { line: { width: 1.6, shape: "hv" } }),
         line(x, s.trail_low, n.trail_low || "Trailing low", c.down, { line: { dash: "dot", shape: "hv" } }),
@@ -118,7 +128,7 @@
       yaxis: axis(c, { domain: adx ? [0.36, 1] : [0.24, 1], tickformat: ",.0f" }),
       yaxis2: axis(c, { domain: adx ? [0.22, 0.32] : [0, 0.18], showticklabels: false }),
       ...(adx ? { yaxis3: axis(c, { domain: [0, 0.18], range: [0, 60] }) } : {}) });
-    plot("stratLiveChart", traces, L);
+    plot("stratLiveChart", traces, L, sid);
   }
 
   // ---------------------------------------------------------------- B. history chart
@@ -134,14 +144,14 @@
       return;
     }
     if (h.status !== "ok") {
-      empty("stratHistChart", h.note || "No design backtest for these settings.");
+      empty("stratHistChart", h.note || "No design backtest for these settings.", sid);
       tbody.innerHTML = "";
       $("stratTradeList").closest(".strat-trades").hidden = true;          // nothing to list
       return;
     }
     how("stratHistHow", h.how_to);
     $("stratHistSource").textContent = h.verified ? `Source: ${h.source} (verified).` : `Source: ${h.source}. ${h.mismatches.join("; ")}`;
-    if (!ok()) { empty("stratHistChart", "Plotly could not be loaded."); return; }
+    if (!ok()) { empty("stratHistChart", "Plotly could not be loaded.", sid); return; }
     const c = colors(), px = h.price.time.map(iso);
     let traces, L;
     if (sid === "dca") {
@@ -199,14 +209,14 @@
         tbody.querySelectorAll("tr").forEach((r) => r.classList.toggle("sel", r === row));
       };
     }
-    plot("stratHistChart", traces, L);
+    plot("stratHistChart", traces, L, sid);
   }
 
   // ---------------------------------------------------------------- C. forward chart
   function drawForward(sid, f) {
     how("stratFwdHow", f.how_to);
-    if (f.status !== "ok") { empty("stratFwdChart", `Empty: ${f.note}`); return; }
-    if (!ok()) { empty("stratFwdChart", "Plotly could not be loaded."); return; }
+    if (f.status !== "ok") { empty("stratFwdChart", `Empty: ${f.note}`, sid); return; }
+    if (!ok()) { empty("stratFwdChart", "Plotly could not be loaded.", sid); return; }
     const c = colors(), x = f.price.time.map(iso);
     const traces = [line(x, f.price.close, "Price", c.muted)];
     if (sid === "dca") {
@@ -223,16 +233,16 @@
   }
 
   // ---------------------------------------------------------------- D. comparison
-  const SHORT = { dca: "DCA", trend: "Trend", range: "Range", breakout: "Breakout", rotation: "Rotation" };
+  const SHORT = { dca: "DCA", trend: "Trend", range: "Range", breakout: "Breakout", breakout_05r: "Breakout-0.5R", rotation: "Rotation" };
   async function compare() {
     try {
       const d = await get("/api/strategies/compare-chart");
       how("stratCmpHow", d.how_to);
-      if (!d.curves.length) { empty("stratCmpEquity", "No stored design backtest yet."); empty("stratCmpScatter", "No stored design backtest yet."); return; }
+      if (!d.curves.length) { empty("stratCmpEquity", "No stored design backtest yet.", "compare"); empty("stratCmpScatter", "No stored design backtest yet.", "compare"); return; }
       if (!ok()) return;
       const c = colors(), pal = ["#60a5fa", c.accent, "#c084fc", c.up, c.warn];
       plot("stratCmpEquity", d.curves.map((k, i) => line(k.time.map(iso), k.value, k.name, pal[i % pal.length])),
-        layout(c, { hovermode: "x unified", xaxis: { type: "date", gridcolor: c.line }, yaxis: axis(c, { type: "log", tickformat: ",.0f" }) }));
+        layout(c, { hovermode: "x unified", xaxis: { type: "date", gridcolor: c.line }, yaxis: axis(c, { type: "log", tickformat: ",.0f" }) }), "compare");
       const xs = d.scatter.map((p) => p.max_drawdown_pct), ys = d.scatter.map((p) => p.net_return_pct);
       const xMax = Math.max(...xs, 1) * 1.15;
       const ySpan = Math.max(Math.max(...ys, 0) - Math.min(...ys, 0), 10);
@@ -245,9 +255,9 @@
         hovertemplate: "%{text}<br>max drawdown %{x:.2f}%<br>net return %{y:.2f}%<extra></extra>" }],
       layout(c, { showlegend: false, xaxis: { title: { text: "max drawdown (%)", font: { size: 10 } }, gridcolor: c.line,
           range: [-xMax * 0.05, xMax * 1.05] },
-        yaxis: axis(c, { side: "left", title: { text: "net return (%)", font: { size: 10 } }, range: [yLo, yHi] }), margin: { l: 50, r: 16, t: 20, b: 40 } }));
+        yaxis: axis(c, { side: "left", title: { text: "net return (%)", font: { size: 10 } }, range: [yLo, yHi] }), margin: { l: 50, r: 16, t: 20, b: 40 } }), "compare");
     } catch (err) {
-      empty("stratCmpEquity", `Could not load: ${err.message}`);
+      empty("stratCmpEquity", `Could not load: ${err.message}`, "compare");
     }
   }
 
@@ -255,10 +265,11 @@
   async function render(sid) {
     const base = `/api/strategies/${sid}/chart`;
     const stale = () => document.getElementById("stratDetail").dataset.sid !== sid;
-    try { const d = await get(`${base}/live`); if (!stale()) drawLive(sid, d); } catch (err) { empty("stratLiveChart", `Could not load: ${err.message}`); }
-    const hist = async () => { try { const h = await get(`${base}/history`); if (!stale()) drawHistory(sid, h, hist); } catch (err) { empty("stratHistChart", `Could not load: ${err.message}`); } };
+    ["stratLiveChart", "stratHistChart", "stratFwdChart"].forEach((id) => done($(id), "", "pending"));
+    try { const d = await get(`${base}/live`); if (!stale()) drawLive(sid, d); } catch (err) { if (!stale()) empty("stratLiveChart", `Could not load: ${err.message}`, sid); }
+    const hist = async () => { try { const h = await get(`${base}/history`); if (!stale()) drawHistory(sid, h, hist); } catch (err) { if (!stale()) empty("stratHistChart", `Could not load: ${err.message}`, sid); } };
     await hist();
-    try { const f = await get(`${base}/forward`); if (!stale()) drawForward(sid, f); } catch (err) { empty("stratFwdChart", `Could not load: ${err.message}`); }
+    try { const f = await get(`${base}/forward`); if (!stale()) drawForward(sid, f); } catch (err) { if (!stale()) empty("stratFwdChart", `Could not load: ${err.message}`, sid); }
   }
 
   window.BTCStrategyCharts = { render, compare };

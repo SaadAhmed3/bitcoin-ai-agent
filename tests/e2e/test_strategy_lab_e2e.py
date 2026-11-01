@@ -11,10 +11,12 @@ def test_strategy_lab_shows_five_cards_and_an_honest_comparison(browser, live_se
         page.get_by_role("link", name="Strategy Lab").click()
         wait_view_ready(page, "strategies")
         cards = page.locator("#stratCards .strat-card")
-        assert cards.count() == 5
+        assert cards.count() == 6
         titles = [t.strip() for t in page.locator("#stratCards .strat-card h3").all_text_contents()]
         assert titles == ["DCA (dollar-cost averaging)", "Trend following", "Range trading", "Breakout trading",
-                          "Narrative / sector rotation"]
+                          "Breakout-0.5R (variant)", "Narrative / sector rotation"]
+        variant = page.locator("#strat-breakout_05r").text_content().lower()
+        assert "chosen after design results: forward test only, no design verdict" in variant and "failed" not in variant
         dca = page.locator("#strat-dca")
         assert dca.locator(".strat-signal").text_content() in ("ACCUMULATE", "WAIT", "PAUSE")
         badges = dca.locator(".tag").all_text_contents()                  # one combined status, not four badges
@@ -25,7 +27,8 @@ def test_strategy_lab_shows_five_cards_and_an_honest_comparison(browser, live_se
         assert page.locator("#strat-breakout .strat-signal").text_content() in (
             "BUY SETUP", "HOLD", "NO TRADE", "EXIT / REDUCE EXPOSURE")
         table = page.locator("#stratCompare")
-        assert table.locator("thead th").all_text_contents() == ["Metric", "DCA", "Trend", "Range", "Breakout", "Rotation"]
+        assert table.locator("thead th").all_text_contents() == ["Metric", "DCA", "Trend", "Range", "Breakout",
+                                                                 "Breakout-0.5R (forward only)", "Rotation"]
         assert "N/A" in table.text_content() and "not ranked" in page.locator("#stratCompareNote").text_content()
         assert p.errors == []
     finally:

@@ -37,7 +37,7 @@ def test_dashboard_loads_ready_with_price_chart_and_no_console_errors(ui):
     assert page.locator("#chartBox .main-svg").count() >= 1            # Plotly rendered (local vendor route, CSP on)
     assert page.locator("#chartBox .candlestick, #chartBox g.trace").count() >= 1
     assert page.evaluate("typeof Plotly") == "object"
-    page.wait_for_timeout(500)
+    ui.idle()
     assert ui.errors == []
 
 
@@ -104,7 +104,7 @@ def test_news_empty_state_and_fresh_install_have_no_console_errors(browser, fres
         page.wait_for_selector("#btResult .empty")
         assert "No backtest yet" in text(page, "#btResult")
         assert page.locator("#btExport").get_attribute("hidden") is not None
-        page.wait_for_timeout(1000)
+        p.idle()
         assert p.errors == []
     finally:
         p.context.close()
@@ -310,8 +310,10 @@ def test_export_buttons_download_files_with_expected_name_and_header(ui, live_se
         with page.expect_download() as dl:
             box.locator("a", has_text=fmt).click()
         d = dl.value
-        assert re.fullmatch(rf"btc-signal-lab_{dataset}_\d{{8}}T\d{{6}}Z\.{fmt.lower()}", d.suggested_filename)
         raw = open(d.path(), "rb").read().decode("utf-8")
+        # an error answer is saved as a file named after the URL: show what it said, not only the name
+        assert re.fullmatch(rf"btc-signal-lab_{dataset}_\d{{8}}T\d{{6}}Z\.{fmt.lower()}", d.suggested_filename), (
+            d.suggested_filename, d.failure(), raw[:500])
         if fmt == "CSV":
             header = next(csv.reader(io.StringIO(raw.lstrip("﻿"))))
             assert len(header) >= 3 and all(h and h == h.strip() for h in header), header
