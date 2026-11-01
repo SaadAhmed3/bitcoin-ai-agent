@@ -2,6 +2,20 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## Strategy Lab, round 4: Breakout trading — 2026-11-02
+
+- `services/strategies/breakout.py` (self-contained, own forward fingerprint): 4h close above the 20-bar high on
+  ≥ 1.2 × volume, stop level − 1 ATR, 10-bar trailing low or 60 bars, no fixed target, 1% risk. Few filters on purpose.
+- `PREREGISTRATION_BREAKOUT.md` committed before the first backtest (config hash `b4aa0a6c76185000`).
+- Design backtest run once (`data/strategy_breakout_design.md`): **FAIL** — 150 trades, +0.38R, profit factor 1.36,
+  beat 100% of random entries, but max drawdown 23.71% > 15%. Diagnostics, buy & hold / H2 / Trend comparisons and the
+  9-run sensitivity grid are reported only.
+- Charts: breakout live chart (level, trailing low, volume threshold, ✓/✗ list), history (verified exactly against the
+  stored result), forward; trades without a target handled in the hover and the zoom. Card: "None (trailing exit)".
+- Forward test registered on the real database; it starts at the next UTC midnight.
+- Tests (failed before): `tests/test_strategy_breakout.py` (11), plus breakout cases in the lab, research-script,
+  chart and e2e tests.
+
 ## Strategy charts: fixes and a derived cache — 2026-11-01
 
 - Scatter labels stay inside the plot (padded axes, labels toward the inside).

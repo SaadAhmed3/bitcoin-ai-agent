@@ -9,7 +9,7 @@ sold, no exchange account, no leverage, futures, margin or shorting. The Lab is 
 | 1 | DCA (dollar-cost averaging) | ACCUMULATE / WAIT / PAUSE | implemented, pre-registered, design backtest run once: PASS (design data) |
 | 2 | Trend following (4h pullback continuation; defined differently from H2's EMA 50/200) | BUY SETUP / HOLD / NO TRADE / EXIT / REDUCE EXPOSURE | implemented, pre-registered, design backtest run once: FAIL (design data) |
 | 3 | Range trading (4h, only in the SIDEWAYS regime) | same | implemented, pre-registered, design backtest run once: INCONCLUSIVE (4 trades) |
-| 4 | Breakout trading (never from a wick alone) | same | planned |
+| 4 | Breakout trading (never from a wick alone) | same | implemented, pre-registered, design backtest run once: FAIL (max drawdown 23.7% > 15%) |
 | 5 | Narrative / sector rotation (BTC, ETH, SOL, BNB; price, relative strength, volume) | BTC STRONGER / ALTCOIN STRENGTH / NEUTRAL / NO TRADE | planned |
 
 ## Shared result schema (`strategy-result-1`, `services/strategies/base.py`)
@@ -125,10 +125,33 @@ the budget basis. The locked study and its verdict are unchanged.
   As noted in advance, ADX 25 gave the same trades as ADX 20. Status: BACKTESTED (design data), not validated; the
   forward test runs as pre-registered (at this frequency it will likely end INCONCLUSIVE too).
 
+## Breakout trading (round 4)
+
+- **Rules** (`PREREGISTRATION_BREAKOUT.md`, config hash `b4aa0a6c76185000`). Few filters, on purpose (lesson from
+  Range): level = highest high of the 20 closed 4h bars before the signal bar; signal = a 4h **close** above it (a
+  wick alone never counts) with volume ≥ 1.2 × its 20-bar average; buy at the next open, skipped if that open is at or
+  below the stop; stop = level − 1.0 × ATR(14), never moved; exit on the first 4h close below the lowest low of the 10
+  bars before it, or after 60 bars; **no fixed target**; R from the initial stop; 1% risk; one position at a time.
+- **Differs from Trend**: no trend, ADX or daily filter, buys new highs rather than pullbacks, trailing exit instead
+  of a 2R target. Differs from H2 (100% in or out on the daily EMA 50 / 200).
+- **Diagnostics** (reported, never a filter): failed breakouts (a close back below the level within 3 bars) and
+  retests (a low within 0.25 × ATR of the level within 10 bars without such a close).
+- **Criteria:** as Trend. Sensitivity: lookback 20/40/55 × volume 1.0/1.2/1.5 (reported only).
+- **Design result** (`data/strategy_breakout_design.md`, run once on 2026-11-02, 4h decisions 2021-06-20 …
+  2025-10-28): **FAIL**. 150 trades (enough to judge), expectancy +0.38R (C1 passed), profit factor 1.36 (C2 passed),
+  beat 100% of 1,000 random-entry runs (C4 passed), but **max drawdown 23.71% > 15%** (C3 failed). Net +51.08%, win
+  rate 26.7% (average win 4.13R), exposure 29%, fees and slippage 29.4% of the account. Exits: stop 85, trailing 54,
+  time 10, end of data 1. Diagnostics: 45 failed breakouts, 85 retests. Compared (reported only), same window: buy &
+  hold +215.85% (max DD 77.04%), H2 +230.17% (max DD 38.24%), Trend's rules −7.82% (max DD 9.57%, 94 trades). Four of
+  nine 182-day windows were positive. Sensitivity: every combination had a positive expectancy; lookback 40 and 55
+  stayed under 15% drawdown. **These are reported only and do not change the verdict or the settings**: picking
+  lookback 40 now would be choosing parameters from the design results. Status: BACKTESTED (design data), FAILED,
+  not validated; the forward test runs anyway as pre-registered.
+
 ## Charts (visualisation only, `services/strategy_charts.py`)
 
 - **Live chart** (Chart tab of each strategy): the strategy's own timeframe and closed candles with only the
-  indicators its rules use (trend: EMA 21/50/200, the daily EMA 50 level, ADX; range: the range box, midpoint, touches,
+  indicators its rules use (breakout: the 20-bar high, the 10-bar trailing low, the volume threshold; trend: EMA 21/50/200, the daily EMA 50 level, ADX; range: the range box, midpoint, touches,
   sideways shading, ADX; DCA: scheduled buy days, average buy price). Computed by the strategy's own functions
   (`trend.indicators`, `range.features` / `regime_labels`, `dca.scheduled_days` / `simulate`); the plan (entry band,
   stop, targets, R:R) comes from the strategy's own result. Without a setup a box lists each rule as ✓ / ✗ from the

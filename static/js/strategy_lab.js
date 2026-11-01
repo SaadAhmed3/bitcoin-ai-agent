@@ -39,8 +39,8 @@
     const levels = r.entry_zone || r.stop !== null || (r.targets || []).length
       ? `<dl class="adv-dl"><div><dt>Entry zone</dt><dd>${r.entry_zone ? `$${esc(r.entry_zone.low)} to $${esc(r.entry_zone.high)}` : "Not applicable"}</dd></div>
           <div><dt>Invalidation</dt><dd>${r.stop !== null ? "$" + esc(r.stop) : "Not applicable"}</dd></div>
-          <div><dt>Target</dt><dd>${(r.targets || []).length ? r.targets.map((t) => "$" + esc(t)).join(", ") : "Not applicable"}</dd></div>
-          <div><dt>Reward/risk</dt><dd>${r.reward_risk !== null ? esc(r.reward_risk) : "Not applicable"}</dd></div></dl>`
+          <div><dt>Target</dt><dd>${(r.targets || []).length ? r.targets.map((t) => "$" + esc(t)).join(", ") : r.stop !== null ? "None (trailing exit)" : "Not applicable"}</dd></div>
+          <div><dt>Reward/risk</dt><dd>${r.reward_risk !== null ? esc(r.reward_risk) : r.stop !== null ? "Unknown at entry (no fixed target)" : "Not applicable"}</dd></div></dl>`
       : `<p class="muted small">Entry, invalidation and reward/risk do not apply: ${esc(s.id === "dca" ? "DCA buys on a schedule and never sells." : "no setup.")}</p>`;
     const warn = [...(r.contradictory || []), ...((r.data || {}).warnings || [])];
     const bt = s.backtest ? `Design backtest: ${esc(s.backtest.verdict)} on its pre-registered criteria` : "Design backtest: not run yet";
@@ -94,9 +94,9 @@
     const wf = (bt.walk_forward || []).map((w) => `<tr><td data-label="Window">${esc(day(w.start))} to ${esc(day(w.end))}</td><td data-label="Trades">${esc(w.trades)}</td>
       <td data-label="Return">${pct(w.return_pct)}</td><td data-label="Sum of R">${num(w.sum_r)}</td></tr>`).join("");
     // Sensitivity columns come from the result itself (each strategy varies its own pre-registered parameters).
-    const SENS = { adx_min: "ADX min", adx_max: "ADX max", lookback: "Lookback", target_r: "Target", target: "Target" };
+    const SENS = { adx_min: "ADX min", adx_max: "ADX max", lookback: "Lookback", volume_mult: "Volume", target_r: "Target", target: "Target" };
     const sensKeys = Object.keys(SENS).filter((k) => (bt.sensitivity || []).some((x) => x[k] !== undefined));
-    const sensVal = (k, v) => (k === "target_r" ? `${esc(v)}R` : k === "target" ? (v === "top" ? "range high (top)" : "midpoint") : esc(v));
+    const sensVal = (k, v) => (k === "target_r" ? `${esc(v)}R` : k === "volume_mult" ? `${esc(v)}×` : k === "target" ? (v === "top" ? "range high (top)" : "midpoint") : esc(v));
     const sens = (bt.sensitivity || []).map((x) => `<tr>${sensKeys.map((k, j) => `<td data-label="${SENS[k]}">${sensVal(k, x[k])}${j === 0 && x.is_default ? " (default)" : ""}</td>`).join("")}
       <td data-label="Trades">${esc(x.trades)}</td><td data-label="Expectancy">${num(x.expectancy_r)}R</td>
       <td data-label="Profit factor">${num(x.profit_factor)}</td><td data-label="Max DD">${num(x.max_drawdown_pct)}%</td></tr>`).join("");
@@ -107,6 +107,8 @@
         <div><dt>Buy &amp; hold (reported)</dt><dd>${pct(bh.net_return_pct)} · max DD ${num(bh.max_drawdown_pct)}%</dd></div>
         ${bt.h2_rule ? `<div><dt>H2 rule (reported)</dt><dd>${pct(h2.net_return_pct)} · max DD ${num(h2.max_drawdown_pct)}%</dd></div>` : ""}
         ${bt.regime_share_pct !== undefined ? `<div><dt>Regime SIDEWAYS / valid range</dt><dd>${num(bt.regime_share_pct, 1)}% / ${num(bt.valid_range_share_pct, 1)}% of the bars</dd></div>` : ""}
+        ${bt.trend_same_window ? `<div><dt>Trend, same window (reported)</dt><dd>${pct(bt.trend_same_window.net_return_pct)} · max DD ${num(bt.trend_same_window.max_drawdown_pct)}% · ${esc(bt.trend_same_window.trades)} trades</dd></div>` : ""}
+        ${bt.diagnostics ? `<div><dt>Failed breakouts / retests (diagnostic)</dt><dd>${esc(bt.diagnostics.failed_breakouts)} / ${esc(bt.diagnostics.retests)} of ${esc(bt.diagnostics.trades)} trades</dd></div>` : ""}
         <div><dt>Beats random entries</dt><dd>${num(rnd.beaten_pct, 1)}% of ${esc(rnd.runs)} random runs</dd></div>
         <div><dt>Fees and slippage</dt><dd>${num(m.costs_pct)}% of the account</dd></div></dl>
       ${list((bt.criteria || []).map((c) => `${c.id} ${c.passed ? "passed" : "failed"}: ${c.rule} (value ${num(c.value)})`))}

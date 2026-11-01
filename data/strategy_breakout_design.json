@@ -1,0 +1,3973 @@
+{
+ "strategy": "breakout",
+ "version": "breakout-1",
+ "config": {
+  "lookback": 20,
+  "volume_mult": 1.2,
+  "volume_window": 20,
+  "stop_atr": 1.0,
+  "trail_bars": 10,
+  "time_limit_bars": 60,
+  "risk_pct": 1.0,
+  "fee_pct": 0.1,
+  "slippage_pct": 0.05
+ },
+ "config_hash": "b4aa0a6c76185000",
+ "period": {
+  "kind": "design",
+  "first_day": 1624176000000,
+  "last_day": 1761681600000,
+  "last_day_close": 1761695999999,
+  "holdout_start": 1761696000000,
+  "bars": 9550
+ },
+ "metrics": {
+  "trades": 150,
+  "net_return_pct": 51.07858083705117,
+  "max_drawdown_pct": 23.71333042006431,
+  "win_rate_pct": 26.666666666666668,
+  "profit_factor": 1.3614834623380603,
+  "expectancy_r": 0.3804944202424102,
+  "avg_trade_pct": 0.33105867967042335,
+  "avg_win_pct": 3.908309781105145,
+  "avg_loss_pct": -0.9697599026694755,
+  "avg_win_r": 4.125306152263865,
+  "exposure_pct": 28.973821989528798,
+  "avg_bars_held": 18.446666666666665,
+  "fees_pct": 19.615138133680478,
+  "slippage_pct": 9.807589192166104,
+  "failed_breakouts": 45,
+  "retests": 85,
+  "exit_reasons": {
+   "stop": 85,
+   "trailing exit": 54,
+   "time limit": 10,
+   "end of design data": 1
+  },
+  "avg_reward_risk": null,
+  "buy_hold_return_pct": 215.84538285863113,
+  "costs_usd": null,
+  "costs_pct": 29.42272732584658
+ },
+ "criteria": [
+  {
+   "id": "C1",
+   "rule": "expectancy >= +0.15R per trade after fees and slippage",
+   "value": 0.3804944202424102,
+   "passed": true
+  },
+  {
+   "id": "C2",
+   "rule": "profit factor >= 1.3",
+   "value": 1.3614834623380603,
+   "passed": true
+  },
+  {
+   "id": "C3",
+   "rule": "max drawdown <= 15% of the account",
+   "value": 23.71333042006431,
+   "passed": false
+  },
+  {
+   "id": "C4",
+   "rule": "beats >= 90% of 1,000 random-entry runs (same trades, holding times, stop rule)",
+   "value": 100.0,
+   "passed": true
+  }
+ ],
+ "verdict": "FAIL",
+ "sample_warning": null,
+ "random_entries": {
+  "runs": 1000,
+  "beaten_pct": 100.0,
+  "median_return_pct": -31.089237183672353
+ },
+ "buy_and_hold": {
+  "net_return_pct": 215.84538285863113,
+  "max_drawdown_pct": 77.04339319608702
+ },
+ "h2_rule": {
+  "net_return_pct": 230.1710136450114,
+  "max_drawdown_pct": 38.23945343870113,
+  "entries": 3
+ },
+ "trend_same_window": {
+  "net_return_pct": -7.8176370980086896,
+  "max_drawdown_pct": 9.56600338932876,
+  "trades": 94,
+  "expectancy_r": -0.08150423123725815,
+  "profit_factor": 0.8160021750266131
+ },
+ "diagnostics": {
+  "failed_breakouts": 45,
+  "retests": 85,
+  "trades": 150
+ },
+ "walk_forward": [
+  {
+   "start": 1624176000000,
+   "end": 1639915199999,
+   "trades": 18,
+   "return_pct": 0.08679598145859835,
+   "sum_r": 0.49305594850052714
+  },
+  {
+   "start": 1639915200000,
+   "end": 1655654399999,
+   "trades": 13,
+   "return_pct": -3.1049977480969826,
+   "sum_r": -3.059574888244544
+  },
+  {
+   "start": 1655654400000,
+   "end": 1671393599999,
+   "trades": 15,
+   "return_pct": -6.854236566481308,
+   "sum_r": -7.051900312352281
+  },
+  {
+   "start": 1671393600000,
+   "end": 1687132799999,
+   "trades": 15,
+   "return_pct": 24.094127411536515,
+   "sum_r": 32.41441304884299
+  },
+  {
+   "start": 1687132800000,
+   "end": 1702871999999,
+   "trades": 20,
+   "return_pct": 35.40202132588184,
+   "sum_r": 33.035864519999066
+  },
+  {
+   "start": 1702872000000,
+   "end": 1718611199999,
+   "trades": 16,
+   "return_pct": 9.894017133334842,
+   "sum_r": 10.577998406994034
+  },
+  {
+   "start": 1718611200000,
+   "end": 1734350399999,
+   "trades": 21,
+   "return_pct": -2.399950444977983,
+   "sum_r": -2.609239957254944
+  },
+  {
+   "start": 1734350400000,
+   "end": 1750089599999,
+   "trades": 18,
+   "return_pct": -6.490533822136757,
+   "sum_r": -6.078390384541999
+  },
+  {
+   "start": 1750089600000,
+   "end": 1761695999999,
+   "trades": 14,
+   "return_pct": -0.7556974778715753,
+   "sum_r": -0.6480633455813183
+  }
+ ],
+ "sensitivity": [
+  {
+   "lookback": 20,
+   "volume_mult": 1.0,
+   "trades": 154,
+   "expectancy_r": 0.3897325884583852,
+   "profit_factor": 1.3782883287418908,
+   "max_drawdown_pct": 22.815972109009646,
+   "net_return_pct": 55.46081015210822,
+   "is_default": false
+  },
+  {
+   "lookback": 20,
+   "volume_mult": 1.2,
+   "trades": 150,
+   "expectancy_r": 0.3804944202424102,
+   "profit_factor": 1.3614834623380603,
+   "max_drawdown_pct": 23.71333042006431,
+   "net_return_pct": 51.07858083705117,
+   "is_default": true
+  },
+  {
+   "lookback": 20,
+   "volume_mult": 1.5,
+   "trades": 130,
+   "expectancy_r": 0.542189980190553,
+   "profit_factor": 1.4721314628960174,
+   "max_drawdown_pct": 19.197549221462054,
+   "net_return_pct": 58.65726739845436,
+   "is_default": false
+  },
+  {
+   "lookback": 40,
+   "volume_mult": 1.0,
+   "trades": 103,
+   "expectancy_r": 0.5783659684866245,
+   "profit_factor": 1.785519332053964,
+   "max_drawdown_pct": 11.198020843743373,
+   "net_return_pct": 71.07532570907229,
+   "is_default": false
+  },
+  {
+   "lookback": 40,
+   "volume_mult": 1.2,
+   "trades": 100,
+   "expectancy_r": 0.6138261147901428,
+   "profit_factor": 1.8344657125973154,
+   "max_drawdown_pct": 9.835239166562983,
+   "net_return_pct": 74.23363337957582,
+   "is_default": false
+  },
+  {
+   "lookback": 40,
+   "volume_mult": 1.5,
+   "trades": 93,
+   "expectancy_r": 0.6782617939799553,
+   "profit_factor": 1.8362926828353279,
+   "max_drawdown_pct": 9.591058995944891,
+   "net_return_pct": 63.17712072396897,
+   "is_default": false
+  },
+  {
+   "lookback": 55,
+   "volume_mult": 1.0,
+   "trades": 92,
+   "expectancy_r": 0.31613027620910994,
+   "profit_factor": 1.4436860090273214,
+   "max_drawdown_pct": 9.07094651454776,
+   "net_return_pct": 29.65269820072369,
+   "is_default": false
+  },
+  {
+   "lookback": 55,
+   "volume_mult": 1.2,
+   "trades": 89,
+   "expectancy_r": 0.3593768558863634,
+   "profit_factor": 1.5162028884455014,
+   "max_drawdown_pct": 8.480578080233084,
+   "net_return_pct": 33.49148128204522,
+   "is_default": false
+  },
+  {
+   "lookback": 55,
+   "volume_mult": 1.5,
+   "trades": 85,
+   "expectancy_r": 0.5176951266176677,
+   "profit_factor": 1.595412277594785,
+   "max_drawdown_pct": 8.92074578718,
+   "net_return_pct": 37.74079012604346,
+   "is_default": false
+  }
+ ],
+ "trade_list": [
+  {
+   "entry_time": 1624982400000,
+   "exit_time": 1625040000000,
+   "fill": 36267.114494999994,
+   "exit": 34618.07304323616,
+   "stop": 34635.39073860546,
+   "target": null,
+   "r": -1.0540550338633519,
+   "reason": "stop",
+   "bars": 5,
+   "return": -0.01054055033863352,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1625385600000,
+   "exit_time": 1625443200000,
+   "fill": 35620.821509999994,
+   "exit": 34377.547824564266,
+   "stop": 34394.74519716285,
+   "target": null,
+   "r": -1.0711177118587036,
+   "reason": "stop",
+   "bars": 5,
+   "return": -0.010711177118587037,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1627084800000,
+   "exit_time": 1627646400000,
+   "fill": 33650.91705,
+   "exit": 38630.675,
+   "stop": 32277.434529623624,
+   "target": null,
+   "r": 3.5730169733832717,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 39,
+   "return": 0.035730169733832716,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1627689600000,
+   "exit_time": 1627848000000,
+   "fill": 42227.46318,
+   "exit": 39744.225649631044,
+   "stop": 39764.10770348278,
+   "target": null,
+   "r": -1.041347561751569,
+   "reason": "stop",
+   "bars": 12,
+   "return": -0.01041347561751569,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1628193600000,
+   "exit_time": 1628784000000,
+   "fill": 40712.58611999999,
+   "exit": 44174.091905,
+   "stop": 39100.990947614126,
+   "target": null,
+   "r": 2.0952030415778276,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 41,
+   "return": 0.020952030415778276,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1628899200000,
+   "exit_time": 1629000000000,
+   "fill": 47823.889995,
+   "exit": 45787.417350245036,
+   "stop": 45810.32251150078,
+   "target": null,
+   "r": -1.0578656884141282,
+   "reason": "stop",
+   "bars": 8,
+   "return": -0.010578656884141283,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1629475200000,
+   "exit_time": 1629849600000,
+   "fill": 48742.73918999999,
+   "exit": 47650.17299500001,
+   "stop": 46378.53536651602,
+   "target": null,
+   "r": -0.5029004248173851,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 26,
+   "return": -0.005029004248173851,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1630555200000,
+   "exit_time": 1630627200000,
+   "fill": 49582.658939999994,
+   "exit": 48487.04821530879,
+   "stop": 48511.30386724241,
+   "target": null,
+   "r": -1.1141781676303308,
+   "reason": "stop",
+   "bars": 6,
+   "return": -0.011141781676303307,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1630684800000,
+   "exit_time": 1630699200000,
+   "fill": 50575.725224999995,
+   "exit": 49565.99334176874,
+   "stop": 49590.788736136805,
+   "target": null,
+   "r": -1.126847887500874,
+   "reason": "stop",
+   "bars": 2,
+   "return": -0.01126847887500874,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1630886400000,
+   "exit_time": 1631016000000,
+   "fill": 51782.75844,
+   "exit": 50206.52285167313,
+   "stop": 50231.63867100863,
+   "target": null,
+   "r": -1.0819440917253123,
+   "reason": "stop",
+   "bars": 10,
+   "return": -0.010819440917253122,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1631721600000,
+   "exit_time": 1631894400000,
+   "fill": 48312.133995,
+   "exit": 46773.31200077537,
+   "stop": 46796.71035595334,
+   "target": null,
+   "r": -1.0781852665623455,
+   "reason": "stop",
+   "bars": 13,
+   "return": -0.010781852665623455,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1631952000000,
+   "exit_time": 1632009600000,
+   "fill": 48646.321005,
+   "exit": 47696.818341540325,
+   "stop": 47720.67868088077,
+   "target": null,
+   "r": -1.129859531651558,
+   "reason": "stop",
+   "bars": 5,
+   "return": -0.011298595316515583,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1633075200000,
+   "exit_time": 1633939200000,
+   "fill": 44810.81421,
+   "exit": 56761.36512,
+   "stop": 43131.0755953023,
+   "target": null,
+   "r": 7.054061046755479,
+   "reason": "time limit (60 bars)",
+   "bars": 60,
+   "return": 0.07054061046755479,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1634270400000,
+   "exit_time": 1634832000000,
+   "fill": 59461.41584999999,
+   "exit": 62939.7144,
+   "stop": 57252.585221354384,
+   "target": null,
+   "r": 1.5193095279594824,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 39,
+   "return": 0.015193095279594827,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1635854400000,
+   "exit_time": 1635955200000,
+   "fill": 62944.75665,
+   "exit": 61167.883202647936,
+   "stop": 61198.48244386987,
+   "target": null,
+   "r": -1.0885954110365212,
+   "reason": "stop",
+   "bars": 8,
+   "return": -0.010885954110365213,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1636344000000,
+   "exit_time": 1636588800000,
+   "fill": 65232.6,
+   "exit": 64849.97879,
+   "stop": 62288.72321899158,
+   "target": null,
+   "r": -0.17415939148593365,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 17,
+   "return": -0.0017415939148593366,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1636948800000,
+   "exit_time": 1636977600000,
+   "fill": 65745.51633,
+   "exit": 64458.878988629775,
+   "stop": 64491.124550905224,
+   "target": null,
+   "r": -1.1295049603332914,
+   "reason": "stop",
+   "bars": 3,
+   "return": -0.011295049603332913,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1639339200000,
+   "exit_time": 1639353600000,
+   "fill": 50246.160525,
+   "exit": 48959.112427263026,
+   "stop": 48983.60422937771,
+   "target": null,
+   "r": -1.0979735125442291,
+   "reason": "stop",
+   "bars": 2,
+   "return": -0.010979735125442291,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1640073600000,
+   "exit_time": 1640491200000,
+   "fill": 48604.059884999995,
+   "exit": 49650.72222,
+   "stop": 47298.59720570358,
+   "target": null,
+   "r": 0.7264915098194594,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 29,
+   "return": 0.007264915098194595,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1641931200000,
+   "exit_time": 1642147200000,
+   "fill": 42993.52602,
+   "exit": 41807.49046866929,
+   "stop": 41828.40467100479,
+   "target": null,
+   "r": -1.0907332261273324,
+   "reason": "stop",
+   "bars": 16,
+   "return": -0.010907332261273325,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1642694400000,
+   "exit_time": 1642708800000,
+   "fill": 43330.354349999994,
+   "exit": 42258.48199597208,
+   "stop": 42279.62180687551,
+   "target": null,
+   "r": -1.1015754655623715,
+   "reason": "stop",
+   "bars": 2,
+   "return": -0.011015754655623714,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1643990400000,
+   "exit_time": 1644854400000,
+   "fill": 39510.625439999996,
+   "exit": 42563.677515,
+   "stop": 38420.86045894798,
+   "target": null,
+   "r": 2.7262554988479697,
+   "reason": "time limit (60 bars)",
+   "bars": 60,
+   "return": 0.027262554988479695,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1644926400000,
+   "exit_time": 1645084800000,
+   "fill": 44255.716799999995,
+   "exit": 42969.51430190162,
+   "stop": 42991.00980680502,
+   "target": null,
+   "r": -1.0859651576138152,
+   "reason": "stop",
+   "bars": 12,
+   "return": -0.01085965157613815,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1646064000000,
+   "exit_time": 1646323200000,
+   "fill": 40845.37248,
+   "exit": 42526.06633,
+   "stop": 39183.20168954188,
+   "target": null,
+   "r": 0.9609857304433584,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 18,
+   "return": 0.009609857304433585,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1646798400000,
+   "exit_time": 1646913600000,
+   "fill": 41238.338865,
+   "exit": 38588.82002403394,
+   "stop": 38608.124086076976,
+   "target": null,
+   "r": -1.0376894015372584,
+   "reason": "stop",
+   "bars": 9,
+   "return": -0.010376894015372585,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1647633600000,
+   "exit_time": 1647792000000,
+   "fill": 42063.731354999996,
+   "exit": 41319.629850000005,
+   "stop": 40921.72018074947,
+   "target": null,
+   "r": -0.7245856125252431,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 11,
+   "return": -0.007245856125252431,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1648137600000,
+   "exit_time": 1648756800000,
+   "fill": 44022.0,
+   "exit": 45559.18901000001,
+   "stop": 42749.984314180074,
+   "target": null,
+   "r": 1.1380424291363218,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 43,
+   "return": 0.011380424291363218,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1650384000000,
+   "exit_time": 1650571200000,
+   "fill": 41466.60294,
+   "exit": 40599.84415584141,
+   "stop": 40620.15423295789,
+   "target": null,
+   "r": -1.120948290617711,
+   "reason": "stop",
+   "bars": 14,
+   "return": -0.011209482906177112,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1651694400000,
+   "exit_time": 1651752000000,
+   "fill": 39879.159615000004,
+   "exit": 38525.474814792964,
+   "stop": 38544.747188387155,
+   "target": null,
+   "r": -1.0731985149987775,
+   "reason": "stop",
+   "bars": 5,
+   "return": -0.010731985149987777,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1653883200000,
+   "exit_time": 1654113600000,
+   "fill": 30368.246535,
+   "exit": 30111.646645,
+   "stop": 29317.841751809916,
+   "target": null,
+   "r": -0.30186437481465134,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 16,
+   "return": -0.003018643748146514,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1654488000000,
+   "exit_time": 1654560000000,
+   "fill": 31266.615495,
+   "exit": 30227.095322358797,
+   "stop": 30242.21643057408,
+   "target": null,
+   "r": -1.074790012694493,
+   "reason": "stop",
+   "bars": 6,
+   "return": -0.01074790012694493,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1656979200000,
+   "exit_time": 1657008000000,
+   "fill": 20246.828354999998,
+   "exit": 19697.747060108166,
+   "stop": 19707.600860538434,
+   "target": null,
+   "r": -1.0923513291826878,
+   "reason": "stop",
+   "bars": 3,
+   "return": -0.010923513291826878,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1657209600000,
+   "exit_time": 1657468800000,
+   "fill": 20898.884219999996,
+   "exit": 20887.99078,
+   "stop": 20319.419157364795,
+   "target": null,
+   "r": -0.09091197795501318,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 18,
+   "return": -0.0009091197795501319,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1658131200000,
+   "exit_time": 1658404800000,
+   "fill": 22257.052965,
+   "exit": 22596.61604,
+   "stop": 21185.646892545126,
+   "target": null,
+   "r": 0.27506788842417784,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 19,
+   "return": 0.0027506788842417786,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1659024000000,
+   "exit_time": 1659312000000,
+   "fill": 23759.723925,
+   "exit": 23284.71182,
+   "stop": 22889.475587359335,
+   "target": null,
+   "r": -0.5998937523515852,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 20,
+   "return": -0.005998937523515851,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1659945600000,
+   "exit_time": 1660046400000,
+   "fill": 23819.433764999998,
+   "exit": 23145.050541078857,
+   "stop": 23156.62885550661,
+   "target": null,
+   "r": -1.0883258375056009,
+   "reason": "stop",
+   "bars": 8,
+   "return": -0.010883258375056009,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1660190400000,
+   "exit_time": 1660262400000,
+   "fill": 24336.532184999996,
+   "exit": 23808.65570376599,
+   "stop": 23820.56598675937,
+   "target": null,
+   "r": -1.1163941961448691,
+   "reason": "stop",
+   "bars": 6,
+   "return": -0.011163941961448693,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1662710400000,
+   "exit_time": 1663084800000,
+   "fill": 20642.075879999997,
+   "exit": 20819.355115000002,
+   "stop": 19807.89518757989,
+   "target": null,
+   "r": 0.1628158086600832,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 26,
+   "return": 0.001628158086600832,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1664251200000,
+   "exit_time": 1664294400000,
+   "fill": 20109.08952,
+   "exit": 19012.17853836141,
+   "stop": 19021.689383052937,
+   "target": null,
+   "r": -1.0447232909924233,
+   "reason": "stop",
+   "bars": 4,
+   "return": -0.010447232909924232,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1664870400000,
+   "exit_time": 1665158400000,
+   "fill": 19977.673844999998,
+   "exit": 19567.551330000002,
+   "stop": 19430.773402866314,
+   "target": null,
+   "r": -0.8222113304949173,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 20,
+   "return": -0.008222113304949175,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1665720000000,
+   "exit_time": 1665763200000,
+   "fill": 19826.758424999996,
+   "exit": 19213.852669406995,
+   "stop": 19223.4644016078,
+   "target": null,
+   "r": -1.0806444973905889,
+   "reason": "stop",
+   "bars": 4,
+   "return": -0.010806444973905888,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1666555200000,
+   "exit_time": 1666612800000,
+   "fill": 19510.13019,
+   "exit": 19182.07736935533,
+   "stop": 19191.67320595831,
+   "target": null,
+   "r": -1.1516312927086365,
+   "reason": "stop",
+   "bars": 5,
+   "return": -0.011516312927086367,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1666713600000,
+   "exit_time": 1666944000000,
+   "fill": 19758.354239999997,
+   "exit": 20069.969995,
+   "stop": 19507.741607578304,
+   "target": null,
+   "r": 1.0844921428688408,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 16,
+   "return": 0.010844921428688408,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1667577600000,
+   "exit_time": 1667779200000,
+   "fill": 20847.95877,
+   "exit": 20895.127210000002,
+   "stop": 20522.160796239637,
+   "target": null,
+   "r": 0.01665251001221131,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 14,
+   "return": 0.0001665251001221131,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1669780800000,
+   "exit_time": 1670400000000,
+   "fill": 16853.672625,
+   "exit": 16754.648485,
+   "stop": 16388.17933527322,
+   "target": null,
+   "r": -0.2849288357901879,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 43,
+   "return": -0.0028492883579018793,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1670932800000,
+   "exit_time": 1671120000000,
+   "fill": 17453.042159999997,
+   "exit": 17419.715785,
+   "stop": 17141.505868283344,
+   "target": null,
+   "r": -0.21891232180108353,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 13,
+   "return": -0.0021891232180108354,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1671552000000,
+   "exit_time": 1671710400000,
+   "fill": 16926.609075,
+   "exit": 16679.661279768578,
+   "stop": 16688.00528240978,
+   "target": null,
+   "r": -1.175815616929507,
+   "reason": "stop",
+   "bars": 12,
+   "return": -0.01175815616929507,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1672646400000,
+   "exit_time": 1672761600000,
+   "fill": 16729.630634999998,
+   "exit": 16608.899659335726,
+   "stop": 16617.20826346746,
+   "target": null,
+   "r": -1.3704523740100214,
+   "reason": "stop",
+   "bars": 9,
+   "return": -0.009200178636713593,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1672804800000,
+   "exit_time": 1673006400000,
+   "fill": 16871.041305,
+   "exit": 16730.37063,
+   "stop": 16702.208851341675,
+   "target": null,
+   "r": -1.0322191211393654,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 14,
+   "return": -0.010319338670248836,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1673222400000,
+   "exit_time": 1674086400000,
+   "fill": 17136.393915,
+   "exit": 20667.131265000004,
+   "stop": 16953.060785011836,
+   "target": null,
+   "r": 19.052387449259697,
+   "reason": "time limit (60 bars)",
+   "bars": 60,
+   "return": 0.190523874492597,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1674259200000,
+   "exit_time": 1675108800000,
+   "fill": 22677.333,
+   "exit": 22773.46757,
+   "stop": 21274.092372619194,
+   "target": null,
+   "r": 0.036119086378370205,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 59,
+   "return": 0.000361190863783702,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1676476800000,
+   "exit_time": 1676851200000,
+   "fill": 22820.864729999998,
+   "exit": 24260.373745,
+   "stop": 22229.121400245516,
+   "target": null,
+   "r": 2.353094165172487,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 26,
+   "return": 0.02353094165172487,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1678665600000,
+   "exit_time": 1679515200000,
+   "fill": 22009.049024999997,
+   "exit": 26655.4656,
+   "stop": 21382.723318426513,
+   "target": null,
+   "r": 7.340832432902186,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 59,
+   "return": 0.07340832432902186,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1680091200000,
+   "exit_time": 1680192000000,
+   "fill": 28368.177,
+   "exit": 27691.46441045213,
+   "stop": 27705.31706898662,
+   "target": null,
+   "r": -1.1054706985200613,
+   "reason": "stop",
+   "bars": 8,
+   "return": -0.011054706985200615,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1681084800000,
+   "exit_time": 1681704000000,
+   "fill": 28337.921879999998,
+   "exit": 29967.8086,
+   "stop": 28002.467176661292,
+   "target": null,
+   "r": 4.684927574061145,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 43,
+   "return": 0.04684927574061146,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1682467200000,
+   "exit_time": 1682539200000,
+   "fill": 28314.950399999998,
+   "exit": 27589.355548081014,
+   "stop": 27603.157126644335,
+   "target": null,
+   "r": -1.0979299568016152,
+   "reason": "stop",
+   "bars": 6,
+   "return": -0.010979299568016153,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1683316800000,
+   "exit_time": 1683374400000,
+   "fill": 29576.44083,
+   "exit": 29106.67840658988,
+   "stop": 29121.23902610293,
+   "target": null,
+   "r": -1.1609038850957538,
+   "reason": "stop",
+   "bars": 5,
+   "return": -0.011609038850957537,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1684123200000,
+   "exit_time": 1684195200000,
+   "fill": 27246.4164,
+   "exit": 26871.60904997373,
+   "stop": 26885.05157576161,
+   "target": null,
+   "r": -1.186959401431061,
+   "reason": "stop",
+   "bars": 6,
+   "return": -0.011869594014310607,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1684814400000,
+   "exit_time": 1684886400000,
+   "fill": 27380.353334999996,
+   "exit": 27014.080652238736,
+   "stop": 27027.594449463464,
+   "target": null,
+   "r": -1.192506082755878,
+   "reason": "stop",
+   "bars": 6,
+   "return": -0.01192506082755878,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1685246400000,
+   "exit_time": 1685520000000,
+   "fill": 27200.83362,
+   "exit": 27154.326045,
+   "stop": 26688.201117077886,
+   "target": null,
+   "r": -0.19675446658192308,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 19,
+   "return": -0.001967544665819231,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1686988800000,
+   "exit_time": 1687852800000,
+   "fill": 26606.876790000002,
+   "exit": 30396.024385,
+   "stop": 26166.040916521553,
+   "target": null,
+   "r": 8.466063944334286,
+   "reason": "time limit (60 bars)",
+   "bars": 60,
+   "return": 0.08466063944334284,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1688414400000,
+   "exit_time": 1688486400000,
+   "fill": 31271.457915,
+   "exit": 30822.269120999616,
+   "stop": 30837.687964982106,
+   "target": null,
+   "r": -1.1786951148074896,
+   "reason": "stop",
+   "bars": 6,
+   "return": -0.011786951148074896,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1689019200000,
+   "exit_time": 1689192000000,
+   "fill": 30852.8187,
+   "exit": 30272.33626,
+   "stop": 30188.897434047612,
+   "target": null,
+   "r": -0.966391088617441,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 12,
+   "return": -0.00966391088617441,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1689278400000,
+   "exit_time": 1689350400000,
+   "fill": 31621.803,
+   "exit": 30795.723851801686,
+   "stop": 30811.12941650994,
+   "target": null,
+   "r": -1.095998060310554,
+   "reason": "stop",
+   "bars": 6,
+   "return": -0.01095998060310554,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1690934400000,
+   "exit_time": 1690977600000,
+   "fill": 29720.842995,
+   "exit": 29268.537088835405,
+   "stop": 29283.17867817449,
+   "target": null,
+   "r": -1.1682361723180472,
+   "reason": "stop",
+   "bars": 4,
+   "return": -0.011682361723180473,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1691496000000,
+   "exit_time": 1691971200000,
+   "fill": 29453.349315,
+   "exit": 29289.198075,
+   "stop": 29145.984707810607,
+   "target": null,
+   "r": -0.7251771419884157,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 33,
+   "return": -0.007251771419884157,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1692028800000,
+   "exit_time": 1692028800000,
+   "fill": 29614.8,
+   "exit": 29405.321671950547,
+   "stop": 29420.031687794442,
+   "target": null,
+   "r": -1.3785530442858758,
+   "reason": "stop",
+   "bars": 1,
+   "return": -0.00905730308838454,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1692820800000,
+   "exit_time": 1692878400000,
+   "fill": 26645.326004999995,
+   "exit": 25989.589938303227,
+   "stop": 26002.591233920186,
+   "target": null,
+   "r": -1.1021202127434175,
+   "reason": "stop",
+   "bars": 5,
+   "return": -0.011021202127434177,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1693324800000,
+   "exit_time": 1693497600000,
+   "fill": 27437.151719999998,
+   "exit": 26908.548995,
+   "stop": 25977.507294389263,
+   "target": null,
+   "r": -0.39937700955565164,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 12,
+   "return": -0.003993770095556517,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1694131200000,
+   "exit_time": 1694160000000,
+   "fill": 26268.1275,
+   "exit": 25806.433375636854,
+   "stop": 25819.343047160433,
+   "target": null,
+   "r": -1.144800542862036,
+   "reason": "stop",
+   "bars": 3,
+   "return": -0.01144800542862036,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1694520000000,
+   "exit_time": 1695297600000,
+   "fill": 26112.029489999997,
+   "exit": 26717.404615000003,
+   "stop": 25727.86383267622,
+   "target": null,
+   "r": 1.4383005881999495,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 54,
+   "return": 0.014383005881999497,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1695816000000,
+   "exit_time": 1695816000000,
+   "fill": 26780.073344999997,
+   "exit": 26523.17710371686,
+   "stop": 26536.445326380046,
+   "target": null,
+   "r": -1.2732504803388522,
+   "reason": "stop",
+   "bars": 1,
+   "return": -0.011571648745599275,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1695916800000,
+   "exit_time": 1696780800000,
+   "fill": 27033.499995,
+   "exit": 27878.793630000004,
+   "stop": 26598.93576320268,
+   "target": null,
+   "r": 1.8187906034191248,
+   "reason": "time limit (60 bars)",
+   "bars": 60,
+   "return": 0.018187906034191247,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1697414400000,
+   "exit_time": 1698278400000,
+   "fill": 27167.71707,
+   "exit": 34478.801975,
+   "stop": 26962.566823092817,
+   "target": null,
+   "r": 35.33721501800061,
+   "reason": "time limit (60 bars)",
+   "bars": 60,
+   "return": 0.26657360171651845,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1698883200000,
+   "exit_time": 1698926400000,
+   "fill": 35439.140715,
+   "exit": 34733.97733444597,
+   "stop": 34751.35301095144,
+   "target": null,
+   "r": -1.1272904328466156,
+   "reason": "stop",
+   "bars": 4,
+   "return": -0.011272904328466156,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1699387200000,
+   "exit_time": 1699920000000,
+   "fill": 35471.70699,
+   "exit": 36444.698535,
+   "stop": 34968.61198575504,
+   "target": null,
+   "r": 1.7910635801826909,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 37,
+   "return": 0.017910635801826908,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1700078400000,
+   "exit_time": 1700136000000,
+   "fill": 37518.739994999996,
+   "exit": 36835.09058982342,
+   "stop": 36853.51734849767,
+   "target": null,
+   "r": -1.139472986596142,
+   "reason": "stop",
+   "bars": 5,
+   "return": -0.01139472986596142,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1700438400000,
+   "exit_time": 1700481600000,
+   "fill": 37378.529924999995,
+   "exit": 36865.480527045474,
+   "stop": 36883.922488289616,
+   "target": null,
+   "r": -1.1873930006241629,
+   "reason": "stop",
+   "bars": 4,
+   "return": -0.011873930006241628,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1700510400000,
+   "exit_time": 1700568000000,
+   "fill": 37588.014615,
+   "exit": 37006.51932812829,
+   "stop": 37025.03184405032,
+   "target": null,
+   "r": -1.1653817037919108,
+   "reason": "stop",
+   "bars": 5,
+   "return": -0.011653817037919107,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1700841600000,
+   "exit_time": 1701000000000,
+   "fill": 38240.210549999996,
+   "exit": 37514.244050108246,
+   "stop": 37533.01055538594,
+   "target": null,
+   "r": -1.1336552044650108,
+   "reason": "stop",
+   "bars": 12,
+   "return": -0.011336552044650106,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1701201600000,
+   "exit_time": 1702065600000,
+   "fill": 38133.31713,
+   "exit": 43923.14744000001,
+   "stop": 37487.370037855406,
+   "target": null,
+   "r": 8.836286926348308,
+   "reason": "time limit (60 bars)",
+   "bars": 60,
+   "return": 0.08836286926348308,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1702958400000,
+   "exit_time": 1703001600000,
+   "fill": 43103.751104999996,
+   "exit": 42079.32291590508,
+   "stop": 42100.37310245631,
+   "target": null,
+   "r": -1.1058756124838487,
+   "reason": "stop",
+   "bars": 4,
+   "return": -0.011058756124838486,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1703088000000,
+   "exit_time": 1703448000000,
+   "fill": 44049.213599999995,
+   "exit": 42824.10300017607,
+   "stop": 42845.525763057594,
+   "target": null,
+   "r": -1.0899702365995485,
+   "reason": "stop",
+   "bars": 26,
+   "return": -0.010899702365995486,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1704139200000,
+   "exit_time": 1704283200000,
+   "fill": 43539.73899,
+   "exit": 42595.55179918762,
+   "stop": 42616.86022930227,
+   "target": null,
+   "r": -1.1164223573880887,
+   "reason": "stop",
+   "bars": 11,
+   "return": -0.011164223573880888,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1704715200000,
+   "exit_time": 1705075200000,
+   "fill": 44658.318,
+   "exit": 44439.769,
+   "stop": 43799.61722960454,
+   "target": null,
+   "r": -0.3582704215559354,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 25,
+   "return": -0.0035827042155593537,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1706270400000,
+   "exit_time": 1706760000000,
+   "fill": 41310.16475999999,
+   "exit": 41994.642175,
+   "stop": 39952.1584468046,
+   "target": null,
+   "r": 0.442687638653501,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 34,
+   "return": 0.00442687638653501,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1707336000000,
+   "exit_time": 1708185600000,
+   "fill": 43637.277734999996,
+   "exit": 50959.06772,
+   "stop": 43130.09331282691,
+   "target": null,
+   "r": 14.249636470653662,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 59,
+   "return": 0.14249636470653662,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1708963200000,
+   "exit_time": 1709668800000,
+   "fill": 52868.751165,
+   "exit": 61380.27451000001,
+   "stop": 51408.02777448077,
+   "target": null,
+   "r": 5.748709422897708,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 49,
+   "return": 0.05748709422897708,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1710144000000,
+   "exit_time": 1710259200000,
+   "fill": 71055.499995,
+   "exit": 68671.5115783699,
+   "stop": 68705.86451062521,
+   "target": null,
+   "r": -1.0740880638662078,
+   "reason": "stop",
+   "bars": 9,
+   "return": -0.01074088063866208,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1711382400000,
+   "exit_time": 1711555200000,
+   "fill": 69826.95602999999,
+   "exit": 68839.55300500001,
+   "stop": 66304.18490525332,
+   "target": null,
+   "r": -0.31965446921163426,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 12,
+   "return": -0.003196544692116343,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1712563200000,
+   "exit_time": 1712664000000,
+   "fill": 70733.98932,
+   "exit": 69287.58738039233,
+   "stop": 69322.24850464465,
+   "target": null,
+   "r": -1.1237356737530693,
+   "reason": "stop",
+   "bars": 8,
+   "return": -0.011237356737530693,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1713513600000,
+   "exit_time": 1713974400000,
+   "fill": 64579.45359,
+   "exit": 64577.79495,
+   "stop": 62580.81277192128,
+   "target": null,
+   "r": -0.06545242514647946,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 32,
+   "return": -0.0006545242514647946,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1715788800000,
+   "exit_time": 1716148800000,
+   "fill": 64757.48256,
+   "exit": 66000.992995,
+   "stop": 62529.92359001772,
+   "target": null,
+   "r": 0.4995387212819115,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 25,
+   "return": 0.004995387212819114,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1716235200000,
+   "exit_time": 1716480000000,
+   "fill": 70035.0,
+   "exit": 68041.95200500001,
+   "stop": 66840.71546545738,
+   "target": null,
+   "r": -0.6671681636245117,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 17,
+   "return": -0.006671681636245117,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1716825600000,
+   "exit_time": 1716854400000,
+   "fill": 70409.04693,
+   "exit": 68736.19955772617,
+   "stop": 68770.58485015124,
+   "target": null,
+   "r": -1.1059106225569766,
+   "reason": "stop",
+   "bars": 3,
+   "return": -0.011059106225569769,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1717430400000,
+   "exit_time": 1717488000000,
+   "fill": 69650.077635,
+   "exit": 68542.52640249155,
+   "stop": 68576.8148098965,
+   "target": null,
+   "r": -1.1607071515085778,
+   "reason": "stop",
+   "bars": 5,
+   "return": -0.011607071515085778,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1717516800000,
+   "exit_time": 1717776000000,
+   "fill": 70480.22249999999,
+   "exit": 69449.17265610796,
+   "stop": 69483.91461341466,
+   "target": null,
+   "r": -1.17531864879787,
+   "reason": "stop",
+   "bars": 19,
+   "return": -0.0117531864879787,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1719792000000,
+   "exit_time": 1719964800000,
+   "fill": 62803.396004999995,
+   "exit": 61723.30434752472,
+   "stop": 61754.18143824384,
+   "target": null,
+   "r": -1.1481144048086411,
+   "reason": "stop",
+   "bars": 13,
+   "return": -0.01148114404808641,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1720598400000,
+   "exit_time": 1720627200000,
+   "fill": 59007.478995,
+   "exit": 57333.33497321079,
+   "stop": 57362.01598120139,
+   "target": null,
+   "r": -1.0881343553411216,
+   "reason": "stop",
+   "bars": 3,
+   "return": -0.010881343553411218,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1720944000000,
+   "exit_time": 1721318400000,
+   "fill": 60092.041005,
+   "exit": 63506.350940000004,
+   "stop": 58969.1964371385,
+   "target": null,
+   "r": 2.930691956164772,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 26,
+   "return": 0.029306919561647722,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1721419200000,
+   "exit_time": 1721764800000,
+   "fill": 67190.828625,
+   "exit": 65503.232,
+   "stop": 65049.650638598185,
+   "target": null,
+   "r": -0.8501351579295494,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 24,
+   "return": -0.008501351579295494,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1722009600000,
+   "exit_time": 1722268800000,
+   "fill": 67593.78,
+   "exit": 66499.79378827137,
+   "stop": 66533.06031843058,
+   "target": null,
+   "r": -1.1577797667521916,
+   "reason": "stop",
+   "bars": 19,
+   "return": -0.011577797667521915,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1724126400000,
+   "exit_time": 1724155200000,
+   "fill": 60649.499595,
+   "exit": 59348.535754888326,
+   "stop": 59378.22486732198,
+   "target": null,
+   "r": -1.1177457118627225,
+   "reason": "stop",
+   "bars": 3,
+   "return": -0.011177457118627224,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1724270400000,
+   "exit_time": 1724284800000,
+   "fill": 61600.784999999996,
+   "exit": 60321.675187304994,
+   "stop": 60351.85111286142,
+   "target": null,
+   "r": -1.1217825757712396,
+   "reason": "stop",
+   "bars": 2,
+   "return": -0.011217825757712397,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1724443200000,
+   "exit_time": 1724716800000,
+   "fill": 63660.65441999999,
+   "exit": 62802.583000000006,
+   "stop": 61265.37375691417,
+   "target": null,
+   "r": -0.41103102137167385,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 19,
+   "return": -0.004110310213716739,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1725912000000,
+   "exit_time": 1726027200000,
+   "fill": 57118.074765,
+   "exit": 56085.96229140999,
+   "stop": 56114.019301060514,
+   "target": null,
+   "r": -1.140690481532449,
+   "reason": "stop",
+   "bars": 9,
+   "return": -0.011406904815324491,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1726243200000,
+   "exit_time": 1726444800000,
+   "fill": 59695.843004999995,
+   "exit": 59102.434,
+   "stop": 57693.316276987855,
+   "target": null,
+   "r": -0.3556543201358301,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 14,
+   "return": -0.003556543201358301,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1726588800000,
+   "exit_time": 1726646400000,
+   "fill": 61166.05774499999,
+   "exit": 59505.60419142939,
+   "stop": 59535.37187736807,
+   "target": null,
+   "r": -1.0922552594961588,
+   "reason": "stop",
+   "bars": 5,
+   "return": -0.010922552594961587,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1726718400000,
+   "exit_time": 1727582400000,
+   "fill": 62149.03899,
+   "exit": 65783.022035,
+   "stop": 60718.28000875344,
+   "target": null,
+   "r": 2.4504832958800162,
+   "reason": "time limit (60 bars)",
+   "bars": 60,
+   "return": 0.02450483295880016,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1728273600000,
+   "exit_time": 1728331200000,
+   "fill": 63562.275255,
+   "exit": 62290.86175997042,
+   "stop": 62322.022771356096,
+   "target": null,
+   "r": -1.1265985357588861,
+   "reason": "stop",
+   "bars": 5,
+   "return": -0.01126598535758886,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1728878400000,
+   "exit_time": 1729526400000,
+   "fill": 64332.149999999994,
+   "exit": 67307.34949000001,
+   "stop": 62728.64355239226,
+   "target": null,
+   "r": 1.7733386696089197,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 45,
+   "return": 0.017733386696089197,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1730145600000,
+   "exit_time": 1730390400000,
+   "fill": 69664.804995,
+   "exit": 70584.699995,
+   "stop": 68551.48877371554,
+   "target": null,
+   "r": 0.7002911482871687,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 17,
+   "return": 0.007002911482871687,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1730865600000,
+   "exit_time": 1731729600000,
+   "fill": 74385.704265,
+   "exit": 91206.41398,
+   "stop": 69225.44401029695,
+   "target": null,
+   "r": 3.227573179390631,
+   "reason": "time limit (60 bars)",
+   "bars": 60,
+   "return": 0.03227573179390631,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1731945600000,
+   "exit_time": 1731945600000,
+   "fill": 92355.66475499999,
+   "exit": 90542.20228023455,
+   "stop": 90587.49602824867,
+   "target": null,
+   "r": -1.1290553393445768,
+   "reason": "stop",
+   "bars": 1,
+   "return": -0.011290553393445767,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1732046400000,
+   "exit_time": 1732464000000,
+   "fill": 93274.483935,
+   "exit": 95853.56924000001,
+   "stop": 91150.64289884629,
+   "target": null,
+   "r": 1.1252994980044495,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 29,
+   "return": 0.011252994980044494,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1732896000000,
+   "exit_time": 1733011200000,
+   "fill": 98068.46973,
+   "exit": 95808.94163718767,
+   "stop": 95856.87007222378,
+   "target": null,
+   "r": -1.1093352703112824,
+   "reason": "stop",
+   "bars": 9,
+   "return": -0.011093352703112826,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1733356800000,
+   "exit_time": 1733428800000,
+   "fill": 98636.61366,
+   "exit": 96690.09388256638,
+   "stop": 96738.46311412343,
+   "target": null,
+   "r": -1.128385991105397,
+   "reason": "stop",
+   "bars": 6,
+   "return": -0.01128385991105397,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1734307200000,
+   "exit_time": 1734552000000,
+   "fill": 104516.221995,
+   "exit": 102766.41109000001,
+   "stop": 102186.95743062915,
+   "target": null,
+   "r": -0.8402195130691809,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 17,
+   "return": -0.008402195130691808,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1735934400000,
+   "exit_time": 1736265600000,
+   "fill": 98641.31601,
+   "exit": 96602.03723146327,
+   "stop": 96650.3624126696,
+   "target": null,
+   "r": -1.1223376249322805,
+   "reason": "stop",
+   "bars": 24,
+   "return": -0.011223376249322806,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1736856000000,
+   "exit_time": 1737331200000,
+   "fill": 96596.31401999999,
+   "exit": 101280.90421500002,
+   "stop": 94385.29326552042,
+   "target": null,
+   "r": 2.02924959780449,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 33,
+   "return": 0.020292495978044903,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1737360000000,
+   "exit_time": 1737388800000,
+   "fill": 107174.210325,
+   "exit": 103954.7035148373,
+   "stop": 104006.70686827143,
+   "target": null,
+   "r": -1.083072448339403,
+   "reason": "stop",
+   "bars": 3,
+   "return": -0.01083072448339403,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1740081600000,
+   "exit_time": 1740153600000,
+   "fill": 98472.0114,
+   "exit": 96989.60111891068,
+   "stop": 97038.12017900018,
+   "target": null,
+   "r": -1.1701528463493134,
+   "reason": "stop",
+   "bars": 6,
+   "return": -0.011701528463493132,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1740931200000,
+   "exit_time": 1741032000000,
+   "fill": 87471.71399999999,
+   "exit": 85235.13762612104,
+   "stop": 85277.77651437822,
+   "target": null,
+   "r": -1.0981549115663352,
+   "reason": "stop",
+   "bars": 8,
+   "return": -0.01098154911566335,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1741968000000,
+   "exit_time": 1742112000000,
+   "fill": 84766.94228999999,
+   "exit": 82754.28450245185,
+   "stop": 82795.68234362366,
+   "target": null,
+   "r": -1.105982505426691,
+   "reason": "stop",
+   "bars": 11,
+   "return": -0.011059825054266911,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1742414400000,
+   "exit_time": 1742486400000,
+   "fill": 85476.09669,
+   "exit": 83847.3920519392,
+   "stop": 83889.33672029934,
+   "target": null,
+   "r": -1.1331443703750166,
+   "reason": "stop",
+   "bars": 6,
+   "return": -0.011331443703750168,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1742788800000,
+   "exit_time": 1743134400000,
+   "fill": 86575.336035,
+   "exit": 85259.48260059067,
+   "stop": 85302.13366742438,
+   "target": null,
+   "r": -1.168461739415167,
+   "reason": "stop",
+   "bars": 25,
+   "return": -0.011684617394151673,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1743523200000,
+   "exit_time": 1743624000000,
+   "fill": 85323.52044,
+   "exit": 83328.66700923364,
+   "stop": 83370.35218532631,
+   "target": null,
+   "r": -1.1076903451807545,
+   "reason": "stop",
+   "bars": 8,
+   "return": -0.011076903451807544,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1745208000000,
+   "exit_time": 1746072000000,
+   "fill": 87249.16278,
+   "exit": 94735.20870000002,
+   "stop": 84889.972417426,
+   "target": null,
+   "r": 3.096003469830612,
+   "reason": "time limit (60 bars)",
+   "bars": 60,
+   "return": 0.030960034698306122,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1746100800000,
+   "exit_time": 1746273600000,
+   "fill": 96228.10000499999,
+   "exit": 95894.038995,
+   "stop": 94610.84955695337,
+   "target": null,
+   "r": -0.325356625892745,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 12,
+   "return": -0.00325356625892745,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1746576000000,
+   "exit_time": 1747065600000,
+   "fill": 96882.43701,
+   "exit": 102476.00636500001,
+   "stop": 95507.91741067597,
+   "target": null,
+   "r": 3.924433608860769,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 34,
+   "return": 0.03924433608860769,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1747584000000,
+   "exit_time": 1747598400000,
+   "fill": 105570.75899999999,
+   "exit": 103585.5146084022,
+   "stop": 103637.33327503971,
+   "target": null,
+   "r": -1.134980587501626,
+   "reason": "stop",
+   "bars": 2,
+   "return": -0.011349805875016258,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1747612800000,
+   "exit_time": 1747612800000,
+   "fill": 106507.497135,
+   "exit": 104758.138725357,
+   "stop": 104810.54399735566,
+   "target": null,
+   "r": -1.1553790154895012,
+   "reason": "stop",
+   "bars": 1,
+   "return": -0.011553790154895011,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1747843200000,
+   "exit_time": 1747843200000,
+   "fill": 109027.82667,
+   "exit": 106495.24327514223,
+   "stop": 106548.51753390918,
+   "target": null,
+   "r": -1.108416221599498,
+   "reason": "stop",
+   "bars": 1,
+   "return": -0.01108416221599498,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1747886400000,
+   "exit_time": 1747987200000,
+   "fill": 111836.73041999999,
+   "exit": 108966.31374316964,
+   "stop": 109020.82415524726,
+   "target": null,
+   "r": -1.097770817049887,
+   "reason": "stop",
+   "bars": 8,
+   "return": -0.01097770817049887,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1748966400000,
+   "exit_time": 1748980800000,
+   "fill": 106663.96532999999,
+   "exit": 105390.71723908045,
+   "stop": 105443.43895855972,
+   "target": null,
+   "r": -1.2169362401698114,
+   "reason": "stop",
+   "bars": 2,
+   "return": -0.012169362401698115,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1749470400000,
+   "exit_time": 1749700800000,
+   "fill": 107813.089605,
+   "exit": 107806.10998,
+   "stop": 105592.44781518097,
+   "target": null,
+   "r": -0.10024076174983988,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 16,
+   "return": -0.0010024076174983988,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1750089600000,
+   "exit_time": 1750118400000,
+   "fill": 107478.67248,
+   "exit": 106214.31037306947,
+   "stop": 106267.44409511703,
+   "target": null,
+   "r": -1.2202942964603742,
+   "reason": "stop",
+   "bars": 3,
+   "return": -0.012202942964603742,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1751198400000,
+   "exit_time": 1751212800000,
+   "fill": 108531.35856,
+   "exit": 107471.5311276021,
+   "stop": 107525.29377448933,
+   "target": null,
+   "r": -1.268139329057118,
+   "reason": "stop",
+   "bars": 2,
+   "return": -0.011743663612342508,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1751486400000,
+   "exit_time": 1751630400000,
+   "fill": 109730.97807,
+   "exit": 107816.92141964423,
+   "stop": 107870.85684806826,
+   "target": null,
+   "r": -1.1459492664847528,
+   "reason": "stop",
+   "bars": 11,
+   "return": -0.011459492664847526,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1752091200000,
+   "exit_time": 1752552000000,
+   "fill": 111805.864995,
+   "exit": 117089.88577000001,
+   "stop": 108847.37362512713,
+   "target": null,
+   "r": 1.7086833768429353,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 32,
+   "return": 0.017086833768429354,
+   "failed_breakout": false,
+   "retest": false
+  },
+  {
+   "entry_time": 1754568000000,
+   "exit_time": 1755187200000,
+   "fill": 116577.79976999998,
+   "exit": 118198.13137,
+   "stop": 114680.73700675784,
+   "target": null,
+   "r": 0.7303689133047301,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 43,
+   "return": 0.0073036891330473,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1755878400000,
+   "exit_time": 1756036800000,
+   "fill": 116428.93537499999,
+   "exit": 114465.07130130645,
+   "stop": 114522.33246754021,
+   "target": null,
+   "r": -1.1511353894314367,
+   "reason": "stop",
+   "bars": 12,
+   "return": -0.01151135389431437,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1756785600000,
+   "exit_time": 1756814400000,
+   "fill": 110377.35109499999,
+   "exit": 108667.06087074641,
+   "stop": 108721.42158153717,
+   "target": null,
+   "r": -1.1651067394678878,
+   "reason": "stop",
+   "bars": 3,
+   "return": -0.01165106739467888,
+   "failed_breakout": true,
+   "retest": true
+  },
+  {
+   "entry_time": 1756828800000,
+   "exit_time": 1756987200000,
+   "fill": 110884.57458,
+   "exit": 109347.84791441323,
+   "stop": 109402.54918900772,
+   "target": null,
+   "r": -1.1855121368094819,
+   "reason": "stop",
+   "bars": 12,
+   "return": -0.011855121368094816,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1757059200000,
+   "exit_time": 1757073600000,
+   "fill": 113010.79716,
+   "exit": 111302.98354943222,
+   "stop": 111358.66288087265,
+   "target": null,
+   "r": -1.1694735807417187,
+   "reason": "stop",
+   "bars": 2,
+   "return": -0.011694735807417186,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1757404800000,
+   "exit_time": 1757419200000,
+   "fill": 113047.60555499999,
+   "exit": 111976.17070382896,
+   "stop": 112032.18679722756,
+   "target": null,
+   "r": -1.276772383320896,
+   "reason": "stop",
+   "bars": 2,
+   "return": -0.01145679696272514,
+   "failed_breakout": true,
+   "retest": false
+  },
+  {
+   "entry_time": 1757520000000,
+   "exit_time": 1758312000000,
+   "fill": 113910.91699499999,
+   "exit": 115067.567435,
+   "stop": 112294.53846972814,
+   "target": null,
+   "r": 0.5739199952647182,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 55,
+   "return": 0.005739199952647182,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1759104000000,
+   "exit_time": 1759852800000,
+   "fill": 112220.04198,
+   "exit": 121785.086995,
+   "stop": 110944.23990301014,
+   "target": null,
+   "r": 7.31386165167624,
+   "reason": "trailing exit (close below the 10-bar low)",
+   "bars": 52,
+   "return": 0.0731386165167624,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1761062400000,
+   "exit_time": 1761076800000,
+   "fill": 113479.3113,
+   "exit": 109944.04777598186,
+   "stop": 109999.04729963167,
+   "target": null,
+   "r": -1.0800005064835034,
+   "reason": "stop",
+   "bars": 2,
+   "return": -0.010800005064835035,
+   "failed_breakout": false,
+   "retest": true
+  },
+  {
+   "entry_time": 1761480000000,
+   "exit_time": 1761696000000,
+   "fill": 113342.73304499999,
+   "exit": 112842.00077500001,
+   "stop": 111016.70026673346,
+   "target": null,
+   "r": -0.3125136544127726,
+   "reason": "end of design data",
+   "bars": 15,
+   "return": -0.003125136544127726,
+   "failed_breakout": false,
+   "retest": false
+  }
+ ],
+ "equity_sample": [
+  {
+   "time": 1624176000000,
+   "equity": 1.0
+  },
+  {
+   "time": 1624507200000,
+   "equity": 1.0
+  },
+  {
+   "time": 1624852800000,
+   "equity": 1.0
+  },
+  {
+   "time": 1625198400000,
+   "equity": 0.9894594496613665
+  },
+  {
+   "time": 1625544000000,
+   "equity": 0.9788611742443838
+  },
+  {
+   "time": 1625889600000,
+   "equity": 0.9788611742443838
+  },
+  {
+   "time": 1626235200000,
+   "equity": 0.9788611742443838
+  },
+  {
+   "time": 1626580800000,
+   "equity": 0.9788611742443838
+  },
+  {
+   "time": 1626926400000,
+   "equity": 0.9788611742443838
+  },
+  {
+   "time": 1627272000000,
+   "equity": 1.010277829706467
+  },
+  {
+   "time": 1627617600000,
+   "equity": 1.0214929775796262
+  },
+  {
+   "time": 1627963200000,
+   "equity": 1.0032784931576408
+  },
+  {
+   "time": 1628308800000,
+   "equity": 1.018155767398508
+  },
+  {
+   "time": 1628654400000,
+   "equity": 1.0376825784289478
+  },
+  {
+   "time": 1629000000000,
+   "equity": 1.0134635047231737
+  },
+  {
+   "time": 1629331200000,
+   "equity": 1.0134635047231737
+  },
+  {
+   "time": 1629676800000,
+   "equity": 1.0194354283075404
+  },
+  {
+   "time": 1630022400000,
+   "equity": 1.0083667924525517
+  },
+  {
+   "time": 1630368000000,
+   "equity": 1.0083667924525517
+  },
+  {
+   "time": 1630713600000,
+   "equity": 0.9858956312924343
+  },
+  {
+   "time": 1631059200000,
+   "equity": 0.9752287917590878
+  },
+  {
+   "time": 1631404800000,
+   "equity": 0.9752287917590878
+  },
+  {
+   "time": 1631750400000,
+   "equity": 0.9699724668326407
+  },
+  {
+   "time": 1632096000000,
+   "equity": 0.9538141053186113
+  },
+  {
+   "time": 1632441600000,
+   "equity": 0.9538141053186113
+  },
+  {
+   "time": 1632787200000,
+   "equity": 0.9538141053186113
+  },
+  {
+   "time": 1633132800000,
+   "equity": 0.9685433646493989
+  },
+  {
+   "time": 1633478400000,
+   "equity": 0.9911828291957105
+  },
+  {
+   "time": 1633824000000,
+   "equity": 1.0112276090435823
+  },
+  {
+   "time": 1634169600000,
+   "equity": 1.0210967345803508
+  },
+  {
+   "time": 1634500800000,
+   "equity": 1.0299501244285045
+  },
+  {
+   "time": 1634846400000,
+   "equity": 1.0366103545585132
+  },
+  {
+   "time": 1635192000000,
+   "equity": 1.0366103545585132
+  },
+  {
+   "time": 1635537600000,
+   "equity": 1.0366103545585132
+  },
+  {
+   "time": 1635883200000,
+   "equity": 1.037307603645857
+  },
+  {
+   "time": 1636228800000,
+   "equity": 1.0253258618084597
+  },
+  {
+   "time": 1636574400000,
+   "equity": 1.0235400823138223
+  },
+  {
+   "time": 1636920000000,
+   "equity": 1.0235401605267862
+  },
+  {
+   "time": 1637265600000,
+   "equity": 1.0119792236426328
+  },
+  {
+   "time": 1637611200000,
+   "equity": 1.0119792236426328
+  },
+  {
+   "time": 1637956800000,
+   "equity": 1.0119792236426328
+  },
+  {
+   "time": 1638302400000,
+   "equity": 1.0119792236426328
+  },
+  {
+   "time": 1638648000000,
+   "equity": 1.0119792236426328
+  },
+  {
+   "time": 1638993600000,
+   "equity": 1.0119792236426328
+  },
+  {
+   "time": 1639339200000,
+   "equity": 1.0094336580408965
+  },
+  {
+   "time": 1639670400000,
+   "equity": 1.000867959814586
+  },
+  {
+   "time": 1640016000000,
+   "equity": 1.000867959814586
+  },
+  {
+   "time": 1640361600000,
+   "equity": 1.0192455590608913
+  },
+  {
+   "time": 1640707200000,
+   "equity": 1.0081391805671422
+  },
+  {
+   "time": 1641052800000,
+   "equity": 1.0081391805671422
+  },
+  {
+   "time": 1641398400000,
+   "equity": 1.0081391805671422
+  },
+  {
+   "time": 1641744000000,
+   "equity": 1.0081391805671422
+  },
+  {
+   "time": 1642089600000,
+   "equity": 1.0046789794974313
+  },
+  {
+   "time": 1642435200000,
+   "equity": 0.9971430715590887
+  },
+  {
+   "time": 1642780800000,
+   "equity": 0.9861587881262386
+  },
+  {
+   "time": 1643126400000,
+   "equity": 0.9861587881262386
+  },
+  {
+   "time": 1643472000000,
+   "equity": 0.9861587881262386
+  },
+  {
+   "time": 1643817600000,
+   "equity": 0.9861587881262386
+  },
+  {
+   "time": 1644163200000,
+   "equity": 1.0052095758407285
+  },
+  {
+   "time": 1644508800000,
+   "equity": 1.029208680881828
+  },
+  {
+   "time": 1644840000000,
+   "equity": 1.013043803633255
+  },
+  {
+   "time": 1645185600000,
+   "equity": 1.0020426914836242
+  },
+  {
+   "time": 1645531200000,
+   "equity": 1.0020426914836242
+  },
+  {
+   "time": 1645876800000,
+   "equity": 1.0020426914836242
+  },
+  {
+   "time": 1646222400000,
+   "equity": 1.021177885761371
+  },
+  {
+   "time": 1646568000000,
+   "equity": 1.0116721787617324
+  },
+  {
+   "time": 1646913600000,
+   "equity": 1.001174163784421
+  },
+  {
+   "time": 1647259200000,
+   "equity": 1.001174163784421
+  },
+  {
+   "time": 1647604800000,
+   "equity": 1.001174163784421
+  },
+  {
+   "time": 1647950400000,
+   "equity": 0.993919799837319
+  },
+  {
+   "time": 1648296000000,
+   "equity": 0.9944900467500573
+  },
+  {
+   "time": 1648641600000,
+   "equity": 1.0175489107732307
+  },
+  {
+   "time": 1648987200000,
+   "equity": 1.0052310288710546
+  },
+  {
+   "time": 1649332800000,
+   "equity": 1.0052310288710546
+  },
+  {
+   "time": 1649664000000,
+   "equity": 1.0052310288710546
+  },
+  {
+   "time": 1650009600000,
+   "equity": 1.0052310288710546
+  },
+  {
+   "time": 1650355200000,
+   "equity": 1.0052310288710546
+  },
+  {
+   "time": 1650700800000,
+   "equity": 0.9939629088361658
+  },
+  {
+   "time": 1651046400000,
+   "equity": 0.9939629088361658
+  },
+  {
+   "time": 1651392000000,
+   "equity": 0.9939629088361658
+  },
+  {
+   "time": 1651737600000,
+   "equity": 0.9903469553569999
+  },
+  {
+   "time": 1652083200000,
+   "equity": 0.9832957136588973
+  },
+  {
+   "time": 1652428800000,
+   "equity": 0.9832957136588973
+  },
+  {
+   "time": 1652774400000,
+   "equity": 0.9832957136588973
+  },
+  {
+   "time": 1653120000000,
+   "equity": 0.9832957136588973
+  },
+  {
+   "time": 1653465600000,
+   "equity": 0.9832957136588973
+  },
+  {
+   "time": 1653811200000,
+   "equity": 0.9832957136588973
+  },
+  {
+   "time": 1654156800000,
+   "equity": 0.9803274942002816
+  },
+  {
+   "time": 1654502400000,
+   "equity": 0.9808225660133676
+  },
+  {
+   "time": 1654833600000,
+   "equity": 0.9697910322009189
+  },
+  {
+   "time": 1655179200000,
+   "equity": 0.9697910322009189
+  },
+  {
+   "time": 1655524800000,
+   "equity": 0.9697910322009189
+  },
+  {
+   "time": 1655870400000,
+   "equity": 0.9697910322009189
+  },
+  {
+   "time": 1656216000000,
+   "equity": 0.9697910322009189
+  },
+  {
+   "time": 1656561600000,
+   "equity": 0.9697910322009189
+  },
+  {
+   "time": 1656907200000,
+   "equity": 0.9697910322009189
+  },
+  {
+   "time": 1657252800000,
+   "equity": 0.9731875787670021
+  },
+  {
+   "time": 1657598400000,
+   "equity": 0.9583254815442959
+  },
+  {
+   "time": 1657944000000,
+   "equity": 0.9583254815442959
+  },
+  {
+   "time": 1658289600000,
+   "equity": 0.9678675210804037
+  },
+  {
+   "time": 1658635200000,
+   "equity": 0.9609615272106107
+  },
+  {
+   "time": 1658980800000,
+   "equity": 0.9609615272106107
+  },
+  {
+   "time": 1659326400000,
+   "equity": 0.9551967790463718
+  },
+  {
+   "time": 1659672000000,
+   "equity": 0.9551967790463718
+  },
+  {
+   "time": 1660003200000,
+   "equity": 0.9544756794362442
+  },
+  {
+   "time": 1660348800000,
+   "equity": 0.9342534207685516
+  },
+  {
+   "time": 1660694400000,
+   "equity": 0.9342534207685516
+  },
+  {
+   "time": 1661040000000,
+   "equity": 0.9342534207685516
+  },
+  {
+   "time": 1661385600000,
+   "equity": 0.9342534207685516
+  },
+  {
+   "time": 1661731200000,
+   "equity": 0.9342534207685516
+  },
+  {
+   "time": 1662076800000,
+   "equity": 0.9342534207685516
+  },
+  {
+   "time": 1662422400000,
+   "equity": 0.9342534207685516
+  },
+  {
+   "time": 1662768000000,
+   "equity": 0.9410672609095367
+  },
+  {
+   "time": 1663113600000,
+   "equity": 0.9357745330305104
+  },
+  {
+   "time": 1663459200000,
+   "equity": 0.9357745330305104
+  },
+  {
+   "time": 1663804800000,
+   "equity": 0.9357745330305104
+  },
+  {
+   "time": 1664150400000,
+   "equity": 0.9357745330305104
+  },
+  {
+   "time": 1664496000000,
+   "equity": 0.9259982785327651
+  },
+  {
+   "time": 1664841600000,
+   "equity": 0.9259982785327651
+  },
+  {
+   "time": 1665172800000,
+   "equity": 0.9183846157664808
+  },
+  {
+   "time": 1665518400000,
+   "equity": 0.9183846157664808
+  },
+  {
+   "time": 1665864000000,
+   "equity": 0.9084601429513186
+  },
+  {
+   "time": 1666209600000,
+   "equity": 0.9084601429513186
+  },
+  {
+   "time": 1666555200000,
+   "equity": 0.9087854663856781
+  },
+  {
+   "time": 1666900800000,
+   "equity": 0.9154323164109214
+  },
+  {
+   "time": 1667246400000,
+   "equity": 0.907736749759811
+  },
+  {
+   "time": 1667592000000,
+   "equity": 0.9146462489160593
+  },
+  {
+   "time": 1667937600000,
+   "equity": 0.9078879107129493
+  },
+  {
+   "time": 1668283200000,
+   "equity": 0.9078879107129493
+  },
+  {
+   "time": 1668628800000,
+   "equity": 0.9078879107129493
+  },
+  {
+   "time": 1668974400000,
+   "equity": 0.9078879107129493
+  },
+  {
+   "time": 1669320000000,
+   "equity": 0.9078879107129493
+  },
+  {
+   "time": 1669665600000,
+   "equity": 0.9078879107129493
+  },
+  {
+   "time": 1670011200000,
+   "equity": 0.9117218584821072
+  },
+  {
+   "time": 1670342400000,
+   "equity": 0.9093496665708305
+  },
+  {
+   "time": 1670688000000,
+   "equity": 0.9053010762586751
+  },
+  {
+   "time": 1671033600000,
+   "equity": 0.9138943451751378
+  },
+  {
+   "time": 1671379200000,
+   "equity": 0.903319260653347
+  },
+  {
+   "time": 1671724800000,
+   "equity": 0.8926978917158528
+  },
+  {
+   "time": 1672070400000,
+   "equity": 0.8926978917158528
+  },
+  {
+   "time": 1672416000000,
+   "equity": 0.8926978917158528
+  },
+  {
+   "time": 1672761600000,
+   "equity": 0.8844849116434493
+  },
+  {
+   "time": 1673107200000,
+   "equity": 0.8753576122914755
+  },
+  {
+   "time": 1673452800000,
+   "equity": 0.8930446744137701
+  },
+  {
+   "time": 1673798400000,
+   "equity": 1.051319702273993
+  },
+  {
+   "time": 1674144000000,
+   "equity": 1.042134136151836
+  },
+  {
+   "time": 1674489600000,
+   "equity": 1.0425668927116283
+  },
+  {
+   "time": 1674835200000,
+   "equity": 1.0459823907921115
+  },
+  {
+   "time": 1675166400000,
+   "equity": 1.0425105454806511
+  },
+  {
+   "time": 1675512000000,
+   "equity": 1.0425105454806511
+  },
+  {
+   "time": 1675857600000,
+   "equity": 1.0425105454806511
+  },
+  {
+   "time": 1676203200000,
+   "equity": 1.0425105454806511
+  },
+  {
+   "time": 1676548800000,
+   "equity": 1.0811173509825607
+  },
+  {
+   "time": 1676894400000,
+   "equity": 1.0670418002976643
+  },
+  {
+   "time": 1677240000000,
+   "equity": 1.0670418002976643
+  },
+  {
+   "time": 1677585600000,
+   "equity": 1.0670418002976643
+  },
+  {
+   "time": 1677931200000,
+   "equity": 1.0670418002976643
+  },
+  {
+   "time": 1678276800000,
+   "equity": 1.0670418002976643
+  },
+  {
+   "time": 1678622400000,
+   "equity": 1.0670418002976643
+  },
+  {
+   "time": 1678968000000,
+   "equity": 1.115085660131494
+  },
+  {
+   "time": 1679313600000,
+   "equity": 1.1628188026505577
+  },
+  {
+   "time": 1679659200000,
+   "equity": 1.1453715508465385
+  },
+  {
+   "time": 1680004800000,
+   "equity": 1.1453715508465385
+  },
+  {
+   "time": 1680336000000,
+   "equity": 1.1327098039627452
+  },
+  {
+   "time": 1680681600000,
+   "equity": 1.1327098039627452
+  },
+  {
+   "time": 1681027200000,
+   "equity": 1.1327098039627452
+  },
+  {
+   "time": 1681372800000,
+   "equity": 1.1917442940145582
+  },
+  {
+   "time": 1681718400000,
+   "equity": 1.1857764379026898
+  },
+  {
+   "time": 1682064000000,
+   "equity": 1.1857764379026898
+  },
+  {
+   "time": 1682409600000,
+   "equity": 1.1857764379026898
+  },
+  {
+   "time": 1682755200000,
+   "equity": 1.1727574431702612
+  },
+  {
+   "time": 1683100800000,
+   "equity": 1.1727574431702612
+  },
+  {
+   "time": 1683446400000,
+   "equity": 1.1591428564497481
+  },
+  {
+   "time": 1683792000000,
+   "equity": 1.1591428564497481
+  },
+  {
+   "time": 1684137600000,
+   "equity": 1.159831000236979
+  },
+  {
+   "time": 1684483200000,
+   "equity": 1.1453843013391012
+  },
+  {
+   "time": 1684828800000,
+   "equity": 1.1417678767059334
+  },
+  {
+   "time": 1685174400000,
+   "equity": 1.1317255238747015
+  },
+  {
+   "time": 1685505600000,
+   "equity": 1.129498283031304
+  },
+  {
+   "time": 1685851200000,
+   "equity": 1.1294988033570303
+  },
+  {
+   "time": 1686196800000,
+   "equity": 1.1294988033570303
+  },
+  {
+   "time": 1686542400000,
+   "equity": 1.1294988033570303
+  },
+  {
+   "time": 1686888000000,
+   "equity": 1.1294988033570303
+  },
+  {
+   "time": 1687233600000,
+   "equity": 1.1335651722203401
+  },
+  {
+   "time": 1687579200000,
+   "equity": 1.2291224569052575
+  },
+  {
+   "time": 1687924800000,
+   "equity": 1.225122894299727
+  },
+  {
+   "time": 1688270400000,
+   "equity": 1.225122894299727
+  },
+  {
+   "time": 1688616000000,
+   "equity": 1.210682430594228
+  },
+  {
+   "time": 1688961600000,
+   "equity": 1.210682430594228
+  },
+  {
+   "time": 1689307200000,
+   "equity": 1.1900888173323392
+  },
+  {
+   "time": 1689652800000,
+   "equity": 1.1858416784919759
+  },
+  {
+   "time": 1689998400000,
+   "equity": 1.1858416784919759
+  },
+  {
+   "time": 1690344000000,
+   "equity": 1.1858416784919759
+  },
+  {
+   "time": 1690675200000,
+   "equity": 1.1858416784919759
+  },
+  {
+   "time": 1691020800000,
+   "equity": 1.171988247057409
+  },
+  {
+   "time": 1691366400000,
+   "equity": 1.171988247057409
+  },
+  {
+   "time": 1691712000000,
+   "equity": 1.1676062959553353
+  },
+  {
+   "time": 1692057600000,
+   "equity": 1.1529511813496298
+  },
+  {
+   "time": 1692403200000,
+   "equity": 1.1529511813496298
+  },
+  {
+   "time": 1692748800000,
+   "equity": 1.1529511813496298
+  },
+  {
+   "time": 1693094400000,
+   "equity": 1.1402442733369116
+  },
+  {
+   "time": 1693440000000,
+   "equity": 1.1379933454685751
+  },
+  {
+   "time": 1693785600000,
+   "equity": 1.135690399856429
+  },
+  {
+   "time": 1694131200000,
+   "equity": 1.133641257252671
+  },
+  {
+   "time": 1694476800000,
+   "equity": 1.1226890099936404
+  },
+  {
+   "time": 1694822400000,
+   "equity": 1.1354997922987065
+  },
+  {
+   "time": 1695168000000,
+   "equity": 1.1501789168551815
+  },
+  {
+   "time": 1695499200000,
+   "equity": 1.1388366526280351
+  },
+  {
+   "time": 1695844800000,
+   "equity": 1.1256584349052094
+  },
+  {
+   "time": 1696190400000,
+   "equity": 1.14871347651671
+  },
+  {
+   "time": 1696536000000,
+   "equity": 1.1336557985945
+  },
+  {
+   "time": 1696881600000,
+   "equity": 1.1461318047458602
+  },
+  {
+   "time": 1697227200000,
+   "equity": 1.1461318047458602
+  },
+  {
+   "time": 1697572800000,
+   "equity": 1.1949540381133816
+  },
+  {
+   "time": 1697918400000,
+   "equity": 1.2586614159984175
+  },
+  {
+   "time": 1698264000000,
+   "equity": 1.451659561058657
+  },
+  {
+   "time": 1698609600000,
+   "equity": 1.4516602879788176
+  },
+  {
+   "time": 1698955200000,
+   "equity": 1.4352958604349988
+  },
+  {
+   "time": 1699300800000,
+   "equity": 1.4352958604349988
+  },
+  {
+   "time": 1699646400000,
+   "equity": 1.4848940514966964
+  },
+  {
+   "time": 1699992000000,
+   "equity": 1.4610029218591198
+  },
+  {
+   "time": 1700337600000,
+   "equity": 1.444355188231155
+  },
+  {
+   "time": 1700668800000,
+   "equity": 1.410572629691957
+  },
+  {
+   "time": 1701014400000,
+   "equity": 1.3945815996626951
+  },
+  {
+   "time": 1701360000000,
+   "equity": 1.3842458574144962
+  },
+  {
+   "time": 1701705600000,
+   "equity": 1.4756045458662865
+  },
+  {
+   "time": 1702051200000,
+   "equity": 1.517810141276219
+  },
+  {
+   "time": 1702396800000,
+   "equity": 1.5178108312309488
+  },
+  {
+   "time": 1702742400000,
+   "equity": 1.5178108312309488
+  },
+  {
+   "time": 1703088000000,
+   "equity": 1.4957775149431582
+  },
+  {
+   "time": 1703433600000,
+   "equity": 1.4942840797586507
+  },
+  {
+   "time": 1703779200000,
+   "equity": 1.4846649976887152
+  },
+  {
+   "time": 1704124800000,
+   "equity": 1.4846649976887152
+  },
+  {
+   "time": 1704470400000,
+   "equity": 1.468089865722203
+  },
+  {
+   "time": 1704816000000,
+   "equity": 1.5040393086481227
+  },
+  {
+   "time": 1705161600000,
+   "equity": 1.46283013397146
+  },
+  {
+   "time": 1705507200000,
+   "equity": 1.46283013397146
+  },
+  {
+   "time": 1705838400000,
+   "equity": 1.46283013397146
+  },
+  {
+   "time": 1706184000000,
+   "equity": 1.46283013397146
+  },
+  {
+   "time": 1706529600000,
+   "equity": 1.4760398428545833
+  },
+  {
+   "time": 1706875200000,
+   "equity": 1.4693059021490502
+  },
+  {
+   "time": 1707220800000,
+   "equity": 1.4693059021490502
+  },
+  {
+   "time": 1707566400000,
+   "equity": 1.5736418410894537
+  },
+  {
+   "time": 1707912000000,
+   "equity": 1.6961891129118227
+  },
+  {
+   "time": 1708257600000,
+   "equity": 1.678676651847148
+  },
+  {
+   "time": 1708603200000,
+   "equity": 1.678676651847148
+  },
+  {
+   "time": 1708948800000,
+   "equity": 1.678676651847148
+  },
+  {
+   "time": 1709294400000,
+   "equity": 1.7734918531801043
+  },
+  {
+   "time": 1709640000000,
+   "equity": 1.8367075075604264
+  },
+  {
+   "time": 1709985600000,
+   "equity": 1.775178894711869
+  },
+  {
+   "time": 1710331200000,
+   "equity": 1.7561119100914966
+  },
+  {
+   "time": 1710676800000,
+   "equity": 1.7561119100914966
+  },
+  {
+   "time": 1711008000000,
+   "equity": 1.7561119100914966
+  },
+  {
+   "time": 1711353600000,
+   "equity": 1.7561119100914966
+  },
+  {
+   "time": 1711699200000,
+   "equity": 1.7504984198865312
+  },
+  {
+   "time": 1712044800000,
+   "equity": 1.7504984198865312
+  },
+  {
+   "time": 1712390400000,
+   "equity": 1.7504984198865312
+  },
+  {
+   "time": 1712736000000,
+   "equity": 1.7308274446737824
+  },
+  {
+   "time": 1713081600000,
+   "equity": 1.7308274446737824
+  },
+  {
+   "time": 1713427200000,
+   "equity": 1.7308274446737824
+  },
+  {
+   "time": 1713772800000,
+   "equity": 1.7406532859058483
+  },
+  {
+   "time": 1714118400000,
+   "equity": 1.7296945761361424
+  },
+  {
+   "time": 1714464000000,
+   "equity": 1.7296945761361424
+  },
+  {
+   "time": 1714809600000,
+   "equity": 1.7296945761361424
+  },
+  {
+   "time": 1715155200000,
+   "equity": 1.7296945761361424
+  },
+  {
+   "time": 1715500800000,
+   "equity": 1.7296945761361424
+  },
+  {
+   "time": 1715846400000,
+   "equity": 1.7419772509450828
+  },
+  {
+   "time": 1716177600000,
+   "equity": 1.7383350703038554
+  },
+  {
+   "time": 1716523200000,
+   "equity": 1.7267374521376682
+  },
+  {
+   "time": 1716868800000,
+   "equity": 1.707641279230808
+  },
+  {
+   "time": 1717214400000,
+   "equity": 1.707641279230808
+  },
+  {
+   "time": 1717560000000,
+   "equity": 1.6970108770689687
+  },
+  {
+   "time": 1717905600000,
+   "equity": 1.6679832949245508
+  },
+  {
+   "time": 1718251200000,
+   "equity": 1.6679832949245508
+  },
+  {
+   "time": 1718596800000,
+   "equity": 1.6679832949245508
+  },
+  {
+   "time": 1718942400000,
+   "equity": 1.6679832949245508
+  },
+  {
+   "time": 1719288000000,
+   "equity": 1.6679832949245508
+  },
+  {
+   "time": 1719633600000,
+   "equity": 1.6679832949245508
+  },
+  {
+   "time": 1719979200000,
+   "equity": 1.6488329384457203
+  },
+  {
+   "time": 1720324800000,
+   "equity": 1.6488329384457203
+  },
+  {
+   "time": 1720670400000,
+   "equity": 1.630891420780312
+  },
+  {
+   "time": 1721001600000,
+   "equity": 1.6657761972519587
+  },
+  {
+   "time": 1721347200000,
+   "equity": 1.678687824462902
+  },
+  {
+   "time": 1721692800000,
+   "equity": 1.6795875417196848
+  },
+  {
+   "time": 1722038400000,
+   "equity": 1.6649647971178707
+  },
+  {
+   "time": 1722384000000,
+   "equity": 1.6451464291831441
+  },
+  {
+   "time": 1722729600000,
+   "equity": 1.6451464291831441
+  },
+  {
+   "time": 1723075200000,
+   "equity": 1.6451464291831441
+  },
+  {
+   "time": 1723420800000,
+   "equity": 1.6451464291831441
+  },
+  {
+   "time": 1723766400000,
+   "equity": 1.6451464291831441
+  },
+  {
+   "time": 1724112000000,
+   "equity": 1.6451464291831441
+  },
+  {
+   "time": 1724457600000,
+   "equity": 1.608589416525656
+  },
+  {
+   "time": 1724803200000,
+   "equity": 1.6018977173706546
+  },
+  {
+   "time": 1725148800000,
+   "equity": 1.6018977173706546
+  },
+  {
+   "time": 1725494400000,
+   "equity": 1.6018977173706546
+  },
+  {
+   "time": 1725840000000,
+   "equity": 1.6018977173706546
+  },
+  {
+   "time": 1726171200000,
+   "equity": 1.583625022584722
+  },
+  {
+   "time": 1726516800000,
+   "equity": 1.5779927917771475
+  },
+  {
+   "time": 1726862400000,
+   "equity": 1.570520934223
+  },
+  {
+   "time": 1727208000000,
+   "equity": 1.582084672851955
+  },
+  {
+   "time": 1727553600000,
+   "equity": 1.599461051352188
+  },
+  {
+   "time": 1727899200000,
+   "equity": 1.5990031741107733
+  },
+  {
+   "time": 1728244800000,
+   "equity": 1.5990031741107733
+  },
+  {
+   "time": 1728590400000,
+   "equity": 1.5809888277645032
+  },
+  {
+   "time": 1728936000000,
+   "equity": 1.5966495941214784
+  },
+  {
+   "time": 1729281600000,
+   "equity": 1.6197258645490495
+  },
+  {
+   "time": 1729627200000,
+   "equity": 1.609025114009448
+  },
+  {
+   "time": 1729972800000,
+   "equity": 1.609025114009448
+  },
+  {
+   "time": 1730318400000,
+   "equity": 1.6451818094200712
+  },
+  {
+   "time": 1730664000000,
+   "equity": 1.6202929744565737
+  },
+  {
+   "time": 1731009600000,
+   "equity": 1.6243247043645042
+  },
+  {
+   "time": 1731340800000,
+   "equity": 1.656443048607691
+  },
+  {
+   "time": 1731686400000,
+   "equity": 1.669848307532999
+  },
+  {
+   "time": 1732032000000,
+   "equity": 1.6537046592090072
+  },
+  {
+   "time": 1732377600000,
+   "equity": 1.6847722279830502
+  },
+  {
+   "time": 1732723200000,
+   "equity": 1.6723137894375624
+  },
+  {
+   "time": 1733068800000,
+   "equity": 1.6537622227410522
+  },
+  {
+   "time": 1733414400000,
+   "equity": 1.655018631462513
+  },
+  {
+   "time": 1733760000000,
+   "equity": 1.6351014014934488
+  },
+  {
+   "time": 1734105600000,
+   "equity": 1.6351014014934488
+  },
+  {
+   "time": 1734451200000,
+   "equity": 1.6470030678276766
+  },
+  {
+   "time": 1734796800000,
+   "equity": 1.6213629604596331
+  },
+  {
+   "time": 1735142400000,
+   "equity": 1.6213629604596331
+  },
+  {
+   "time": 1735488000000,
+   "equity": 1.6213629604596331
+  },
+  {
+   "time": 1735833600000,
+   "equity": 1.6213629604596331
+  },
+  {
+   "time": 1736179200000,
+   "equity": 1.6451793654311149
+  },
+  {
+   "time": 1736510400000,
+   "equity": 1.6031657939176789
+  },
+  {
+   "time": 1736856000000,
+   "equity": 1.6005122364062574
+  },
+  {
+   "time": 1737201600000,
+   "equity": 1.6591361022965456
+  },
+  {
+   "time": 1737547200000,
+   "equity": 1.6179822346490493
+  },
+  {
+   "time": 1737892800000,
+   "equity": 1.6179822346490493
+  },
+  {
+   "time": 1738238400000,
+   "equity": 1.6179822346490493
+  },
+  {
+   "time": 1738584000000,
+   "equity": 1.6179822346490493
+  },
+  {
+   "time": 1738929600000,
+   "equity": 1.6179822346490493
+  },
+  {
+   "time": 1739275200000,
+   "equity": 1.6179822346490493
+  },
+  {
+   "time": 1739620800000,
+   "equity": 1.6179822346490493
+  },
+  {
+   "time": 1739966400000,
+   "equity": 1.6179822346490493
+  },
+  {
+   "time": 1740312000000,
+   "equity": 1.5990493694768773
+  },
+  {
+   "time": 1740657600000,
+   "equity": 1.5990493694768773
+  },
+  {
+   "time": 1741003200000,
+   "equity": 1.6161126834652073
+  },
+  {
+   "time": 1741334400000,
+   "equity": 1.5814893302875963
+  },
+  {
+   "time": 1741680000000,
+   "equity": 1.5814893302875963
+  },
+  {
+   "time": 1742025600000,
+   "equity": 1.5744764595905472
+  },
+  {
+   "time": 1742371200000,
+   "equity": 1.5639983349694258
+  },
+  {
+   "time": 1742716800000,
+   "equity": 1.5462759758839608
+  },
+  {
+   "time": 1743062400000,
+   "equity": 1.5481121855013151
+  },
+  {
+   "time": 1743408000000,
+   "equity": 1.5282083327199882
+  },
+  {
+   "time": 1743753600000,
+   "equity": 1.5112805165642011
+  },
+  {
+   "time": 1744099200000,
+   "equity": 1.5112805165642011
+  },
+  {
+   "time": 1744444800000,
+   "equity": 1.5112805165642011
+  },
+  {
+   "time": 1744790400000,
+   "equity": 1.5112805165642011
+  },
+  {
+   "time": 1745136000000,
+   "equity": 1.5112805165642011
+  },
+  {
+   "time": 1745481600000,
+   "equity": 1.5442364452963067
+  },
+  {
+   "time": 1745827200000,
+   "equity": 1.5615068284919453
+  },
+  {
+   "time": 1746172800000,
+   "equity": 1.562494243742751
+  },
+  {
+   "time": 1746504000000,
+   "equity": 1.553000530420683
+  },
+  {
+   "time": 1746849600000,
+   "equity": 1.6278502583060703
+  },
+  {
+   "time": 1747195200000,
+   "equity": 1.6139470051822984
+  },
+  {
+   "time": 1747540800000,
+   "equity": 1.6139470051822984
+  },
+  {
+   "time": 1747886400000,
+   "equity": 1.5537866737386916
+  },
+  {
+   "time": 1748232000000,
+   "equity": 1.5425895303401578
+  },
+  {
+   "time": 1748577600000,
+   "equity": 1.5425895303401578
+  },
+  {
+   "time": 1748923200000,
+   "equity": 1.5425895303401578
+  },
+  {
+   "time": 1749268800000,
+   "equity": 1.523817199308383
+  },
+  {
+   "time": 1749614400000,
+   "equity": 1.5331610381102552
+  },
+  {
+   "time": 1749960000000,
+   "equity": 1.5222897133401214
+  },
+  {
+   "time": 1750305600000,
+   "equity": 1.503713298792629
+  },
+  {
+   "time": 1750651200000,
+   "equity": 1.503713298792629
+  },
+  {
+   "time": 1750996800000,
+   "equity": 1.503713298792629
+  },
+  {
+   "time": 1751342400000,
+   "equity": 1.4860541956422024
+  },
+  {
+   "time": 1751673600000,
+   "equity": 1.4690247684876747
+  },
+  {
+   "time": 1752019200000,
+   "equity": 1.4690247684876747
+  },
+  {
+   "time": 1752364800000,
+   "equity": 1.4971257462562724
+  },
+  {
+   "time": 1752710400000,
+   "equity": 1.494125750508529
+  },
+  {
+   "time": 1753056000000,
+   "equity": 1.494125750508529
+  },
+  {
+   "time": 1753401600000,
+   "equity": 1.494125750508529
+  },
+  {
+   "time": 1753747200000,
+   "equity": 1.494125750508529
+  },
+  {
+   "time": 1754092800000,
+   "equity": 1.494125750508529
+  },
+  {
+   "time": 1754438400000,
+   "equity": 1.494125750508529
+  },
+  {
+   "time": 1754784000000,
+   "equity": 1.5069468662021017
+  },
+  {
+   "time": 1755129600000,
+   "equity": 1.5449870124191538
+  },
+  {
+   "time": 1755475200000,
+   "equity": 1.5050383805159244
+  },
+  {
+   "time": 1755820800000,
+   "equity": 1.5050383805159244
+  },
+  {
+   "time": 1756166400000,
+   "equity": 1.4877133510932798
+  },
+  {
+   "time": 1756512000000,
+   "equity": 1.4877133510932798
+  },
+  {
+   "time": 1756843200000,
+   "equity": 1.4711507060744966
+  },
+  {
+   "time": 1757188800000,
+   "equity": 1.4359565230401505
+  },
+  {
+   "time": 1757534400000,
+   "equity": 1.4174345448050993
+  },
+  {
+   "time": 1757880000000,
+   "equity": 1.4289042698431973
+  },
+  {
+   "time": 1758225600000,
+   "equity": 1.4447365784270667
+  },
+  {
+   "time": 1758571200000,
+   "equity": 1.4276518840855787
+  },
+  {
+   "time": 1758916800000,
+   "equity": 1.4276518840855787
+  },
+  {
+   "time": 1759262400000,
+   "equity": 1.4449474431560516
+  },
+  {
+   "time": 1759608000000,
+   "equity": 1.5381571016855484
+  },
+  {
+   "time": 1759953600000,
+   "equity": 1.5320683677551472
+  },
+  {
+   "time": 1760299200000,
+   "equity": 1.5320683677551472
+  },
+  {
+   "time": 1760644800000,
+   "equity": 1.5320683677551472
+  },
+  {
+   "time": 1760990400000,
+   "equity": 1.5320683677551472
+  },
+  {
+   "time": 1761336000000,
+   "equity": 1.5155220216237182
+  },
+  {
+   "time": 1761681600000,
+   "equity": 1.5107858083705117
+  }
+ ],
+ "limitations": [
+  "Design data only (before 2025-10-29): evidence about the past, not validation.",
+  "One asset and one price source (Binance BTCUSDT 4h); fixed costs; fills at the next open.",
+  "Long only: a breakdown below support gives NO TRADE, not a short.",
+  "No fixed target: R/R is unknown at entry; R is measured from the initial stop."
+ ]
+}

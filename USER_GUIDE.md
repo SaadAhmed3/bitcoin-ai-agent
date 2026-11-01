@@ -231,8 +231,8 @@ that one day they can be tested on data nobody has seen yet. Turning it off stop
 **Strategy Lab** (in the menu) shows five research strategies side by side. Each card shows its current research
 signal, the data it used, its costs and its **validation status**, which always says how it did on design data
 (for example "FAILED on design data · not validated"). DCA (buying a fixed amount on a schedule), **trend following**
-(buying 4-hour trend pullbacks) and **range trading** (buying near the bottom of a sideways range) are active so far;
-the others say "planned". Use the picker in the details card to see each one's backtest, forward test, settings and history.
+(buying 4-hour trend pullbacks), **range trading** (buying near the bottom of a sideways range) and **breakout
+trading** (buying a 4-hour close above the recent high) are active so far; rotation says "planned". Use the picker in the details card to see each one's backtest, forward test, settings and history.
 
 - **DCA** says ACCUMULATE on a scheduled buy day, WAIT on other days and PAUSE when the price data is not trustworthy.
   It does not try to time the market, and nothing is ever bought.
@@ -243,6 +243,10 @@ the others say "planned". Use the picker in the details card to see each one's b
 - **Range trading** only looks for setups when the 4-hour market is sideways: BUY SETUP near the range bottom (stop
   below the range, target the middle), EXIT / REDUCE EXPOSURE when the market stops being sideways. On design data it
   found only 4 trades in over four years, too few to judge (INCONCLUSIVE).
+- **Breakout trading** says BUY SETUP when a 4-hour candle **closes** above the high of the previous 20 candles on
+  higher volume (a wick above it is not enough). It shows an entry and a stop but **no target**: a simulated trade is
+  closed when a candle closes below the low of the previous 10 candles, or after 60 candles. On design data it made
+  money on average but its worst drawdown (23.7%) was above the 15% limit, so it FAILED and is research only.
 - The **comparison table** does not rank strategies. N/A means there is no valid number yet.
 - **Settings** can be changed in the DCA details. Saving creates a new version; if it differs from the
   pre-registered settings, the strategy shows **NOT VALIDATED (settings changed)** and its earlier results no longer
