@@ -43,7 +43,8 @@
           <div><dt>Reward/risk</dt><dd>${r.reward_risk !== null ? esc(r.reward_risk) : r.stop !== null ? "Unknown at entry (no fixed target)" : "Not applicable"}</dd></div></dl>`
       : `<p class="muted small">Entry, invalidation and reward/risk do not apply: ${esc(s.id === "dca" ? "DCA buys on a schedule and never sells." : "no setup.")}</p>`;
     const warn = [...(r.contradictory || []), ...((r.data || {}).warnings || [])];
-    const bt = s.backtest ? `Design backtest: ${esc(s.backtest.verdict)} on its pre-registered criteria` : "Design backtest: not run yet";
+    const bt = s.forward_only ? "Design backtest: none, by design (chosen after design results: forward test only)"
+      : s.backtest ? `Design backtest: ${esc(s.backtest.verdict)} on its pre-registered criteria` : "Design backtest: not run yet";
     return `<article class="strat-card" id="strat-${esc(s.id)}">${head}
       <div class="strat-tags">${badge(s.validation)}</div>${kinds(r.labels)}
       <p class="muted small">${esc(s.purpose)}</p>
