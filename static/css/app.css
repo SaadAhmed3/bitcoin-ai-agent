@@ -608,3 +608,4 @@ nav a .label { flex: 1; min-width: 0; }
 .strat-cfg .strat-cfg-fields { margin-top: 8px; }
 .strat-kinds { margin: -4px 0 6px; }
 .strat-supp { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.strat-design-warning { margin: 4px 0; padding: 4px 8px; border-left: 3px solid var(--down); color: var(--text); font-size: 12px; font-weight: 600; }

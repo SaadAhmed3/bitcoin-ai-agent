@@ -102,7 +102,8 @@ def test_comparison_shows_backtest_numbers_only_when_they_exist(config, db):
         "avg_reward_risk": None, "costs_usd": 7.8, "buy_hold_return_pct": 30.0}}, now=1)
     rows = {r["metric"]: r["values"]["dca"] for r in c.get("/api/strategies").get_json()["comparison"]["rows"]}
     assert rows["Net return"] == "+12.50%" and rows["Win rate"] == "N/A" and rows["Number of trades"] == "52"
-    assert rows["Maximum drawdown"] == "20.10%" and rows["Validation status"] == "BACKTESTED (design data)"
+    assert rows["Maximum drawdown"] == "20.10%" and rows["Validation status"] == "FAILED on design data · not validated"
+    assert rows["Buy-and-hold comparison"] == "+30.00% (lump sum, same budget)"                 # DCA's basis
 
 
 def test_trend_backtest_numbers_show_in_the_comparison(config, db):
@@ -113,4 +114,33 @@ def test_trend_backtest_numbers_show_in_the_comparison(config, db):
         "avg_reward_risk": 2.0, "costs_usd": None, "costs_pct": 1.25, "buy_hold_return_pct": 80.0}}, now=1)
     rows = {r["metric"]: r["values"]["trend"] for r in c.get("/api/strategies").get_json()["comparison"]["rows"]}
     assert rows["Net return"] == "-3.20%" and rows["Profit factor"] == "0.90" and rows["Number of trades"] == "12"
-    assert rows["Fees and slippage"] == "1.25% of the account" and rows["Validation status"] == "BACKTESTED (design data)"
+    assert rows["Fees and slippage"] == "1.25% of the account"
+    assert rows["Validation status"] == "INCONCLUSIVE on design data · not validated"
+    assert rows["Buy-and-hold comparison"] == "+80.00% (buy & hold, same window)"              # trend's basis
+
+
+def test_status_labels_carry_the_design_verdict():
+    from services.strategies.base import validation_status
+    lab = lambda v, fw=None: validation_status("h", "h", {"verdict": v} if v else None, fw)["label"]  # noqa: E731
+    assert lab("PASS") == "PASSED on design data · not validated"
+    assert lab("FAIL") == "FAILED on design data · not validated"
+    assert lab("INCONCLUSIVE") == "INCONCLUSIVE on design data · not validated"
+    assert lab(None) == "Not validated"
+    fw = {"state": "running", "days_elapsed": 9, "target_days": 365, "verdict": None, "code_changed": False}
+    assert lab("FAIL", fw) == "FAILED on design data · forward testing, day 9 of 365 · not validated"
+    assert validation_status("h", "x", {"verdict": "PASS"}, None)["label"] == "Settings changed · not validated"
+    assert validation_status("h", "h", {"verdict": "FAIL"}, None)["design_verdict"] == "FAIL"
+
+
+def test_every_live_result_of_a_failed_strategy_says_research_only(config, db):
+    c = make_client(config, db, [FakeProvider("fake1")])
+    h = c.get("/api/strategies/trend/config").get_json()["hash"]
+    card = next(s for s in c.get("/api/strategies").get_json()["strategies"] if s["id"] == "trend")
+    assert card["result"].get("design_warning") is None                      # no backtest yet: no claim either way
+    db.strategy_backtest_add("trend", 1, h, "design", "abc", {"verdict": "FAIL", "metrics": {"trades": 94}}, now=1)
+    card = next(s for s in c.get("/api/strategies").get_json()["strategies"] if s["id"] == "trend")
+    assert card["result"]["design_warning"] == "Failed on design data: research only"
+    assert card["validation"]["label"] == "FAILED on design data · not validated"
+    c.application.config["BTC_MONITOR"].run_once()                            # the stored daily record says it too
+    rec = db.strategy_signals("trend", 1)[0]["result"]
+    assert rec["design_warning"] == "Failed on design data: research only"

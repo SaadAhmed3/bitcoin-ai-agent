@@ -63,6 +63,28 @@ Validation statuses: NOT VALIDATED · NOT VALIDATED (settings changed) · NOT VA
 - **Limitations:** one asset and one price source (Binance BTCUSDT daily); fixed costs; overlapping windows are not
   independent samples; win rate and profit factor do not apply; walk-forward does not apply (no fitted parameters).
 
+## DCA forward-test fingerprint re-base (2026-11-01)
+
+What happened, exactly, and why it is not a reset of evidence:
+
+| | |
+|---|---|
+| Forward test | `strategy_forward_tests` id 1, `dca`, config hash `f626cffd73fb1e10`, start day 2026-11-02 00:00 UTC (registered 2026-11-01 11:51 UTC, after the round-1 merge) |
+| Old fingerprint (round-1 scheme) | `f576a36a9cb5fdeacb3a99a6e63c0915b0817a4b5295000e8f85d6bc9cd5d4f6` = SHA-256 over `base.py` + `dca.py` + the whole `strategy_forward.py` |
+| New fingerprint (round-2 scheme) | `6f3658518fdbc3db35e07bea8e736d1234dbe975b8b7994378491787aa2da378` = SHA-256 over `dca.py` + the generic `strategy_forward.py` core |
+| Recorded | 2026-11-01 12:47:46 UTC in `strategy_forward_rebases` (append-only), with the reason "round 2: generic forward tracker; fingerprint = strategy module + tracker core (re-based before the first day)" |
+| Days processed at that moment | **0** (the first DCA day, 2026-11-02, could not close before 2026-11-03 00:00 UTC) |
+
+- **Why:** the round-1 fingerprint covered the shared `base.py` and the whole tracker, so adding any later strategy
+  would have marked DCA "code changed" for good. Round 2 made the tracker a generic core and moved DCA's daily step
+  into `dca.py` with identical logic and event format (tested against the round-1 behaviour).
+- **Guarantees:** the forward test row itself is unchanged (start day, configuration, original fingerprint); the
+  re-base is a separate append-only row; a database trigger refuses any re-base once the test has a processed day;
+  `apply_rebases()` only acts on the exact old fingerprint listed in `KNOWN_REBASES` (`services/strategy_lab.py`) and
+  only once. Strategy Lab shows the re-base under the DCA forward test.
+- **From now on** DCA's forward fingerprint changes only if `dca.py` or the tracker core changes; such a change marks
+  DCA "code changed" (NOT VALIDATED (code changed)) and cannot be re-based, because days have been processed by then.
+
 ## DCA addendum (2026-11-01): deposit-neutral drawdown, reported only
 
 C1's drawdown is on the whole budget (cash not yet invested + BTC). The time-weighted index of the invested BTC and

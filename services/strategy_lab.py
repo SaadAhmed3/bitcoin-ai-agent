@@ -46,6 +46,10 @@ METRICS = [("Net return", "net_return_pct", "signed_pct"), ("Win rate", "win_rat
            ("Profit factor", "profit_factor", "num"), ("Maximum drawdown", "max_drawdown_pct", "pct"),
            ("Number of trades", "trades", "int"), ("Average reward/risk", "avg_reward_risk", "num"),
            ("Fees and slippage", "costs_usd", "usd"), ("Buy-and-hold comparison", "buy_hold_return_pct", "signed_pct")]
+# What "buy-and-hold" means for each strategy's backtest (the comparison row says it in every cell).
+BUY_HOLD_BASIS = {"dca": "lump sum, same budget", "trend": "buy & hold, same window", "range": "buy & hold, same window",
+                  "breakout": "buy & hold, same window", "rotation": "buy & hold, same window"}
+FAILED_NOTE = "Failed on design data: research only"
 COMPARE_NOTE = ("Strategies are not ranked: each column shows that strategy's own pre-registered design backtest "
                 "(design data before 2025-10-29, hypothetical) or N/A. A higher return with a deeper drawdown is not "
                 "better by default, and design results never validate a strategy.")
@@ -146,6 +150,8 @@ class StrategyLab:
         status = self.validation(sid, cfg)
         if status["status"] != FORWARD_PASS:
             r["labels"] = r["labels"] + ["NOT VALIDATED"]
+        # every live result of a strategy that failed its pre-registered design criteria says so
+        r["design_warning"] = FAILED_NOTE if status.get("design_verdict") == "FAIL" else None
         return r
 
     def card(self, meta: dict) -> dict:
@@ -176,11 +182,13 @@ class StrategyLab:
                 m = (c.get("backtest") or {}).get("metrics") or {}
                 if key == "costs_usd" and m.get("costs_usd") is None and m.get("costs_pct") is not None:
                     vals[c["id"]] = f"{m['costs_pct']:.2f}% of the account"      # trade strategies: % of the account
+                elif key == "buy_hold_return_pct" and m.get(key) is not None:
+                    vals[c["id"]] = f"{_fmt(m[key], kind)} ({BUY_HOLD_BASIS.get(c['id'], 'buy & hold')})"
                 else:
                     vals[c["id"]] = _fmt(m.get(key), kind)
             rows.append({"metric": label, "values": vals})
         rows.append({"metric": "Validation status",
-                     "values": {c["id"]: c["validation"]["status"] if c["implemented"] else "N/A" for c in cards}})
+                     "values": {c["id"]: c["validation"]["label"] if c["implemented"] else "N/A" for c in cards}})
         return {"rows": rows, "note": COMPARE_NOTE}
 
     def detail(self, sid: str) -> dict:

@@ -122,9 +122,35 @@ def code_fingerprint(strategy_id: str) -> str:
     return h.hexdigest()[:16]
 
 
+DESIGN_WORD = {"PASS": "PASSED", "FAIL": "FAILED", "INCONCLUSIVE": "INCONCLUSIVE"}
+
+
 def validation_status(prereg_hash: str | None, current_hash: str, backtest: dict | None,
                       forward: dict | None) -> dict[str, str]:
-    """The strategy's validation status for its CURRENT configuration (never inherited across configurations)."""
+    """The strategy's validation status for its CURRENT configuration (never inherited across configurations), with
+    a display label that always shows the design verdict, e.g. "FAILED on design data · not validated"."""
+    out = _status(prereg_hash, current_hash, backtest, forward)
+    verdict = (backtest or {}).get("verdict") if out["status"] != SETTINGS_CHANGED else None
+    design = f"{DESIGN_WORD[verdict]} on design data" if verdict in DESIGN_WORD else None
+    if out["status"] == SETTINGS_CHANGED:
+        label = "Settings changed · not validated"
+    elif out["status"] == CODE_CHANGED:
+        label = " · ".join(x for x in (design, "code changed", "not validated") if x)
+    elif out["status"] == FORWARD_TESTING:
+        label = " · ".join(x for x in (design, f"forward testing, day {forward.get('days_elapsed', 0)} of "
+                                               f"{forward.get('target_days', 365)}", "not validated") if x)
+    elif out["status"] == FORWARD_PASS:
+        label = "Forward tested: PASS"
+    elif out["status"] == FORWARD_FAIL:
+        label = "Forward tested: FAIL · not validated"
+    elif design:
+        label = f"{design} · not validated"
+    else:
+        label = "Not validated"
+    return {**out, "label": label, "design_verdict": verdict}
+
+
+def _status(prereg_hash: str | None, current_hash: str, backtest: dict | None, forward: dict | None) -> dict[str, str]:
     if prereg_hash is None or current_hash != prereg_hash:
         return {"status": SETTINGS_CHANGED, "detail": "The settings differ from the pre-registered ones: no earlier "
                                                       "backtest or forward result applies to them."}
