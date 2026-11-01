@@ -233,11 +233,21 @@ class StrategyLab:
         extra = {}
         if sid == "dca":
             extra = {"backtest_supplement": self._dca_supplement(bt), "forward_deposit_neutral": self._dca_forward_extra()}
+        elif sid == "rotation":
+            extra = {"stress_test": self.stress_test(sid)}
         return {**card, **extra, "backtest": bt, "forward": self.forward_status(sid),
                 "history": [{"day": h["day"], "signal": h["signal"], "config_version": h["config_version"],
                              "explanation": h["result"].get("explanation")} for h in self.db.strategy_signals(sid, 60)],
                 "config_history": [{"version": v["version"], "config_hash": v["config_hash"], "reason": v["reason"],
                                     "created_at": v["created_at"], "config": v["config"]} for v in self.db.strategy_configs(sid)]}
+
+    def stress_test(self, sid: str) -> dict | None:
+        """Rotation's survivorship stress test (data/rotation_stress_design.json), reported only, next to the
+        original; it never changes the strategy, its result or its verdict."""
+        if sid != "rotation":
+            return None
+        from services import rotation_stress
+        return rotation_stress.load_result()
 
     # ---------------------------------------------------------------- DCA: deposit-neutral, reported only
     def _dca_supplement(self, bt: dict | None) -> dict | None:

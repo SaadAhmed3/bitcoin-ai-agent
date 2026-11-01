@@ -96,7 +96,7 @@
         ${list((bt.criteria || []).map((c) => `${c.id} ${c.passed ? "passed" : "failed"}: ${c.rule} (DCA ${num(c.dca)}%, lump sum ${num(c.lump_sum)}%)`))}`;
       return;
     }
-    if (sid === "rotation") { renderRotationBacktest(bt, head); return; }
+    if (sid === "rotation") { renderRotationBacktest(bt, head, det); return; }
     const bh = bt.buy_and_hold || {}, h2 = bt.h2_rule || {}, rnd = bt.random_entries || {};
     const wf = (bt.walk_forward || []).map((w) => `<tr><td data-label="Window">${esc(day(w.start))} to ${esc(day(w.end))}</td><td data-label="Trades">${esc(w.trades)}</td>
       <td data-label="Return">${pct(w.return_pct)}</td><td data-label="Sum of R">${num(w.sum_r)}</td></tr>`).join("");
@@ -126,7 +126,7 @@
   }
 
   // Rotation: judged against BTC buy & hold; survivorship bias stated next to the numbers.
-  function renderRotationBacktest(bt, head) {
+  function renderRotationBacktest(bt, head, det) {
     const m = bt.metrics, b = bt.btc_buy_and_hold || {}, rr = bt.random_rotations || {}, a = bt.asset_buy_and_hold || {};
     const name = { ETHUSDT: "ETH", SOLUSDT: "SOL", BNBUSDT: "BNB" };
     const assets = Object.keys(name).map((s) => `<div><dt>${name[s]} buy &amp; hold (reported)</dt><dd>${a[s] ? `${pct(a[s].net_return_pct)} · max DD ${num(a[s].max_drawdown_pct)}%` : "N/A (not listed at the start)"}</dd></div>`).join("");
@@ -148,7 +148,29 @@
       <h4>Walk-forward windows (182 days, fixed rules, reported only)</h4>
       <div class="table-wrap"><table class="table stack"><thead><tr><th>Window</th><th>Switches</th><th>Return</th></tr></thead><tbody>${wf}</tbody></table></div>
       <h4>Sensitivity (reported only, never used to choose parameters)</h4>
-      <div class="table-wrap"><table class="table stack"><thead><tr><th>Lookback</th><th>Cash filter</th><th>Switches</th><th>Net return</th><th>Max DD</th><th>Return / DD</th></tr></thead><tbody>${sens}</tbody></table></div>`;
+      <div class="table-wrap"><table class="table stack"><thead><tr><th>Lookback</th><th>Cash filter</th><th>Switches</th><th>Net return</th><th>Max DD</th><th>Return / DD</th></tr></thead><tbody>${sens}</tbody></table></div>
+      ${stressBox(det && det.stress_test)}`;
+  }
+
+  // Survivorship stress test: the same rule over a wider point-in-time universe, next to the original (reported only).
+  function stressBox(st) {
+    if (!st || !st.stress) return "";
+    const o = st.original || {}, s = st.stress, u = st.universe || {};
+    const name = (x) => esc(String(x).replace("USDT", ""));
+    const ends = Object.entries(u.history_ends || {}).map(([k, v]) => `${name(k)} ${esc(day(v))}`).join(", ");
+    const held = Object.entries(st.weeks_held || {}).map(([k, v]) => `${name(k)} ${esc(v)}`).join(", ");
+    return `<div class="strat-supp" id="stratStress"><h4>Survivorship stress test <span class="tag hyp">Reported only</span></h4>
+      <p class="small">${esc(st.note)}</p>
+      <div class="table-wrap"><table class="table stack"><thead><tr><th></th><th>Original (BTC, ETH, SOL, BNB)</th><th>Wider universe (${esc((u.available || []).length)} assets)</th></tr></thead><tbody>
+        <tr><td data-label="">Net return</td><td data-label="Original">${pct(o.net_return_pct)}</td><td data-label="Wider">${pct(s.net_return_pct)}</td></tr>
+        <tr><td data-label="">Max drawdown</td><td data-label="Original">${num(o.max_drawdown_pct)}%</td><td data-label="Wider">${num(s.max_drawdown_pct)}%</td></tr>
+        <tr><td data-label="">Return / max drawdown</td><td data-label="Original">${num(o.return_to_drawdown)}</td><td data-label="Wider">${num(s.return_to_drawdown)}</td></tr>
+        <tr><td data-label="">Switches</td><td data-label="Original">${esc(o.switches)}</td><td data-label="Wider">${esc(s.switches)}</td></tr>
+        <tr><td data-label="">Beats random rotations</td><td data-label="Original">${num(o.random_beaten_pct, 1)}%</td><td data-label="Wider">${num(s.random_beaten_pct, 1)}%</td></tr>
+        <tr><td data-label="">Verdict</td><td data-label="Original">${esc(o.verdict)} (stands)</td><td data-label="Wider">${esc(st.verdict_if_it_were_judged)} if it were judged (it is not)</td></tr>
+      </tbody></table></div>
+      <p class="small muted">Available: ${(u.available || []).map(name).join(", ")}. Not available: ${(u.not_available || []).map(name).join(", ") || "none"}.
+        ${ends ? `History ends: ${ends}.` : ""} Weeks held: ${held}.</p></div>`;
   }
 
   // Deposit-neutral views (addendum 2026-11-01): reported only, never a criterion.
