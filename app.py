@@ -256,7 +256,8 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     lab.ensure_defaults()
     app.config["BTC_STRATEGY_LAB"] = lab
     app.config["BTC_STRATEGY_FORWARD"] = strategy_forward
-    strategy_charts = StrategyCharts(db, lab)            # read-only: stored results, verified in-memory series
+    # read-only on results; verified series kept in a derived cache next to the database (data/cache/)
+    strategy_charts = StrategyCharts(db, lab, cache_dir=Path(config.db_path).resolve().parent / "cache" / "strategy_charts")
     app.config["BTC_STRATEGY_CHARTS"] = strategy_charts
 
     def strategy_lab_job():

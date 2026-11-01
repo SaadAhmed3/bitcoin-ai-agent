@@ -92,9 +92,9 @@
     } else if (sid === "dca") {
       const lowBy = Object.fromEntries(s.time.map((t, i) => [t, s.low[i]]));
       const days = (d.buy_days || []).filter((t) => lowBy[t] !== undefined);
-      traces.push({ type: "scatter", mode: "markers", name: "Scheduled buy days", xaxis: "x", yaxis: "y",
+      traces.push({ type: "scatter", mode: "markers", name: "Scheduled buy days (hypothetical)", xaxis: "x", yaxis: "y",
         x: days.map(iso), y: days.map((t) => lowBy[t] * 0.985), marker: { symbol: "triangle-up", size: 9, color: c.info } });
-      if (d.avg_price) traces.push(line([x[0], last], [d.avg_price, d.avg_price], "Average buy price", c.accent, { line: { dash: "dash" } }));
+      if (d.avg_price) traces.push(line([x[0], last], [d.avg_price, d.avg_price], "Hypothetical average of the scheduled buys in view", c.accent, { line: { dash: "dash" } }));
     }
     if (adx) {
       traces.push(line(x, s.adx, "ADX(14)", "#2dd4bf", { yaxis: "y3" }));
@@ -107,10 +107,6 @@
       (d.plan.targets || []).forEach((t, i) => traces.push(line([x[Math.max(0, x.length - 30)], last], [t, t], `Target ${i + 1} ${usd(t)}`, c.up, { line: { width: 2 } })));
       ann.push({ xref: "paper", x: 0.99, xanchor: "right", yref: "y", y: hi, yanchor: "bottom", showarrow: false,
         text: `Entry ${usd(e.low)} · R:R ${d.plan.rr}`, font: { size: 11, color: c.text }, bgcolor: alpha(c.info, 0.2) });
-    } else if ((d.checklist || []).length && !narrow()) {   // no setup: why, rule by rule (phones: the list below)
-      ann.push({ xref: "paper", yref: "paper", x: 0.01, y: 0.99, xanchor: "left", yanchor: "top", align: "left", showarrow: false,
-        text: ["<b>No setup</b>", ...d.checklist.map((r) => `${r.met ? "✓" : "✗"} ${esc(r.rule)}`)].join("<br>"),
-        font: { size: 10, color: c.text }, bgcolor: alpha(css("--card") || "#141922", 0.85), bordercolor: c.line, borderwidth: 1, borderpad: 6 });
     }
     const L = layout(c, { shapes, annotations: ann, hovermode: "x unified",
       xaxis: { type: "date", rangeslider: { visible: false }, gridcolor: c.line, linecolor: c.line },
@@ -230,14 +226,19 @@
       const c = colors(), pal = ["#60a5fa", c.accent, "#c084fc", c.up, c.warn];
       plot("stratCmpEquity", d.curves.map((k, i) => line(k.time.map(iso), k.value, k.name, pal[i % pal.length])),
         layout(c, { hovermode: "x unified", xaxis: { type: "date", gridcolor: c.line }, yaxis: axis(c, { type: "log", tickformat: ",.0f" }) }));
+      const xs = d.scatter.map((p) => p.max_drawdown_pct), ys = d.scatter.map((p) => p.net_return_pct);
+      const xMax = Math.max(...xs, 1) * 1.15;
+      const ySpan = Math.max(Math.max(...ys, 0) - Math.min(...ys, 0), 10);
+      const yLo = Math.min(...ys, 0) - ySpan * 0.15, yHi = Math.max(...ys, 0) + ySpan * 0.15;
       plot("stratCmpScatter", [{ type: "scatter", mode: "markers+text", name: "Strategies",
         x: d.scatter.map((p) => p.max_drawdown_pct), y: d.scatter.map((p) => p.net_return_pct),
-        text: d.scatter.map((p) => `${SHORT[p.id] || p.id} (${p.verdict})`), textposition: "top center", cliponaxis: false,
+        text: d.scatter.map((p) => `${SHORT[p.id] || p.id} (${p.verdict})`),
+        textposition: d.scatter.map((p) => (p.max_drawdown_pct < xMax / 2 ? "middle right" : "middle left")),
         marker: { size: 12, color: d.scatter.map((_, i) => pal[i % pal.length]) },
         hovertemplate: "%{text}<br>max drawdown %{x:.2f}%<br>net return %{y:.2f}%<extra></extra>" }],
       layout(c, { showlegend: false, xaxis: { title: { text: "max drawdown (%)", font: { size: 10 } }, gridcolor: c.line,
-          range: [0, Math.max(...d.scatter.map((p) => p.max_drawdown_pct)) * 1.25 + 1] },
-        yaxis: axis(c, { side: "left", title: { text: "net return (%)", font: { size: 10 } } }), margin: { l: 50, r: 16, t: 20, b: 40 } }));
+          range: [-xMax * 0.05, xMax * 1.05] },
+        yaxis: axis(c, { side: "left", title: { text: "net return (%)", font: { size: 10 } }, range: [yLo, yHi] }), margin: { l: 50, r: 16, t: 20, b: 40 } }));
     } catch (err) {
       empty("stratCmpEquity", `Could not load: ${err.message}`);
     }
