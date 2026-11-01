@@ -232,7 +232,8 @@ that one day they can be tested on data nobody has seen yet. Turning it off stop
 signal, the data it used, its costs and its **validation status**, which always says how it did on design data
 (for example "FAILED on design data · not validated"). DCA (buying a fixed amount on a schedule), **trend following**
 (buying 4-hour trend pullbacks), **range trading** (buying near the bottom of a sideways range) and **breakout
-trading** (buying a 4-hour close above the recent high) are active so far; rotation says "planned". Use the picker in the details card to see each one's backtest, forward test, settings and history.
+trading** (buying a 4-hour close above the recent high) and **rotation** (holding whichever of BTC, ETH, SOL and
+BNB was strongest over 28 days, or cash) are active. Use the picker in the details card to see each one's backtest, forward test, settings and history.
 
 - **DCA** says ACCUMULATE on a scheduled buy day, WAIT on other days and PAUSE when the price data is not trustworthy.
   It does not try to time the market, and nothing is ever bought.
@@ -247,6 +248,11 @@ trading** (buying a 4-hour close above the recent high) are active so far; rotat
   higher volume (a wick above it is not enough). It shows an entry and a stop but **no target**: a simulated trade is
   closed when a candle closes below the low of the previous 10 candles, or after 60 candles. On design data it made
   money on average but its worst drawdown (23.7%) was above the 15% limit, so it FAILED and is research only.
+- **Rotation** looks once a week (Monday 00:00 UTC) at which of BTC, ETH, SOL and BNB rose most over the last 28
+  days: BTC STRONGER or ALTCOIN STRENGTH (hold that one), NO TRADE (even the best one fell: cash) or NEUTRAL (the top
+  two are within 2 points: keep what is held). The card between Mondays is a preview. Recent headlines that name these
+  coins are shown next to the ranking as context only. On design data it did far better than holding BTC, but read
+  the warning: SOL and BNB were chosen knowing they survived, which flatters the result.
 - **Breakout-0.5R** is the same breakout rules with half the risk per trade. It was chosen *after* seeing Breakout's
   result, so it has no backtest verdict at all ("chosen after design results: forward test only, no design
   verdict"); only its forward test, which starts fresh, can say anything about it.

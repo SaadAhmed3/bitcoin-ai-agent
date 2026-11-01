@@ -263,7 +263,7 @@ class StrategyCharts:
         result = self.lab.evaluate(sid)
         frames = {tf: self.lab.market.get_candles(tf).df for tf in eng.EVAL_TIMEFRAMES}
         frames.update(self.lab.extra_frames(eng, self.lab.clock()))
-        if any(f is None or f.empty for f in frames.values()):
+        if any(frames[tf] is None or frames[tf].empty for tf in eng.EVAL_TIMEFRAMES):   # other assets: N/A, not "no data"
             return {"status": "no_data", "note": "No closed candles for this strategy's timeframe yet.", "how_to": HOW_TO["live"]}
         out = LIVE[sid](frames, cfg, result)
         how_to = out.pop("how_to", HOW_TO["live"])

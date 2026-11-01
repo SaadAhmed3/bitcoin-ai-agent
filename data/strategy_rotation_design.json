@@ -1,0 +1,5194 @@
+{
+ "strategy": "rotation",
+ "version": "rotation-1",
+ "config": {
+  "lookback_days": 28,
+  "cash_filter": "on",
+  "neutral_band_pct": 2.0,
+  "fee_pct": 0.1,
+  "slippage_pct": 0.05
+ },
+ "config_hash": "f3de8ea9c08bc780",
+ "period": {
+  "kind": "design",
+  "first_monday": 1624838400000,
+  "first_day": 1624838400000,
+  "last_day": 1761609600000,
+  "last_day_close": 1761695999999,
+  "holdout_start": 1761696000000,
+  "days": 1584
+ },
+ "metrics": {
+  "net_return_pct": 3193.1706167616435,
+  "max_drawdown_pct": 59.701953871969074,
+  "return_to_drawdown": 53.48519453164636,
+  "switches": 91,
+  "trades": 91,
+  "weeks": 227,
+  "weeks_in_cash_pct": 29.955947136563875,
+  "weeks_in_btc_pct": 11.013215859030836,
+  "weeks_in_alts_pct": 59.03083700440529,
+  "costs_pct": 242.42102392895447,
+  "buy_hold_return_pct": 224.3573967634224,
+  "win_rate_pct": null,
+  "profit_factor": null,
+  "expectancy_r": null,
+  "avg_reward_risk": null,
+  "costs_usd": null
+ },
+ "criteria": [
+  {
+   "id": "C1",
+   "rule": "return / max drawdown >= BTC buy & hold's (same window)",
+   "value": 53.48519453164636,
+   "btc": 2.927829570634778,
+   "passed": true
+  },
+  {
+   "id": "C2",
+   "rule": "max drawdown <= BTC buy & hold's",
+   "value": 59.701953871969074,
+   "btc": 76.62925431645935,
+   "passed": true
+  },
+  {
+   "id": "C3",
+   "rule": "beats >= 90% of 1,000 random weekly rotations among the same assets",
+   "value": 97.7,
+   "passed": true
+  }
+ ],
+ "verdict": "PASS",
+ "sample_warning": null,
+ "btc_buy_and_hold": {
+  "net_return_pct": 224.3573967634224,
+  "max_drawdown_pct": 76.62925431645935
+ },
+ "buy_and_hold": {
+  "net_return_pct": 224.3573967634224,
+  "max_drawdown_pct": 76.62925431645935
+ },
+ "asset_buy_and_hold": {
+  "BTCUSDT": {
+   "net_return_pct": 224.3573967634224,
+   "max_drawdown_pct": 76.62925431645935
+  },
+  "ETHUSDT": {
+   "net_return_pct": 100.13793941461975,
+   "max_drawdown_pct": 79.30253453633334
+  },
+  "SOLUSDT": {
+   "net_return_pct": 507.12019621403437,
+   "max_drawdown_pct": 96.26992725584275
+  },
+  "BNBUSDT": {
+   "net_return_pct": 278.19896135846966,
+   "max_drawdown_pct": 69.85462892119357
+  }
+ },
+ "random_rotations": {
+  "runs": 1000,
+  "beaten_pct": 97.7,
+  "median_return_pct": 564.8869032469573
+ },
+ "random_entries": {
+  "runs": 1000,
+  "beaten_pct": 97.7,
+  "median_return_pct": 564.8869032469573
+ },
+ "walk_forward": [
+  {
+   "start": 1624838400000,
+   "end": 1640563199999,
+   "trades": 12,
+   "return_pct": 311.43839545928864,
+   "sum_r": null
+  },
+  {
+   "start": 1640563200000,
+   "end": 1656287999999,
+   "trades": 7,
+   "return_pct": -12.461364806087971,
+   "sum_r": null
+  },
+  {
+   "start": 1656288000000,
+   "end": 1672012799999,
+   "trades": 12,
+   "return_pct": -1.4692688817947053,
+   "sum_r": null
+  },
+  {
+   "start": 1672012800000,
+   "end": 1687737599999,
+   "trades": 11,
+   "return_pct": 41.552158167825894,
+   "sum_r": null
+  },
+  {
+   "start": 1687737600000,
+   "end": 1703462399999,
+   "trades": 5,
+   "return_pct": 452.22846120272504,
+   "sum_r": null
+  },
+  {
+   "start": 1703462400000,
+   "end": 1719187199999,
+   "trades": 15,
+   "return_pct": -27.405152125294265,
+   "sum_r": null
+  },
+  {
+   "start": 1719187200000,
+   "end": 1734911999999,
+   "trades": 10,
+   "return_pct": 4.2345074282149175,
+   "sum_r": null
+  },
+  {
+   "start": 1734912000000,
+   "end": 1750636799999,
+   "trades": 14,
+   "return_pct": -17.267510411912678,
+   "sum_r": null
+  },
+  {
+   "start": 1750636800000,
+   "end": 1761695999999,
+   "trades": 5,
+   "return_pct": 89.63096064277687,
+   "sum_r": null
+  }
+ ],
+ "sensitivity": [
+  {
+   "lookback_days": 14,
+   "cash_filter": "on",
+   "switches": 114,
+   "net_return_pct": 1091.6533295796987,
+   "max_drawdown_pct": 66.70485451332277,
+   "return_to_drawdown": 16.365425538281713,
+   "is_default": false
+  },
+  {
+   "lookback_days": 14,
+   "cash_filter": "off",
+   "switches": 108,
+   "net_return_pct": 935.4137976694169,
+   "max_drawdown_pct": 84.41514406458896,
+   "return_to_drawdown": 11.081113561255068,
+   "is_default": false
+  },
+  {
+   "lookback_days": 28,
+   "cash_filter": "on",
+   "switches": 91,
+   "net_return_pct": 3193.1706167616435,
+   "max_drawdown_pct": 59.701953871969074,
+   "return_to_drawdown": 53.48519453164636,
+   "is_default": true
+  },
+  {
+   "lookback_days": 28,
+   "cash_filter": "off",
+   "switches": 78,
+   "net_return_pct": 1005.0570434420179,
+   "max_drawdown_pct": 83.35856846816819,
+   "return_to_drawdown": 12.057033390944268,
+   "is_default": false
+  },
+  {
+   "lookback_days": 56,
+   "cash_filter": "on",
+   "switches": 63,
+   "net_return_pct": 557.0560387718882,
+   "max_drawdown_pct": 79.21288546313609,
+   "return_to_drawdown": 7.032391706411574,
+   "is_default": false
+  },
+  {
+   "lookback_days": 56,
+   "cash_filter": "off",
+   "switches": 54,
+   "net_return_pct": 456.65126350448776,
+   "max_drawdown_pct": 84.10917526989168,
+   "return_to_drawdown": 5.429268115388998,
+   "is_default": false
+  }
+ ],
+ "weeks": [
+  {
+   "kind": "week",
+   "monday": 1624838400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.026400013243074727,
+    "ETHUSDT": -0.16919672419718523,
+    "SOLUSDT": 0.11574786623758215,
+    "BNBUSDT": -0.10658230180913475
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1625443200000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.014241691392213207,
+    "ETHUSDT": -0.14352562022478543,
+    "SOLUSDT": -0.18777396043122851,
+    "BNBUSDT": -0.218703172224621
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1626048000000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.1220274332230411,
+    "ETHUSDT": -0.14700338337325103,
+    "SOLUSDT": -0.168552679171188,
+    "BNBUSDT": -0.11930016402405685
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1626652800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.10734783214457466,
+    "ETHUSDT": -0.1568240270652158,
+    "SOLUSDT": -0.24346938196670165,
+    "BNBUSDT": -0.10905980889465605
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1627257600000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.01961594612617623,
+    "ETHUSDT": 0.10468248683334336,
+    "SOLUSDT": -0.11439947330469946,
+    "BNBUSDT": 0.040189775501082936
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1627862400000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER",
+   "returns": {
+    "BTCUSDT": 0.1291975318613261,
+    "ETHUSDT": 0.10031472129298358,
+    "SOLUSDT": -0.0033547257876312964,
+    "BNBUSDT": 0.08117157532020025
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1628467200000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.2783321983514402,
+    "ETHUSDT": 0.4071106543016656,
+    "SOLUSDT": 0.16990864458392885,
+    "BNBUSDT": 0.060932455922523054
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1629072000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.4781607473718128,
+    "ETHUSDT": 0.7482660548518745,
+    "SOLUSDT": 1.0069358527349754,
+    "BNBUSDT": 0.37057265806024486
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1629676800000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.39168458116809535,
+    "ETHUSDT": 0.47868060407618995,
+    "SOLUSDT": 1.5762885868026055,
+    "BNBUSDT": 0.48294553146483343
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1630281600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.22392499618525985,
+    "ETHUSDT": 0.26129147118782003,
+    "SOLUSDT": 1.7580857602809896,
+    "BNBUSDT": 0.44231636549505415
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1630886400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.1818158361451483,
+    "ETHUSDT": 0.31158258213390444,
+    "SOLUSDT": 2.7715803452855248,
+    "BNBUSDT": 0.4769302788261798
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1631491200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.020193801568618497,
+    "ETHUSDT": 0.029367208028810765,
+    "SOLUSDT": 2.2558704302180046,
+    "BNBUSDT": 0.005434126313247134
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1632096000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.040566645856697225,
+    "ETHUSDT": 0.027986411365040098,
+    "SOLUSDT": 1.099072483682583,
+    "BNBUSDT": -0.08932869751270389
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1632700800000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.11497189848307787,
+    "ETHUSDT": -0.05090787257210394,
+    "SOLUSDT": 0.4394566486257028,
+    "BNBUSDT": -0.2828851365436731
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1633305600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.06872265097896157,
+    "ETHUSDT": -0.1348154186148358,
+    "SOLUSDT": 0.21816901408450695,
+    "BNBUSDT": -0.1471870047543582
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1633910400000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER",
+   "returns": {
+    "BTCUSDT": 0.1875875063334813,
+    "ETHUSDT": 0.0029404766450953357,
+    "SOLUSDT": -0.15342245682483202,
+    "BNBUSDT": -0.029305789094403067
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1634515200000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER",
+   "returns": {
+    "BTCUSDT": 0.30241428397550907,
+    "ETHUSDT": 0.15568914445025261,
+    "SOLUSDT": 0.048180151872218024,
+    "BNBUSDT": 0.1524718551150268
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1635120000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.4098922867688115,
+    "ETHUSDT": 0.33436949437302443,
+    "SOLUSDT": 0.4902683574166913,
+    "BNBUSDT": 0.383139534883721
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1635724800000,
+   "holding": "BTCUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.27177981913281757,
+    "ETHUSDT": 0.25440277611162965,
+    "SOLUSDT": 0.17059775696612345,
+    "BNBUSDT": 0.2185830429732869
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1636329600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.15760606670447674,
+    "ETHUSDT": 0.3509937848176159,
+    "SOLUSDT": 0.6921721450355811,
+    "BNBUSDT": 0.6075228903736698
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1636934400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.06486069100201486,
+    "ETHUSDT": 0.20267231631074778,
+    "SOLUSDT": 0.4903822133399949,
+    "BNBUSDT": 0.3820344022085369
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1637539200000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.03664944352071309,
+    "ETHUSDT": 0.043107735043467876,
+    "SOLUSDT": 0.14034827347382994,
+    "BNBUSDT": 0.2274064733081127
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1638144000000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.06565959432167812,
+    "ETHUSDT": 0.0017657170980660553,
+    "SOLUSDT": -0.008889327868042973,
+    "BNBUSDT": 0.1652687762104459
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1638748800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.21932152103270885,
+    "ETHUSDT": -0.09022046182296728,
+    "SOLUSDT": -0.2132729894264659,
+    "BNBUSDT": -0.1413177339901479
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1639353600000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.236041093360562,
+    "ETHUSDT": -0.10731654598508589,
+    "SOLUSDT": -0.27589674824002675,
+    "BNBUSDT": -0.12369391518131534
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1639958400000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.20369120681955333,
+    "ETHUSDT": -0.07847479399104351,
+    "SOLUSDT": -0.21942648908941043,
+    "BNBUSDT": -0.09280821917808224
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1640563200000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.11347714739865011,
+    "ETHUSDT": -0.05383744918249589,
+    "SOLUSDT": -0.014350490806716798,
+    "BNBUSDT": -0.10616718468836905
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1641168000000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.04271876068525737,
+    "ETHUSDT": -0.08773388872472854,
+    "SOLUSDT": -0.10222471109301035,
+    "BNBUSDT": -0.04804589458587305
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1641772800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.16360922925086752,
+    "ETHUSDT": -0.2368111380145279,
+    "SOLUSDT": -0.1850694444444445,
+    "BNBUSDT": -0.23075574259161835
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1642377600000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.0773237980233169,
+    "ETHUSDT": -0.1471048433542126,
+    "SOLUSDT": -0.17756905463235717,
+    "BNBUSDT": -0.058890147225367895
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1642982400000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.28618020229839236,
+    "ETHUSDT": -0.37517595408951754,
+    "SOLUSDT": -0.49557656336888933,
+    "BNBUSDT": -0.29740117130307464
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1643587200000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.19888305631793468,
+    "ETHUSDT": -0.3204032108498095,
+    "SOLUSDT": -0.47099518003969376,
+    "BNBUSDT": -0.28964218455743884
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1644192000000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER",
+   "returns": {
+    "BTCUSDT": 0.01233141492744938,
+    "ETHUSDT": -0.030768059340666287,
+    "SOLUSDT": -0.1813662831984093,
+    "BNBUSDT": -0.04285388648279009
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1644796800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.02363503055141125,
+    "ETHUSDT": -0.14214731331867292,
+    "SOLUSDT": -0.37255034464116776,
+    "BNBUSDT": -0.20196550340954678
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1645401600000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER",
+   "returns": {
+    "BTCUSDT": 0.059107921052958146,
+    "ETHUSDT": 0.03268202960996591,
+    "SOLUSDT": -0.09079975947083585,
+    "BNBUSDT": -0.00859598853868182
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1646006400000,
+   "holding": "BTCUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": -0.00482263759656365,
+    "ETHUSDT": 0.005807785738445981,
+    "SOLUSDT": -0.08210955086290073,
+    "BNBUSDT": -0.04533404029692467
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1646611200000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.09343979960770044,
+    "ETHUSDT": -0.1648777901073325,
+    "SOLUSDT": -0.26639486467730744,
+    "BNBUSDT": -0.10693022148130504
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1647216000000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.10168722532117314,
+    "ETHUSDT": -0.12381187894661683,
+    "SOLUSDT": -0.15207323640280013,
+    "BNBUSDT": -0.09173159085197291
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1647820800000,
+   "holding": "ETHUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.07490109253445643,
+    "ETHUSDT": 0.09130088215439436,
+    "SOLUSDT": -0.02314814814814814,
+    "BNBUSDT": 0.026799789805570073
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1648425600000,
+   "holding": "ETHUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.24214629167244706,
+    "ETHUSDT": 0.25942471501343256,
+    "SOLUSDT": 0.25002919537545276,
+    "BNBUSDT": 0.19550124965287408
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1649030400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.20787016202937947,
+    "ETHUSDT": 0.3804428348012181,
+    "SOLUSDT": 0.6187773442118956,
+    "BNBUSDT": 0.2010666666666665
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1649635200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.11598249109122039,
+    "ETHUSDT": 0.2732454832747002,
+    "SOLUSDT": 0.4107709894576399,
+    "BNBUSDT": 0.156889872717211
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1650240000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.03838848764641456,
+    "ETHUSDT": 0.04427234411367942,
+    "SOLUSDT": 0.13010607086436465,
+    "BNBUSDT": 0.04042988741044007
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1650844800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.1575482149904246,
+    "ETHUSDT": -0.11368015414258192,
+    "SOLUSDT": -0.07296337817638265,
+    "BNBUSDT": -0.07363530778164917
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1651449600000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.17107203923516423,
+    "ETHUSDT": -0.19793237192318935,
+    "SOLUSDT": -0.34492330168005847,
+    "BNBUSDT": -0.1343250444049734
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1652054400000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.1926155480996279,
+    "ETHUSDT": -0.21333795394375343,
+    "SOLUSDT": -0.3213288916899253,
+    "BNBUSDT": -0.1487682372638126
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1652659200000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.2104240321870089,
+    "ETHUSDT": -0.2820458759194929,
+    "SOLUSDT": -0.4125811283075388,
+    "BNBUSDT": -0.23167732415150033
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1653264000000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.232095306149815,
+    "ETHUSDT": -0.3005169462512838,
+    "SOLUSDT": -0.4711276831603346,
+    "BNBUSDT": -0.19909729187562697
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1653868800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.23396506478702628,
+    "ETHUSDT": -0.3579603583957859,
+    "SOLUSDT": -0.49843889384478157,
+    "BNBUSDT": -0.2156963323929212
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1654473600000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.1210159701983643,
+    "ETHUSDT": -0.28315956995051017,
+    "SOLUSDT": -0.4889891217829663,
+    "BNBUSDT": -0.15959539196403472
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1655078400000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.15175641396806594,
+    "ETHUSDT": -0.33116734800423253,
+    "SOLUSDT": -0.47968723440421557,
+    "BNBUSDT": -0.18437900128040963
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1655683200000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.3208542698638738,
+    "ETHUSDT": -0.4476627234863131,
+    "SOLUSDT": -0.3485137195121951,
+    "BNBUSDT": -0.32654978083907327
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1656288000000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.2860730756309364,
+    "ETHUSDT": -0.339565735206546,
+    "SOLUSDT": -0.12427745664739875,
+    "BNBUSDT": -0.23512099411379983
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1656892800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.3544004002779484,
+    "ETHUSDT": -0.4052473937427681,
+    "SOLUSDT": -0.133177570093458,
+    "BNBUSDT": -0.2671347375459714
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1657497600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.21494491153747586,
+    "ETHUSDT": -0.18572105600624467,
+    "SOLUSDT": 0.19928128062724615,
+    "BNBUSDT": -0.07888540031397184
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1658102400000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.010895304753572477,
+    "ETHUSDT": 0.18618911327124676,
+    "SOLUSDT": 0.12957004972214103,
+    "BNBUSDT": 0.15202231520223153
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1658707200000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.07327715897893672,
+    "ETHUSDT": 0.33387321650706725,
+    "SOLUSDT": 0.039096217314039006,
+    "BNBUSDT": 0.11757161179991438
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1659312000000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.20591866878099463,
+    "ETHUSDT": 0.5621171783367154,
+    "SOLUSDT": 0.26834381551362685,
+    "BNBUSDT": 0.292883211678832
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1659916800000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.11081717553098924,
+    "ETHUSDT": 0.4551936047108769,
+    "SOLUSDT": 0.10596567692726788,
+    "BNBUSDT": 0.37537281636131237
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1660521600000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.1686245321701536,
+    "ETHUSDT": 0.44571770066858396,
+    "SOLUSDT": 0.1618332470222683,
+    "BNBUSDT": 0.281678773204197
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1661126400000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.0471251142620267,
+    "ETHUSDT": 0.012787131501533544,
+    "SOLUSDT": -0.1089665282189104,
+    "BNBUSDT": 0.15493496557000763
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1661731200000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.1604627421080378,
+    "ETHUSDT": -0.14978666603103463,
+    "SOLUSDT": -0.28122786304604486,
+    "BNBUSDT": -0.02434721242060689
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1662336000000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.13696541742846302,
+    "ETHUSDT": -0.07111558119974826,
+    "SOLUSDT": -0.20788177339901492,
+    "BNBUSDT": -0.13537794299876083
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1662940800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.10196854670021782,
+    "ETHUSDT": -0.0874278539355452,
+    "SOLUSDT": -0.2201916648094494,
+    "BNBUSDT": -0.07021410579345089
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1663545600000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.09757706149163325,
+    "ETHUSDT": -0.17527639930042704,
+    "SOLUSDT": -0.14724431039210306,
+    "BNBUSDT": -0.11825107651540245
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1664150400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.03826165483971089,
+    "ETHUSDT": -0.09260842748605225,
+    "SOLUSDT": 0.062417871222076204,
+    "BNBUSDT": -0.007956600361663568
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1664755200000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.047174292385614214,
+    "ETHUSDT": -0.19158097360822646,
+    "SOLUSDT": -0.003109452736318241,
+    "BNBUSDT": 0.020064493013256746
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1665360000000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.10939956118307381,
+    "ETHUSDT": -0.25082242895402884,
+    "SOLUSDT": -0.059159759931408984,
+    "BNBUSDT": -0.057907213003725144
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1665964800000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.0078903265214888,
+    "ETHUSDT": -0.02140111351732088,
+    "SOLUSDT": -0.02990353697749193,
+    "BNBUSDT": 0.02366641622839971
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1666569600000,
+   "holding": "ETHUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.04057024423391242,
+    "ETHUSDT": 0.05373736125379436,
+    "SOLUSDT": -0.09461966604823757,
+    "BNBUSDT": 0.00619759387531893
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1667174400000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.08242097309097018,
+    "ETHUSDT": 0.24572341625415128,
+    "SOLUSDT": 0.027448533998752245,
+    "BNBUSDT": 0.10115911485774509
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1667779200000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.07544413247169879,
+    "ETHUSDT": 0.18528791577547166,
+    "SOLUSDT": -0.009113001215066974,
+    "BNBUSDT": 0.21459381739755568
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1668384000000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.15226771766362213,
+    "ETHUSDT": -0.06467322638692141,
+    "SOLUSDT": -0.5631421942326815,
+    "BNBUSDT": 0.01431192660550451
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1668988800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.16811971140089121,
+    "ETHUSDT": -0.1627254068318429,
+    "SOLUSDT": -0.5809426229508197,
+    "BNBUSDT": -0.04275362318840581
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1669593600000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.20354885812518064,
+    "ETHUSDT": -0.24933980533688782,
+    "SOLUSDT": -0.5713418336369156,
+    "BNBUSDT": -0.018819776714513514
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1670198400000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.18176391183597873,
+    "ETHUSDT": -0.18420062615970256,
+    "SOLUSDT": -0.5797057020232985,
+    "BNBUSDT": -0.1364308967150043
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1670803200000,
+   "holding": "BTCUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.04624659748864812,
+    "ETHUSDT": 0.03399127295352389,
+    "SOLUSDT": 0.018209408194233667,
+    "BNBUSDT": 0.02894356005788712
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1671408000000,
+   "holding": "BTCUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.0281310522025795,
+    "ETHUSDT": 0.03576400136577318,
+    "SOLUSDT": 0.00896495517522422,
+    "BNBUSDT": -0.04996214988644965
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1672012800000,
+   "holding": "BTCUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.024550210058202904,
+    "ETHUSDT": 0.020630214091868382,
+    "SOLUSDT": -0.19405099150141636,
+    "BNBUSDT": -0.2093628088426529
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1672617600000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.028584039238382597,
+    "ETHUSDT": -0.061801924324493496,
+    "SOLUSDT": -0.2713347921225383,
+    "BNBUSDT": -0.16244002741603836
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1673222400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.0025039435061648962,
+    "ETHUSDT": 0.021496266854577728,
+    "SOLUSDT": 0.0767511177347242,
+    "BNBUSDT": -0.03340365682137836
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1673827200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.24693739653164837,
+    "ETHUSDT": 0.3122918533295016,
+    "SOLUSDT": 0.8489499192245558,
+    "BNBUSDT": 0.20398406374501987
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1674432000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.3490810124220909,
+    "ETHUSDT": 0.33559839476081454,
+    "SOLUSDT": 1.1274165202108963,
+    "BNBUSDT": 0.24588815789473695
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1675036800000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.4288173078369717,
+    "ETHUSDT": 0.3702117733308896,
+    "SOLUSDT": 1.6096096096096097,
+    "BNBUSDT": 0.2978723404255319
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1675641600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.3389267642194018,
+    "ETHUSDT": 0.2626495938488249,
+    "SOLUSDT": 0.6242214532871972,
+    "BNBUSDT": 0.19243361222262645
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1676246400000,
+   "holding": "BTCUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.043697865510385014,
+    "ETHUSDT": -0.02427665988199834,
+    "SOLUSDT": -0.061162079510703404,
+    "BNBUSDT": 0.03441429516876249
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1676851200000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER",
+   "returns": {
+    "BTCUSDT": 0.0688694849541216,
+    "ETHUSDT": 0.0321425060217273,
+    "SOLUSDT": 0.026022304832713727,
+    "BNBUSDT": 0.028052805280528004
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1677456000000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.007895191283068592,
+    "ETHUSDT": -0.0020429009193054792,
+    "SOLUSDT": -0.10817031070195626,
+    "BNBUSDT": -0.026796973518285028
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1678060800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.02191915461230165,
+    "ETHUSDT": -0.03955752538335933,
+    "SOLUSDT": -0.10651896037494679,
+    "BNBUSDT": -0.11928004881025023
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1678665600000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.009804191605221169,
+    "ETHUSDT": 0.04323917535300992,
+    "SOLUSDT": -0.060027919962773346,
+    "BNBUSDT": -0.07837492002559177
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1679270400000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER",
+   "returns": {
+    "BTCUSDT": 0.15248626387208852,
+    "ETHUSDT": 0.06008632236940015,
+    "SOLUSDT": -0.11996779388083734,
+    "BNBUSDT": 0.08089887640449445
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1679875200000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER",
+   "returns": {
+    "BTCUSDT": 0.18735844210428,
+    "ETHUSDT": 0.08073792464785323,
+    "SOLUSDT": -0.09935483870967732,
+    "BNBUSDT": 0.06446388079041143
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1680480000000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER",
+   "returns": {
+    "BTCUSDT": 0.25597719863898005,
+    "ETHUSDT": 0.14695956742384553,
+    "SOLUSDT": -0.02145922746781115,
+    "BNBUSDT": 0.08659508139937655
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1681084800000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER",
+   "returns": {
+    "BTCUSDT": 0.2876127818608898,
+    "ETHUSDT": 0.17628596558946552,
+    "SOLUSDT": 0.003960396039603964,
+    "BNBUSDT": 0.0857341200971884
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1681689600000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.08335862569697006,
+    "ETHUSDT": 0.18980951097333598,
+    "SOLUSDT": 0.1591948764867337,
+    "BNBUSDT": 0.032670032670032656
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1682294400000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.013495756765309008,
+    "ETHUSDT": 0.049676415541073826,
+    "SOLUSDT": 0.025310410697230168,
+    "BNBUSDT": 0.0063907486305536665
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1682899200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.03767375044681098,
+    "ETHUSDT": 0.04211734679661849,
+    "SOLUSDT": 0.10818713450292394,
+    "BNBUSDT": 0.07586866432897676
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1683504000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.0037544450313093947,
+    "ETHUSDT": 0.006175628859768079,
+    "SOLUSDT": 0.06804733727810652,
+    "BNBUSDT": 0.02621483375959066
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1684108800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.11176601610643921,
+    "ETHUSDT": -0.1507832744127212,
+    "SOLUSDT": -0.17403314917127077,
+    "BNBUSDT": -0.10238711532930678
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1684713600000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.03054736033286698,
+    "ETHUSDT": -0.030660580021482198,
+    "SOLUSDT": -0.08663251047973919,
+    "BNBUSDT": -0.0734804959177503
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1685318400000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.039961742141899514,
+    "ETHUSDT": 0.02061398114529256,
+    "SOLUSDT": -0.08487247141600707,
+    "BNBUSDT": -0.06933333333333325
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1685923200000,
+   "holding": "ETHUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": -0.04624992525527516,
+    "ETHUSDT": 0.010484388366124753,
+    "SOLUSDT": 0.007386888273314796,
+    "BNBUSDT": -0.049844236760124616
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1686528000000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.03685578442670634,
+    "ETHUSDT": -0.025816886300098374,
+    "SOLUSDT": -0.25704730052556135,
+    "BNBUSDT": -0.24575456584428068
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1687132800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.015246498961782873,
+    "ETHUSDT": -0.046517554891933655,
+    "SOLUSDT": -0.21213666496685368,
+    "BNBUSDT": -0.20332898172323755
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1687737600000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER",
+   "returns": {
+    "BTCUSDT": 0.08543238909673967,
+    "ETHUSDT": -0.005155503395087635,
+    "SOLUSDT": -0.18500720807304172,
+    "BNBUSDT": -0.23973256924546327
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1688342400000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER",
+   "returns": {
+    "BTCUSDT": 0.12914596641515952,
+    "ETHUSDT": 0.025116269226088672,
+    "SOLUSDT": -0.10861594867094415,
+    "BNBUSDT": -0.19180327868852454
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1688947200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.16335854012740336,
+    "ETHUSDT": 0.06278098541728472,
+    "SOLUSDT": 0.3710610932475884,
+    "BNBUSDT": -0.005522514868309347
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1689552000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.14776098833825557,
+    "ETHUSDT": 0.1168889276271825,
+    "SOLUSDT": 0.7747572815533983,
+    "BNBUSDT": -0.007374027038099085
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1690156800000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.012438506683264072,
+    "ETHUSDT": -0.005303349483884556,
+    "SOLUSDT": 0.4599056603773586,
+    "BNBUSDT": 0.015494137353433857
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1690761600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.04363388610848273,
+    "ETHUSDT": -0.039066209715713174,
+    "SOLUSDT": 0.2467866323907455,
+    "BNBUSDT": -0.016227180527383367
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1691366400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.035552545016347414,
+    "ETHUSDT": -0.017457590723641836,
+    "SOLUSDT": 0.08818011257035652,
+    "BNBUSDT": 0.03887227680478422
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1691971200000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.030700923095039467,
+    "ETHUSDT": -0.04233888799288277,
+    "SOLUSDT": -0.11633843909555075,
+    "BNBUSDT": -0.008666941807676576
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1692576000000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.12943067270536412,
+    "ETHUSDT": -0.1077390627564554,
+    "SOLUSDT": -0.12075928917609058,
+    "BNBUSDT": -0.10721649484536078
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1693180800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.10857929127638344,
+    "ETHUSDT": -0.10928192760730271,
+    "SOLUSDT": -0.14268041237113405,
+    "BNBUSDT": -0.09938144329896903
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1693785600000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.10716326290668243,
+    "ETHUSDT": -0.10623511156762899,
+    "SOLUSDT": -0.15646551724137925,
+    "BNBUSDT": -0.11842105263157887
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1694390400000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.11814936199487847,
+    "ETHUSDT": -0.12131599963058126,
+    "SOLUSDT": -0.24721419727610405,
+    "BNBUSDT": -0.11573688592839293
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1694995200000,
+   "holding": "BTCUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.012887366509112708,
+    "ETHUSDT": -0.03724098644703422,
+    "SOLUSDT": -0.1359669269637116,
+    "BNBUSDT": 0.0
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1695600000000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER",
+   "returns": {
+    "BTCUSDT": 0.005616860465784468,
+    "ETHUSDT": -0.04680612423341546,
+    "SOLUSDT": -0.06878306878306872,
+    "BNBUSDT": -0.04624542124542119
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1696204800000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.07783079802596804,
+    "ETHUSDT": 0.05987749413145549,
+    "SOLUSDT": 0.2197240674501788,
+    "BNBUSDT": 0.017723880597014796
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1696809600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.0803138813719424,
+    "ETHUSDT": 0.009533701821419216,
+    "SOLUSDT": 0.2730263157894737,
+    "BNBUSDT": -0.004708097928436961
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1697414400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.023622269862493717,
+    "ETHUSDT": -0.03988338839307726,
+    "SOLUSDT": 0.1658692185007975,
+    "BNBUSDT": -0.03140877598152425
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1698019200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.14264042199937665,
+    "ETHUSDT": 0.05250172390887631,
+    "SOLUSDT": 0.5005165289256199,
+    "BNBUSDT": 0.045607297167546745
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1698624000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.2333947901175204,
+    "ETHUSDT": 0.03538490820687645,
+    "SOLUSDT": 0.3753665689149559,
+    "BNBUSDT": 0.04078826764436294
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1699228800000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.254139674499992,
+    "ETHUSDT": 0.1585397222018079,
+    "SOLUSDT": 0.7721791559000861,
+    "BNBUSDT": 0.15421002838221387
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1699833600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.36495268679004855,
+    "ETHUSDT": 0.3125686076891967,
+    "SOLUSDT": 1.5663474692202461,
+    "BNBUSDT": 0.17978063900810692
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1700438400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.24564173795680655,
+    "ETHUSDT": 0.2090340806635811,
+    "SOLUSDT": 1.1032702237521517,
+    "BNBUSDT": 0.13131313131313127
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1701043200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.08461881793633719,
+    "ETHUSDT": 0.1488407589380214,
+    "SOLUSDT": 0.7535790435577217,
+    "BNBUSDT": 0.0202553940995156
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1701648000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.1416770536172296,
+    "ETHUSDT": 0.15924216713978345,
+    "SOLUSDT": 0.530498177399757,
+    "BNBUSDT": -0.06516393442622959
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1702252800000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.18145252566295245,
+    "ETHUSDT": 0.1504929866776219,
+    "SOLUSDT": 0.33031272210376694,
+    "BNBUSDT": -0.03071948261924007
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1702857600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.10746266179798325,
+    "ETHUSDT": 0.09199739494001902,
+    "SOLUSDT": 0.15990180032733226,
+    "BNBUSDT": -0.030844155844155785
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1703462400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.14804941220265322,
+    "ETHUSDT": 0.0978116984187789,
+    "SOLUSDT": 0.9532742747959007,
+    "BNBUSDT": 0.1415623651273199
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1704067200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.057823100320071985,
+    "ETHUSDT": 0.04054812011217779,
+    "SOLUSDT": 0.6151159098126391,
+    "BNBUSDT": 0.3669443226654976
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1704672000000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.0031859228385975324,
+    "ETHUSDT": -0.05567529193713616,
+    "SOLUSDT": 0.19460398023240266,
+    "BNBUSDT": 0.2610508757297747
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1705276800000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.008645390353755111,
+    "ETHUSDT": 0.12581264909948464,
+    "SOLUSDT": 0.3236912656977564,
+    "BNBUSDT": 0.25418760469011725
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1705881600000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.03282439552004457,
+    "ETHUSDT": 0.0852454671937457,
+    "SOLUSDT": -0.18995108937305472,
+    "BNBUSDT": 0.20453686200378085
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1706486400000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.005972058184288143,
+    "ETHUSDT": -0.010942779387081547,
+    "SOLUSDT": -0.05642941407786073,
+    "BNBUSDT": -0.02084669660038485
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1707091200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.03064352448563612,
+    "ETHUSDT": 0.030777610717468873,
+    "SOLUSDT": 0.06764311270125223,
+    "BNBUSDT": 0.007605820105820227
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1707696000000,
+   "holding": "SOLUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.15737527361866754,
+    "ETHUSDT": 0.013886698451596846,
+    "SOLUSDT": 0.14550687559961606,
+    "BNBUSDT": 0.0707846410684474
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1708300800000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER",
+   "returns": {
+    "BTCUSDT": 0.2539022658069332,
+    "ETHUSDT": 0.17262570969251723,
+    "SOLUSDT": 0.2321879459874847,
+    "BNBUSDT": 0.09792843691148767
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1708905600000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.23072913221793612,
+    "ETHUSDT": 0.3791439585271834,
+    "SOLUSDT": 0.07803709106063761,
+    "BNBUSDT": 0.2725188339338356
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1709510400000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.4821442326117915,
+    "ETHUSDT": 0.52320081754222,
+    "SOLUSDT": 0.3630746675044507,
+    "BNBUSDT": 0.36035444699704633
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1710115200000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.42765826659591455,
+    "ETHUSDT": 0.5469266635024588,
+    "SOLUSDT": 0.3436627582356224,
+    "BNBUSDT": 0.6492048643592141
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1710720000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.31178627660192704,
+    "ETHUSDT": 0.2649972233791478,
+    "SOLUSDT": 0.7984675694939418,
+    "BNBUSDT": 0.6343624928530589
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1711324800000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.2992747760679004,
+    "ETHUSDT": 0.1100016385068383,
+    "SOLUSDT": 0.7771334686382525,
+    "BNBUSDT": 0.46126126126126143
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1711929600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.12938561779586988,
+    "ETHUSDT": 0.045151542085148044,
+    "SOLUSDT": 0.5553933620159803,
+    "BNBUSDT": 0.4636911942098916
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1712534400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.005866214744848275,
+    "ETHUSDT": -0.1093910743153873,
+    "SOLUSDT": 0.24329939746519869,
+    "BNBUSDT": 0.10398941198714318
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1713139200000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.03994006446228504,
+    "ETHUSDT": -0.1343316752224456,
+    "SOLUSDT": -0.2507183196274646,
+    "BNBUSDT": -0.009270596466678493
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1713744000000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.03375748158867464,
+    "ETHUSDT": -0.08894696930228252,
+    "SOLUSDT": -0.19077659343049802,
+    "BNBUSDT": 0.020961775585696563
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1714348800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.1144975989762066,
+    "ETHUSDT": -0.10474886771697178,
+    "SOLUSDT": -0.3183996048407013,
+    "BNBUSDT": -0.01071369704961267
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1714953600000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.07711014889045464,
+    "ETHUSDT": -0.09200104220948413,
+    "SOLUSDT": -0.18822415329768283,
+    "BNBUSDT": 0.013872238396985814
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1715558400000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.06362675794647243,
+    "ETHUSDT": -0.07157278193153338,
+    "SOLUSDT": -0.05170247933884298,
+    "BNBUSDT": 0.05014124293785316
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1716163200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.020524120684650482,
+    "ETHUSDT": -0.024297337395597363,
+    "SOLUSDT": 0.14200268817204287,
+    "BNBUSDT": -0.008799171842650111
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1716768000000,
+   "holding": "SOLUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.08537971837787328,
+    "ETHUSDT": 0.17252294351070185,
+    "SOLUSDT": 0.18421624755417043,
+    "BNBUSDT": 0.0
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1717372800000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.058639473848653534,
+    "ETHUSDT": 0.20548971594912646,
+    "SOLUSDT": 0.11953612845673511,
+    "BNBUSDT": 0.018412162162162016
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1717977600000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.13278497377935294,
+    "ETHUSDT": 0.2652895411516101,
+    "SOLUSDT": 0.13030746705710095,
+    "BNBUSDT": 0.13147276395427032
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1718582400000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.006078702646784118,
+    "ETHUSDT": 0.18013213119344607,
+    "SOLUSDT": -0.10963337844994991,
+    "BNBUSDT": 0.06318537859007822
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1719187200000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.07732944354989735,
+    "ETHUSDT": -0.10598802551699082,
+    "SOLUSDT": -0.2124716969585705,
+    "BNBUSDT": -0.037820726424525275
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1719792000000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.07368956800076976,
+    "ETHUSDT": -0.0906527793573505,
+    "SOLUSDT": -0.10137909898866071,
+    "BNBUSDT": -0.03433405208160545
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1720396800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.19799997530443747,
+    "ETHUSDT": -0.2092056982516728,
+    "SOLUSDT": -0.1880088823094006,
+    "BNBUSDT": -0.2708766716196137
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1721001600000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.08817090544292183,
+    "ETHUSDT": -0.10465979290422445,
+    "SOLUSDT": -0.024058162590879117,
+    "BNBUSDT": -0.10805500982318272
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1721606400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.07839470362368228,
+    "ETHUSDT": 0.03361970937557568,
+    "SOLUSDT": 0.4336001243297849,
+    "BNBUSDT": 0.04329004329004338
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1722211200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.0872661238663539,
+    "ETHUSDT": -0.04886334551038929,
+    "SOLUSDT": 0.2611690880567492,
+    "BNBUSDT": 0.0029199587770525337
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1722816000000,
+   "holding": "SOLUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.04123308808562309,
+    "ETHUSDT": -0.08259297168201973,
+    "SOLUSDT": 0.05082041932543313,
+    "BNBUSDT": 0.012635011208477653
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1723420800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.03429920535097353,
+    "ETHUSDT": -0.21253713313693345,
+    "SOLUSDT": -0.04124339699309232,
+    "BNBUSDT": -0.07599118942731276
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1724025600000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.14285837934645373,
+    "ETHUSDT": -0.26125308264892866,
+    "SOLUSDT": -0.2280340397853543,
+    "BNBUSDT": -0.11834024896265549
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1724630400000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.05904596462294154,
+    "ETHUSDT": -0.1602459818479829,
+    "SOLUSDT": -0.14050838290968104,
+    "BNBUSDT": -0.017126220243192325
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1725235200000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.014771754268324111,
+    "ETHUSDT": -0.09788316498817384,
+    "SOLUSDT": -0.07106195330007958,
+    "BNBUSDT": 0.03119339907426033
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1725840000000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.06544831355591707,
+    "ETHUSDT": -0.10099476398813478,
+    "SOLUSDT": -0.08066680793953518,
+    "BNBUSDT": -0.0005959475566149619
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1726444800000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.012060276565683647,
+    "ETHUSDT": -0.11333575790058004,
+    "SOLUSDT": -0.07758741749754239,
+    "BNBUSDT": 0.041792168674698704
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1727049600000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.009985051385861032,
+    "ETHUSDT": -0.06013189470272717,
+    "SOLUSDT": -0.08991945633022902,
+    "BNBUSDT": 0.0257884648893536
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1727654400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.1448495738183715,
+    "ETHUSDT": 0.0956004815065219,
+    "SOLUSDT": 0.23315175097276275,
+    "BNBUSDT": 0.16237314597970354
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1728259200000,
+   "holding": "BTCUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.14488731992648085,
+    "ETHUSDT": 0.06212945631828659,
+    "SOLUSDT": 0.1254706108336534,
+    "BNBUSDT": 0.13357185450208697
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1728864000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.06321484137184608,
+    "ETHUSDT": 0.06597728940892011,
+    "SOLUSDT": 0.12460988049021848,
+    "BNBUSDT": 0.03397181062522603
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1729468800000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.08577125442522004,
+    "ETHUSDT": 0.06428128632313057,
+    "SOLUSDT": 0.15743621655258244,
+    "BNBUSDT": 0.029216918634278777
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1730073600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.0368843881460339,
+    "ETHUSDT": -0.05637374793988592,
+    "SOLUSDT": 0.11466616180739608,
+    "BNBUSDT": -0.01074546675621213
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1730678400000,
+   "holding": "SOLUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.09481197919576778,
+    "ETHUSDT": 0.00725400917201835,
+    "SOLUSDT": 0.10957127252867305,
+    "BNBUSDT": -0.02209363492898464
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1731283200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.27835190763419515,
+    "ETHUSDT": 0.2893179581272709,
+    "SOLUSDT": 0.42188980641667784,
+    "BNBUSDT": 0.09634743096819287
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1731888000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.30165724615500733,
+    "ETHUSDT": 0.11980370671044915,
+    "SOLUSDT": 0.4185782556750297,
+    "BNBUSDT": 0.02145568575672563
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1732492800000,
+   "holding": "SOLUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.4392471814141663,
+    "ETHUSDT": 0.3402982693994734,
+    "SOLUSDT": 0.4308441374624923,
+    "BNBUSDT": 0.11956890699253209
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1733097600000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.4130684269321312,
+    "ETHUSDT": 0.5085505730898023,
+    "SOLUSDT": 0.45696179166923034,
+    "BNBUSDT": 0.17624170701093766
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1733702400000,
+   "holding": "ETHUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.2580512308011409,
+    "ETHUSDT": 0.25789690281194133,
+    "SOLUSDT": 0.12829056981006337,
+    "BNBUSDT": 0.18279055680423384
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1734307200000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.16257124316364435,
+    "ETHUSDT": 0.2870903771131339,
+    "SOLUSDT": -0.055585968753947834,
+    "BNBUSDT": 0.1615285183389885
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1734912000000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.02771980481315417,
+    "ETHUSDT": -0.023613590384386485,
+    "SOLUSDT": -0.2857199382740473,
+    "BNBUSDT": -0.01497763965739407
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1735516800000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.03546816500211247,
+    "ETHUSDT": -0.0947052144103614,
+    "SOLUSDT": -0.19788851351351355,
+    "BNBUSDT": 0.059025290019665055
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1736121600000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.027158452526609977,
+    "ETHUSDT": -0.0919446074697502,
+    "SOLUSDT": -0.0996118471015105,
+    "BNBUSDT": -0.044083557951482555
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1736726400000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.09495070980918885,
+    "ETHUSDT": -0.17473459810208913,
+    "SOLUSDT": -0.1594506621483035,
+    "BNBUSDT": -0.03551407069428403
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1737331200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.06456078171778357,
+    "ETHUSDT": -0.020327073614416324,
+    "SOLUSDT": 0.3982938178595168,
+    "BNBUSDT": 0.05143358419132937
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1737936000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.09475112600839353,
+    "ETHUSDT": -0.036904733530365164,
+    "SOLUSDT": 0.2661893229440877,
+    "BNBUSDT": -0.039354550819766576
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1738540800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.006740500882389422,
+    "ETHUSDT": -0.21075690527201674,
+    "SOLUSDT": -0.04638957874513849,
+    "BNBUSDT": -0.12898814307265016
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1739145600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.02028334425934042,
+    "ETHUSDT": -0.19591711810975432,
+    "SOLUSDT": 0.06344491008434572,
+    "BNBUSDT": -0.1118210401823061
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1739750400000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.05144941502436029,
+    "ETHUSDT": -0.17222063251138375,
+    "SOLUSDT": -0.2541399255209571,
+    "BNBUSDT": -0.014768951536175967
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1740355200000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.061995712336776476,
+    "ETHUSDT": -0.12773579244016442,
+    "SOLUSDT": -0.30170478170478177,
+    "BNBUSDT": -0.013410851551613145
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1740960000000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.03511329870167623,
+    "ETHUSDT": -0.12251191770510983,
+    "SOLUSDT": -0.12186133359540063,
+    "BNBUSDT": 0.00993849142117198
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1741564800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.1630513332866832,
+    "ETHUSDT": -0.2309586705136305,
+    "SOLUSDT": -0.36893300743253354,
+    "BNBUSDT": -0.09931634757473895
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1742169600000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.14090568979085316,
+    "ETHUSDT": -0.2909773390796607,
+    "SOLUSDT": -0.33005789557550336,
+    "BNBUSDT": -0.10533353142177981
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1742774400000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.10571069417606849,
+    "ETHUSDT": -0.2885778223847303,
+    "SOLUSDT": -0.20900321543408362,
+    "BNBUSDT": -0.052595607666838795
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1743379200000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.12602110957886914,
+    "ETHUSDT": -0.2821044354694593,
+    "SOLUSDT": -0.30154999720217124,
+    "BNBUSDT": -0.03484309388723272
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1743984000000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.02854261450234885,
+    "ETHUSDT": -0.21760434763241132,
+    "SOLUSDT": -0.16283297763022697,
+    "BNBUSDT": 0.0016046155233029324
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1744588800000,
+   "holding": "SOLUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.01435636388121142,
+    "ETHUSDT": -0.15328033916269213,
+    "SOLUSDT": 0.017838737810195848,
+    "BNBUSDT": -0.02975755562935911
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1745193600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.010492957337437825,
+    "ETHUSDT": -0.20868997352927987,
+    "SOLUSDT": 0.037789822342668034,
+    "BNBUSDT": -0.04972827393834456
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1745798400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.1378724527093642,
+    "ETHUSDT": -0.00909975992122769,
+    "SOLUSDT": 0.18554718795064895,
+    "BNBUSDT": 0.002092328130189225
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1746403200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.20206069106209346,
+    "ETHUSDT": 0.14429767959715578,
+    "SOLUSDT": 0.3591728826362004,
+    "BNBUSDT": 0.05488353673902879
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1747008000000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.24305157593123217,
+    "ETHUSDT": 0.5738095834167836,
+    "SOLUSDT": 0.34904190683907155,
+    "BNBUSDT": 0.11444855206407878
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1747612800000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.2497676663938302,
+    "ETHUSDT": 0.5735434935994357,
+    "SOLUSDT": 0.2570723922820253,
+    "BNBUSDT": 0.09912782360780747
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1748217600000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.1627200416429775,
+    "ETHUSDT": 0.424236164998409,
+    "SOLUSDT": 0.18759291796188693,
+    "BNBUSDT": 0.10933616146886282
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1748822400000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.12055151583164703,
+    "ETHUSDT": 0.4037625908030473,
+    "SOLUSDT": 0.09538034039597099,
+    "BNBUSDT": 0.12753613296247646
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1749427200000,
+   "holding": "BTCUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.015520851341746855,
+    "ETHUSDT": -0.0018850141376061114,
+    "SOLUSDT": -0.11975287256770029,
+    "BNBUSDT": 0.0013053827843048094
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1750032000000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.008080935417708934,
+    "ETHUSDT": 0.019949715347228336,
+    "SOLUSDT": -0.11731102135025973,
+    "BNBUSDT": -0.005126394793792954
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1750636800000,
+   "holding": null,
+   "signal": "NO TRADE",
+   "returns": {
+    "BTCUSDT": -0.07376156824797286,
+    "ETHUSDT": -0.12680991839198497,
+    "SOLUSDT": -0.25054057129850915,
+    "BNBUSDT": -0.0801117351816445
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1751241600000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER",
+   "returns": {
+    "BTCUSDT": 0.025690313587478197,
+    "ETHUSDT": -0.015406366547075612,
+    "SOLUSDT": -0.0276509386098428,
+    "BNBUSDT": -0.008883575222846107
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1751846400000,
+   "holding": "BTCUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": 0.032816690941418925,
+    "ETHUSDT": 0.024113186948916843,
+    "SOLUSDT": -0.003870121351262523,
+    "BNBUSDT": 0.017070552147239182
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1752451200000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.12777836545841947,
+    "ETHUSDT": 0.16659535800220593,
+    "SOLUSDT": 0.053474537491011276,
+    "BNBUSDT": 0.0675882071614804
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1753056000000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.16145627143650487,
+    "ETHUSDT": 0.686353638281636,
+    "SOLUSDT": 0.3774960139700858,
+    "BNBUSDT": 0.22898296552508102
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1753660800000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.10205733957209762,
+    "ETHUSDT": 0.5487842437672243,
+    "SOLUSDT": 0.23036785807461513,
+    "BNBUSDT": 0.2887463734921363
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1754265600000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.045831355380909766,
+    "ETHUSDT": 0.36041395140739585,
+    "SOLUSDT": 0.06657447649150527,
+    "BNBUSDT": 0.13282463468701478
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1754870400000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.0017413372314476483,
+    "ETHUSDT": 0.4301908123403866,
+    "SOLUSDT": 0.1334781259695934,
+    "BNBUSDT": 0.16650289017341047
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1755475200000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.0011929378488675368,
+    "ETHUSDT": 0.1904974858186328,
+    "SOLUSDT": 0.05269249848426383,
+    "BNBUSDT": 0.1302291165666869
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1756080000000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.04959119645640797,
+    "ETHUSDT": 0.23451098886908905,
+    "SOLUSDT": 0.0919211195928753,
+    "BNBUSDT": 0.03851895734597166
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1756684800000,
+   "holding": "ETHUSDT",
+   "signal": "NEUTRAL",
+   "returns": {
+    "BTCUSDT": -0.05220657252330818,
+    "ETHUSDT": 0.2559784256192912,
+    "SOLUSDT": 0.23862443662406618,
+    "BNBUSDT": 0.1416914045340183
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1757289600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.06837451436161801,
+    "ETHUSDT": 0.013085303853365593,
+    "SOLUSDT": 0.12969451439833568,
+    "BNBUSDT": 0.09022323530140475
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1757894400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.018201948962825343,
+    "ETHUSDT": 0.029550592196908587,
+    "SOLUSDT": 0.2553536834389234,
+    "BNBUSDT": 0.08315602422315238
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1758499200000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.015319807929240703,
+    "ETHUSDT": -0.07011913852075757,
+    "SOLUSDT": 0.1465190795222837,
+    "BNBUSDT": 0.19542275615794447
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1759104000000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.03619152054549635,
+    "ETHUSDT": -0.056848739591468744,
+    "SOLUSDT": 0.0508922340743696,
+    "BNBUSDT": 0.15782661925027686
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1759708800000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.11107850880721104,
+    "ETHUSDT": 0.04833274890332295,
+    "SOLUSDT": 0.10763266295129648,
+    "BNBUSDT": 0.32649281290835774
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1760313600000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.0026825309120890317,
+    "ETHUSDT": -0.09820848780212355,
+    "SOLUSDT": -0.17834501167834493,
+    "BNBUSDT": 0.40597511090004446
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1760918400000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": -0.05718457907935348,
+    "ETHUSDT": -0.10402544899065691,
+    "SOLUSDT": -0.2045223577235772,
+    "BNBUSDT": 0.0592479480816952
+   }
+  },
+  {
+   "kind": "week",
+   "monday": 1761523200000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH",
+   "returns": {
+    "BTCUSDT": 0.02135668367599397,
+    "ETHUSDT": 0.003935144948529423,
+    "SOLUSDT": -0.051226106341602295,
+    "BNBUSDT": 0.14620195164197747
+   }
+  }
+ ],
+ "switch_list": [
+  {
+   "kind": "switch",
+   "time": 1624838400000,
+   "from": null,
+   "to": "SOLUSDT",
+   "fill": 31.898941499999996
+  },
+  {
+   "kind": "switch",
+   "time": 1625443200000,
+   "from": "SOLUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1627257600000,
+   "from": null,
+   "to": "ETHUSDT",
+   "fill": 2190.91491
+  },
+  {
+   "kind": "switch",
+   "time": 1627862400000,
+   "from": "ETHUSDT",
+   "to": "BTCUSDT",
+   "fill": 39870.195134999994
+  },
+  {
+   "kind": "switch",
+   "time": 1628467200000,
+   "from": "BTCUSDT",
+   "to": "ETHUSDT",
+   "fill": 3013.34592
+  },
+  {
+   "kind": "switch",
+   "time": 1629072000000,
+   "from": "ETHUSDT",
+   "to": "SOLUSDT",
+   "fill": 53.541757499999996
+  },
+  {
+   "kind": "switch",
+   "time": 1633910400000,
+   "from": "SOLUSDT",
+   "to": "BTCUSDT",
+   "fill": 54686.339504999996
+  },
+  {
+   "kind": "switch",
+   "time": 1635120000000,
+   "from": "BTCUSDT",
+   "to": "SOLUSDT",
+   "fill": 202.251075
+  },
+  {
+   "kind": "switch",
+   "time": 1635724800000,
+   "from": "SOLUSDT",
+   "to": "BTCUSDT",
+   "fill": 61330.459904999996
+  },
+  {
+   "kind": "switch",
+   "time": 1636329600000,
+   "from": "BTCUSDT",
+   "to": "SOLUSDT",
+   "fill": 249.74481
+  },
+  {
+   "kind": "switch",
+   "time": 1637539200000,
+   "from": "SOLUSDT",
+   "to": "BNBUSDT",
+   "fill": 584.2919999999999
+  },
+  {
+   "kind": "switch",
+   "time": 1638748800000,
+   "from": "BNBUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1644192000000,
+   "from": null,
+   "to": "BTCUSDT",
+   "fill": 42402.060435
+  },
+  {
+   "kind": "switch",
+   "time": 1644796800000,
+   "from": "BTCUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1645401600000,
+   "from": null,
+   "to": "BTCUSDT",
+   "fill": 38406.083445
+  },
+  {
+   "kind": "switch",
+   "time": 1646611200000,
+   "from": "BTCUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1647820800000,
+   "from": null,
+   "to": "ETHUSDT",
+   "fill": 2862.820695
+  },
+  {
+   "kind": "switch",
+   "time": 1649030400000,
+   "from": "ETHUSDT",
+   "to": "SOLUSDT",
+   "fill": 136.96845
+  },
+  {
+   "kind": "switch",
+   "time": 1650844800000,
+   "from": "SOLUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1657497600000,
+   "from": null,
+   "to": "SOLUSDT",
+   "fill": 36.728355
+  },
+  {
+   "kind": "switch",
+   "time": 1658102400000,
+   "from": "SOLUSDT",
+   "to": "ETHUSDT",
+   "fill": 1339.319325
+  },
+  {
+   "kind": "switch",
+   "time": 1661126400000,
+   "from": "ETHUSDT",
+   "to": "BNBUSDT",
+   "fill": 302.05094999999994
+  },
+  {
+   "kind": "switch",
+   "time": 1661731200000,
+   "from": "BNBUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1664150400000,
+   "from": null,
+   "to": "SOLUSDT",
+   "fill": 32.346165
+  },
+  {
+   "kind": "switch",
+   "time": 1664755200000,
+   "from": "SOLUSDT",
+   "to": "BNBUSDT",
+   "fill": 284.84234999999995
+  },
+  {
+   "kind": "switch",
+   "time": 1665360000000,
+   "from": "BNBUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1665964800000,
+   "from": null,
+   "to": "BNBUSDT",
+   "fill": 272.53619999999995
+  },
+  {
+   "kind": "switch",
+   "time": 1666569600000,
+   "from": "BNBUSDT",
+   "to": "ETHUSDT",
+   "fill": 1364.872095
+  },
+  {
+   "kind": "switch",
+   "time": 1667779200000,
+   "from": "ETHUSDT",
+   "to": "BNBUSDT",
+   "fill": 337.9689
+  },
+  {
+   "kind": "switch",
+   "time": 1668988800000,
+   "from": "BNBUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1670803200000,
+   "from": null,
+   "to": "BTCUSDT",
+   "fill": 17093.592525
+  },
+  {
+   "kind": "switch",
+   "time": 1672617600000,
+   "from": "BTCUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1673222400000,
+   "from": null,
+   "to": "SOLUSDT",
+   "fill": 14.46723
+  },
+  {
+   "kind": "switch",
+   "time": 1676246400000,
+   "from": "SOLUSDT",
+   "to": "BTCUSDT",
+   "fill": 21793.261185
+  },
+  {
+   "kind": "switch",
+   "time": 1677456000000,
+   "from": "BTCUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1678665600000,
+   "from": null,
+   "to": "ETHUSDT",
+   "fill": 1581.1201649999998
+  },
+  {
+   "kind": "switch",
+   "time": 1679270400000,
+   "from": "ETHUSDT",
+   "to": "BTCUSDT",
+   "fill": 27986.856434999998
+  },
+  {
+   "kind": "switch",
+   "time": 1681689600000,
+   "from": "BTCUSDT",
+   "to": "ETHUSDT",
+   "fill": 2119.71933
+  },
+  {
+   "kind": "switch",
+   "time": 1682899200000,
+   "from": "ETHUSDT",
+   "to": "SOLUSDT",
+   "fill": 22.741365
+  },
+  {
+   "kind": "switch",
+   "time": 1684108800000,
+   "from": "SOLUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1685318400000,
+   "from": null,
+   "to": "ETHUSDT",
+   "fill": 1909.59432
+  },
+  {
+   "kind": "switch",
+   "time": 1686528000000,
+   "from": "ETHUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1687737600000,
+   "from": null,
+   "to": "BTCUSDT",
+   "fill": 30477.901334999995
+  },
+  {
+   "kind": "switch",
+   "time": 1688947200000,
+   "from": "BTCUSDT",
+   "to": "SOLUSDT",
+   "fill": 21.330659999999998
+  },
+  {
+   "kind": "switch",
+   "time": 1691971200000,
+   "from": "SOLUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1694995200000,
+   "from": null,
+   "to": "BTCUSDT",
+   "fill": 26540.76375
+  },
+  {
+   "kind": "switch",
+   "time": 1696204800000,
+   "from": "BTCUSDT",
+   "to": "SOLUSDT",
+   "fill": 23.891939999999998
+  },
+  {
+   "kind": "switch",
+   "time": 1704672000000,
+   "from": "SOLUSDT",
+   "to": "BNBUSDT",
+   "fill": 302.65125
+  },
+  {
+   "kind": "switch",
+   "time": 1705276800000,
+   "from": "BNBUSDT",
+   "to": "SOLUSDT",
+   "fill": 93.856905
+  },
+  {
+   "kind": "switch",
+   "time": 1705881600000,
+   "from": "SOLUSDT",
+   "to": "BNBUSDT",
+   "fill": 318.85934999999995
+  },
+  {
+   "kind": "switch",
+   "time": 1706486400000,
+   "from": "BNBUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1707091200000,
+   "from": null,
+   "to": "SOLUSDT",
+   "fill": 95.52774
+  },
+  {
+   "kind": "switch",
+   "time": 1708300800000,
+   "from": "SOLUSDT",
+   "to": "BTCUSDT",
+   "fill": 52163.74884
+  },
+  {
+   "kind": "switch",
+   "time": 1708905600000,
+   "from": "BTCUSDT",
+   "to": "ETHUSDT",
+   "fill": 3114.1562999999996
+  },
+  {
+   "kind": "switch",
+   "time": 1710115200000,
+   "from": "ETHUSDT",
+   "to": "BNBUSDT",
+   "fill": 529.16445
+  },
+  {
+   "kind": "switch",
+   "time": 1710720000000,
+   "from": "BNBUSDT",
+   "to": "SOLUSDT",
+   "fill": 201.95092499999998
+  },
+  {
+   "kind": "switch",
+   "time": 1713139200000,
+   "from": "SOLUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1713744000000,
+   "from": null,
+   "to": "BNBUSDT",
+   "fill": 579.8898
+  },
+  {
+   "kind": "switch",
+   "time": 1714348800000,
+   "from": "BNBUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1714953600000,
+   "from": null,
+   "to": "BNBUSDT",
+   "fill": 592.2959999999999
+  },
+  {
+   "kind": "switch",
+   "time": 1716163200000,
+   "from": "BNBUSDT",
+   "to": "SOLUSDT",
+   "fill": 170.014965
+  },
+  {
+   "kind": "switch",
+   "time": 1717372800000,
+   "from": "SOLUSDT",
+   "to": "ETHUSDT",
+   "fill": 3782.8104599999997
+  },
+  {
+   "kind": "switch",
+   "time": 1719187200000,
+   "from": "ETHUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1721606400000,
+   "from": null,
+   "to": "SOLUSDT",
+   "fill": 184.582245
+  },
+  {
+   "kind": "switch",
+   "time": 1723420800000,
+   "from": "SOLUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1725235200000,
+   "from": null,
+   "to": "BNBUSDT",
+   "fill": 512.5561499999999
+  },
+  {
+   "kind": "switch",
+   "time": 1725840000000,
+   "from": "BNBUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1726444800000,
+   "from": null,
+   "to": "BNBUSDT",
+   "fill": 553.6767
+  },
+  {
+   "kind": "switch",
+   "time": 1727654400000,
+   "from": "BNBUSDT",
+   "to": "SOLUSDT",
+   "fill": 158.54923499999998
+  },
+  {
+   "kind": "switch",
+   "time": 1728259200000,
+   "from": "SOLUSDT",
+   "to": "BTCUSDT",
+   "fill": 62851.319955
+  },
+  {
+   "kind": "switch",
+   "time": 1728864000000,
+   "from": "BTCUSDT",
+   "to": "SOLUSDT",
+   "fill": 147.81387
+  },
+  {
+   "kind": "switch",
+   "time": 1733097600000,
+   "from": "SOLUSDT",
+   "to": "ETHUSDT",
+   "fill": 3709.463805
+  },
+  {
+   "kind": "switch",
+   "time": 1734912000000,
+   "from": "ETHUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1735516800000,
+   "from": null,
+   "to": "BNBUSDT",
+   "fill": 695.057355
+  },
+  {
+   "kind": "switch",
+   "time": 1736121600000,
+   "from": "BNBUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1737331200000,
+   "from": null,
+   "to": "SOLUSDT",
+   "fill": 252.5262
+  },
+  {
+   "kind": "switch",
+   "time": 1738540800000,
+   "from": "SOLUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1739145600000,
+   "from": null,
+   "to": "SOLUSDT",
+   "fill": 200.570235
+  },
+  {
+   "kind": "switch",
+   "time": 1739750400000,
+   "from": "SOLUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1740960000000,
+   "from": null,
+   "to": "BNBUSDT",
+   "fill": 624.25197
+  },
+  {
+   "kind": "switch",
+   "time": 1741564800000,
+   "from": "BNBUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1743984000000,
+   "from": null,
+   "to": "BNBUSDT",
+   "fill": 555.827775
+  },
+  {
+   "kind": "switch",
+   "time": 1744588800000,
+   "from": "BNBUSDT",
+   "to": "SOLUSDT",
+   "fill": 128.44419
+  },
+  {
+   "kind": "switch",
+   "time": 1747008000000,
+   "from": "SOLUSDT",
+   "to": "ETHUSDT",
+   "fill": 2515.83729
+  },
+  {
+   "kind": "switch",
+   "time": 1749427200000,
+   "from": "ETHUSDT",
+   "to": "BTCUSDT",
+   "fill": 105786.87700499999
+  },
+  {
+   "kind": "switch",
+   "time": 1750032000000,
+   "from": "BTCUSDT",
+   "to": "ETHUSDT",
+   "fill": 2548.8938099999996
+  },
+  {
+   "kind": "switch",
+   "time": 1750636800000,
+   "from": "ETHUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1751241600000,
+   "from": null,
+   "to": "BTCUSDT",
+   "fill": 108411.10846499998
+  },
+  {
+   "kind": "switch",
+   "time": 1752451200000,
+   "from": "BTCUSDT",
+   "to": "ETHUSDT",
+   "fill": 2973.516015
+  },
+  {
+   "kind": "switch",
+   "time": 1757289600000,
+   "from": "ETHUSDT",
+   "to": "SOLUSDT",
+   "fill": 206.453175
+  },
+  {
+   "kind": "switch",
+   "time": 1758499200000,
+   "from": "SOLUSDT",
+   "to": "BNBUSDT",
+   "fill": 1048.3238999999999
+  }
+ ],
+ "equity_sample": [
+  {
+   "time": 1624838400000,
+   "equity": 1.0319636155168348
+  },
+  {
+   "time": 1625097600000,
+   "equity": 1.0404066983382507
+  },
+  {
+   "time": 1625443200000,
+   "equity": 1.071896806947685
+  },
+  {
+   "time": 1625788800000,
+   "equity": 1.071896806947685
+  },
+  {
+   "time": 1626134400000,
+   "equity": 1.071896806947685
+  },
+  {
+   "time": 1626480000000,
+   "equity": 1.071896806947685
+  },
+  {
+   "time": 1626825600000,
+   "equity": 1.071896806947685
+  },
+  {
+   "time": 1627171200000,
+   "equity": 1.071896806947685
+  },
+  {
+   "time": 1627516800000,
+   "equity": 1.1629217310544742
+  },
+  {
+   "time": 1627862400000,
+   "equity": 1.221489970822878
+  },
+  {
+   "time": 1628208000000,
+   "equity": 1.33659567982185
+  },
+  {
+   "time": 1628553600000,
+   "equity": 1.4210994601181197
+  },
+  {
+   "time": 1628899200000,
+   "equity": 1.476058807852869
+  },
+  {
+   "time": 1629244800000,
+   "equity": 2.0252559882381425
+  },
+  {
+   "time": 1629590400000,
+   "equity": 2.0283776412208527
+  },
+  {
+   "time": 1629936000000,
+   "equity": 2.0881628702200796
+  },
+  {
+   "time": 1630281600000,
+   "equity": 3.072877154855363
+  },
+  {
+   "time": 1630627200000,
+   "equity": 4.080446398828346
+  },
+  {
+   "time": 1630972800000,
+   "equity": 4.834660056972438
+  },
+  {
+   "time": 1631318400000,
+   "equity": 4.9901852680753205
+  },
+  {
+   "time": 1631664000000,
+   "equity": 4.425779260040662
+  },
+  {
+   "time": 1632009600000,
+   "equity": 4.257711693203675
+  },
+  {
+   "time": 1632355200000,
+   "equity": 4.178276773554353
+  },
+  {
+   "time": 1632700800000,
+   "equity": 3.8003337874333667
+  },
+  {
+   "time": 1633046400000,
+   "equity": 4.502984427559478
+  },
+  {
+   "time": 1633392000000,
+   "equity": 4.5882724465513824
+  },
+  {
+   "time": 1633737600000,
+   "equity": 4.371429051859548
+  },
+  {
+   "time": 1634083200000,
+   "equity": 4.303604042625047
+  },
+  {
+   "time": 1634428800000,
+   "equity": 4.615782065019401
+  },
+  {
+   "time": 1634774400000,
+   "equity": 4.665656069928459
+  },
+  {
+   "time": 1635120000000,
+   "equity": 4.721369184445449
+  },
+  {
+   "time": 1635379200000,
+   "equity": 4.399856776463184
+  },
+  {
+   "time": 1635724800000,
+   "equity": 4.51744590518466
+  },
+  {
+   "time": 1636070400000,
+   "equity": 4.519374925489722
+  },
+  {
+   "time": 1636416000000,
+   "equity": 4.480296309617886
+  },
+  {
+   "time": 1636761600000,
+   "equity": 4.528090635209946
+  },
+  {
+   "time": 1637107200000,
+   "equity": 4.1035645667157805
+  },
+  {
+   "time": 1637452800000,
+   "equity": 4.320419604794256
+  },
+  {
+   "time": 1637798400000,
+   "equity": 4.714903117544361
+  },
+  {
+   "time": 1638144000000,
+   "equity": 4.5990777710485915
+  },
+  {
+   "time": 1638489600000,
+   "equity": 4.3895593098715295
+  },
+  {
+   "time": 1638835200000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1639180800000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1639526400000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1639872000000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1640217600000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1640563200000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1640908800000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1641254400000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1641600000000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1641945600000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1642291200000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1642636800000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1642982400000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1643328000000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1643673600000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1644019200000,
+   "equity": 4.114383954592887
+  },
+  {
+   "time": 1644364800000,
+   "equity": 4.294844711625381
+  },
+  {
+   "time": 1644710400000,
+   "equity": 4.070382416392141
+  },
+  {
+   "time": 1645056000000,
+   "equity": 4.070383486738176
+  },
+  {
+   "time": 1645401600000,
+   "equity": 3.912427988172927
+  },
+  {
+   "time": 1645747200000,
+   "equity": 4.146171503282304
+  },
+  {
+   "time": 1646006400000,
+   "equity": 4.562788097801769
+  },
+  {
+   "time": 1646352000000,
+   "equity": 4.138717328380173
+  },
+  {
+   "time": 1646697600000,
+   "equity": 4.061771472026963
+  },
+  {
+   "time": 1647043200000,
+   "equity": 4.061771472026963
+  },
+  {
+   "time": 1647388800000,
+   "equity": 4.061771472026963
+  },
+  {
+   "time": 1647734400000,
+   "equity": 4.061771472026963
+  },
+  {
+   "time": 1648080000000,
+   "equity": 4.40252063587801
+  },
+  {
+   "time": 1648425600000,
+   "equity": 4.7169338289455105
+  },
+  {
+   "time": 1648771200000,
+   "equity": 4.890005441207955
+  },
+  {
+   "time": 1649116800000,
+   "equity": 4.605365345129049
+  },
+  {
+   "time": 1649462400000,
+   "equity": 4.100434061525793
+  },
+  {
+   "time": 1649808000000,
+   "equity": 3.809309051137719
+  },
+  {
+   "time": 1650153600000,
+   "equity": 3.6354326421902283
+  },
+  {
+   "time": 1650499200000,
+   "equity": 3.694601441059625
+  },
+  {
+   "time": 1650844800000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1651190400000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1651536000000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1651881600000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1652227200000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1652572800000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1652918400000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1653264000000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1653609600000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1653955200000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1654300800000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1654646400000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1654992000000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1655337600000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1655683200000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1656028800000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1656374400000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1656633600000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1656979200000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1657324800000,
+   "equity": 3.601675560487918
+  },
+  {
+   "time": 1657670400000,
+   "equity": 3.417744314632533
+  },
+  {
+   "time": 1658016000000,
+   "equity": 3.777712805698581
+  },
+  {
+   "time": 1658361600000,
+   "equity": 4.431499806253056
+  },
+  {
+   "time": 1658707200000,
+   "equity": 4.0527218292242475
+  },
+  {
+   "time": 1659052800000,
+   "equity": 4.842822423072621
+  },
+  {
+   "time": 1659398400000,
+   "equity": 4.587500300876684
+  },
+  {
+   "time": 1659744000000,
+   "equity": 4.7553991383105885
+  },
+  {
+   "time": 1660089600000,
+   "equity": 5.213808813911249
+  },
+  {
+   "time": 1660435200000,
+   "equity": 5.4437309276965955
+  },
+  {
+   "time": 1660780800000,
+   "equity": 5.19361257245078
+  },
+  {
+   "time": 1661126400000,
+   "equity": 4.509354137194833
+  },
+  {
+   "time": 1661472000000,
+   "equity": 4.202718055865585
+  },
+  {
+   "time": 1661817600000,
+   "equity": 4.156123477630377
+  },
+  {
+   "time": 1662163200000,
+   "equity": 4.156123477630377
+  },
+  {
+   "time": 1662508800000,
+   "equity": 4.156123477630377
+  },
+  {
+   "time": 1662854400000,
+   "equity": 4.156123477630377
+  },
+  {
+   "time": 1663200000000,
+   "equity": 4.156123477630377
+  },
+  {
+   "time": 1663545600000,
+   "equity": 4.156123477630377
+  },
+  {
+   "time": 1663891200000,
+   "equity": 4.156123477630377
+  },
+  {
+   "time": 1664236800000,
+   "equity": 4.189808006236364
+  },
+  {
+   "time": 1664582400000,
+   "equity": 4.157766036167256
+  },
+  {
+   "time": 1664928000000,
+   "equity": 4.233451638725988
+  },
+  {
+   "time": 1665273600000,
+   "equity": 4.003216335464208
+  },
+  {
+   "time": 1665619200000,
+   "equity": 4.003218340079298
+  },
+  {
+   "time": 1665964800000,
+   "equity": 4.038107275363794
+  },
+  {
+   "time": 1666310400000,
+   "equity": 3.9575209545564616
+  },
+  {
+   "time": 1666656000000,
+   "equity": 4.312684306107601
+  },
+  {
+   "time": 1666915200000,
+   "equity": 4.592379199211308
+  },
+  {
+   "time": 1667260800000,
+   "equity": 4.663492076331898
+  },
+  {
+   "time": 1667606400000,
+   "equity": 4.806781421589422
+  },
+  {
+   "time": 1667952000000,
+   "equity": 3.655303575839361
+  },
+  {
+   "time": 1668297600000,
+   "equity": 3.779745261361763
+  },
+  {
+   "time": 1668643200000,
+   "equity": 3.663508522137541
+  },
+  {
+   "time": 1668988800000,
+   "equity": 3.612913162468193
+  },
+  {
+   "time": 1669334400000,
+   "equity": 3.612913162468193
+  },
+  {
+   "time": 1669680000000,
+   "equity": 3.612913162468193
+  },
+  {
+   "time": 1670025600000,
+   "equity": 3.612913162468193
+  },
+  {
+   "time": 1670371200000,
+   "equity": 3.612913162468193
+  },
+  {
+   "time": 1670716800000,
+   "equity": 3.612913162468193
+  },
+  {
+   "time": 1671062400000,
+   "equity": 3.6592820282874605
+  },
+  {
+   "time": 1671408000000,
+   "equity": 3.46585156485608
+  },
+  {
+   "time": 1671753600000,
+   "equity": 3.537454527372773
+  },
+  {
+   "time": 1672099200000,
+   "equity": 3.522245064691087
+  },
+  {
+   "time": 1672444800000,
+   "equity": 3.487676954054973
+  },
+  {
+   "time": 1672790400000,
+   "equity": 3.5034426607871816
+  },
+  {
+   "time": 1673136000000,
+   "equity": 3.5034426607871816
+  },
+  {
+   "time": 1673481600000,
+   "equity": 4.0074634633771495
+  },
+  {
+   "time": 1673827200000,
+   "equity": 5.695960727331717
+  },
+  {
+   "time": 1674172800000,
+   "equity": 6.1621695570072985
+  },
+  {
+   "time": 1674518400000,
+   "equity": 5.502713544046503
+  },
+  {
+   "time": 1674864000000,
+   "equity": 5.797415498556455
+  },
+  {
+   "time": 1675209600000,
+   "equity": 6.038974477662975
+  },
+  {
+   "time": 1675555200000,
+   "equity": 5.66938923963
+  },
+  {
+   "time": 1675900800000,
+   "equity": 4.947127892101508
+  },
+  {
+   "time": 1676246400000,
+   "equity": 5.173551449128455
+  },
+  {
+   "time": 1676592000000,
+   "equity": 5.837888262845162
+  },
+  {
+   "time": 1676937600000,
+   "equity": 5.809896302893815
+  },
+  {
+   "time": 1677283200000,
+   "equity": 5.502179577544613
+  },
+  {
+   "time": 1677542400000,
+   "equity": 5.596695934372627
+  },
+  {
+   "time": 1677888000000,
+   "equity": 5.596695934372627
+  },
+  {
+   "time": 1678233600000,
+   "equity": 5.596695934372627
+  },
+  {
+   "time": 1678579200000,
+   "equity": 5.596695934372627
+  },
+  {
+   "time": 1678924800000,
+   "equity": 5.9097048721522905
+  },
+  {
+   "time": 1679270400000,
+   "equity": 6.211119254272392
+  },
+  {
+   "time": 1679616000000,
+   "equity": 6.152286528483548
+  },
+  {
+   "time": 1679961600000,
+   "equity": 6.108947421423432
+  },
+  {
+   "time": 1680307200000,
+   "equity": 6.375987133518865
+  },
+  {
+   "time": 1680652800000,
+   "equity": 6.312632260985071
+  },
+  {
+   "time": 1680998400000,
+   "equity": 6.347086178826294
+  },
+  {
+   "time": 1681344000000,
+   "equity": 6.806489677284417
+  },
+  {
+   "time": 1681689600000,
+   "equity": 6.627917163344321
+  },
+  {
+   "time": 1682035200000,
+   "equity": 5.908177769164761
+  },
+  {
+   "time": 1682380800000,
+   "equity": 5.963527588484492
+  },
+  {
+   "time": 1682726400000,
+   "equity": 6.096788989502554
+  },
+  {
+   "time": 1683072000000,
+   "equity": 5.829892337202509
+  },
+  {
+   "time": 1683417600000,
+   "equity": 5.6778537780488465
+  },
+  {
+   "time": 1683763200000,
+   "equity": 5.287271962292024
+  },
+  {
+   "time": 1684108800000,
+   "equity": 5.486497649241188
+  },
+  {
+   "time": 1684454400000,
+   "equity": 5.486497649241188
+  },
+  {
+   "time": 1684800000000,
+   "equity": 5.486497649241188
+  },
+  {
+   "time": 1685145600000,
+   "equity": 5.486497649241188
+  },
+  {
+   "time": 1685491200000,
+   "equity": 5.369717921852263
+  },
+  {
+   "time": 1685836800000,
+   "equity": 5.416662078147764
+  },
+  {
+   "time": 1686182400000,
+   "equity": 5.28950016027039
+  },
+  {
+   "time": 1686528000000,
+   "equity": 5.023342492858647
+  },
+  {
+   "time": 1686873600000,
+   "equity": 5.023342492858647
+  },
+  {
+   "time": 1687219200000,
+   "equity": 5.023342492858647
+  },
+  {
+   "time": 1687564800000,
+   "equity": 5.023342492858647
+  },
+  {
+   "time": 1687910400000,
+   "equity": 4.944947943624836
+  },
+  {
+   "time": 1688169600000,
+   "equity": 5.028547448364566
+  },
+  {
+   "time": 1688515200000,
+   "equity": 5.015215654544933
+  },
+  {
+   "time": 1688860800000,
+   "equity": 4.958643077737245
+  },
+  {
+   "time": 1689206400000,
+   "equity": 6.031324327045748
+  },
+  {
+   "time": 1689552000000,
+   "equity": 6.21451333967036
+  },
+  {
+   "time": 1689897600000,
+   "equity": 5.913063065731125
+  },
+  {
+   "time": 1690243200000,
+   "equity": 5.395959903512286
+  },
+  {
+   "time": 1690588800000,
+   "equity": 5.836541073115781
+  },
+  {
+   "time": 1690934400000,
+   "equity": 5.368133724379433
+  },
+  {
+   "time": 1691280000000,
+   "equity": 5.379727965684788
+  },
+  {
+   "time": 1691625600000,
+   "equity": 5.709004418756875
+  },
+  {
+   "time": 1691971200000,
+   "equity": 5.616253300657793
+  },
+  {
+   "time": 1692316800000,
+   "equity": 5.616253300657793
+  },
+  {
+   "time": 1692662400000,
+   "equity": 5.616253300657793
+  },
+  {
+   "time": 1693008000000,
+   "equity": 5.616253300657793
+  },
+  {
+   "time": 1693353600000,
+   "equity": 5.616253300657793
+  },
+  {
+   "time": 1693699200000,
+   "equity": 5.616253300657793
+  },
+  {
+   "time": 1694044800000,
+   "equity": 5.616253300657793
+  },
+  {
+   "time": 1694390400000,
+   "equity": 5.616253300657793
+  },
+  {
+   "time": 1694736000000,
+   "equity": 5.616253300657793
+  },
+  {
+   "time": 1695081600000,
+   "equity": 5.743538276474189
+  },
+  {
+   "time": 1695427200000,
+   "equity": 5.609650311832632
+  },
+  {
+   "time": 1695772800000,
+   "equity": 5.566807429626584
+  },
+  {
+   "time": 1696118400000,
+   "equity": 5.908668173397943
+  },
+  {
+   "time": 1696464000000,
+   "equity": 5.599870357920047
+  },
+  {
+   "time": 1696809600000,
+   "equity": 5.451856163437578
+  },
+  {
+   "time": 1697155200000,
+   "equity": 5.387716679161842
+  },
+  {
+   "time": 1697500800000,
+   "equity": 5.903299456609106
+  },
+  {
+   "time": 1697846400000,
+   "equity": 7.232960303709945
+  },
+  {
+   "time": 1698192000000,
+   "equity": 8.002634115018779
+  },
+  {
+   "time": 1698451200000,
+   "equity": 7.802814952467448
+  },
+  {
+   "time": 1698796800000,
+   "equity": 10.151306838255943
+  },
+  {
+   "time": 1699142400000,
+   "equity": 10.151306838255943
+  },
+  {
+   "time": 1699488000000,
+   "equity": 11.172604780184974
+  },
+  {
+   "time": 1699833600000,
+   "equity": 12.729220725492263
+  },
+  {
+   "time": 1700179200000,
+   "equity": 14.433850865282022
+  },
+  {
+   "time": 1700524800000,
+   "equity": 12.741555241699135
+  },
+  {
+   "time": 1700870400000,
+   "equity": 14.51032486576463
+  },
+  {
+   "time": 1701216000000,
+   "equity": 14.63120312459198
+  },
+  {
+   "time": 1701561600000,
+   "equity": 15.536556614176408
+  },
+  {
+   "time": 1701907200000,
+   "equity": 16.710802557070657
+  },
+  {
+   "time": 1702252800000,
+   "equity": 17.32999527065565
+  },
+  {
+   "time": 1702598400000,
+   "equity": 17.88751540320628
+  },
+  {
+   "time": 1702944000000,
+   "equity": 18.00839366203363
+  },
+  {
+   "time": 1703289600000,
+   "equity": 26.61295216794778
+  },
+  {
+   "time": 1703635200000,
+   "equity": 26.37366255353445
+  },
+  {
+   "time": 1703980800000,
+   "equity": 25.093339771261107
+  },
+  {
+   "time": 1704326400000,
+   "equity": 25.88028190525956
+  },
+  {
+   "time": 1704672000000,
+   "equity": 22.085132086428317
+  },
+  {
+   "time": 1705017600000,
+   "equity": 21.568818494681064
+  },
+  {
+   "time": 1705363200000,
+   "equity": 22.586496147194566
+  },
+  {
+   "time": 1705708800000,
+   "equity": 21.49199633389439
+  },
+  {
+   "time": 1706054400000,
+   "equity": 19.324488612422485
+  },
+  {
+   "time": 1706400000000,
+   "equity": 20.128851495641708
+  },
+  {
+   "time": 1706745600000,
+   "equity": 20.12886157518677
+  },
+  {
+   "time": 1707091200000,
+   "equity": 20.106368781748717
+  },
+  {
+   "time": 1707436800000,
+   "equity": 22.477264034290275
+  },
+  {
+   "time": 1707782400000,
+   "equity": 23.64169308562718
+  },
+  {
+   "time": 1708128000000,
+   "equity": 22.89343181798108
+  },
+  {
+   "time": 1708473600000,
+   "equity": 23.392586718875197
+  },
+  {
+   "time": 1708819200000,
+   "equity": 23.338203390487088
+  },
+  {
+   "time": 1709078400000,
+   "equity": 25.2903956914767
+  },
+  {
+   "time": 1709424000000,
+   "equity": 26.073156275808977
+  },
+  {
+   "time": 1709769600000,
+   "equity": 28.92095156376028
+  },
+  {
+   "time": 1710115200000,
+   "equity": 28.584199182295496
+  },
+  {
+   "time": 1710460800000,
+   "equity": 34.579775951507386
+  },
+  {
+   "time": 1710806400000,
+   "equity": 26.20893040227642
+  },
+  {
+   "time": 1711152000000,
+   "equity": 26.645694464450738
+  },
+  {
+   "time": 1711497600000,
+   "equity": 28.756977987611386
+  },
+  {
+   "time": 1711843200000,
+   "equity": 31.24483547250536
+  },
+  {
+   "time": 1712188800000,
+   "equity": 28.397380720874224
+  },
+  {
+   "time": 1712534400000,
+   "equity": 27.884993199171497
+  },
+  {
+   "time": 1712880000000,
+   "equity": 23.63773277831031
+  },
+  {
+   "time": 1713225600000,
+   "equity": 23.34451064543326
+  },
+  {
+   "time": 1713571200000,
+   "equity": 23.34451064543326
+  },
+  {
+   "time": 1713916800000,
+   "equity": 24.447108836790264
+  },
+  {
+   "time": 1714262400000,
+   "equity": 24.10176531511419
+  },
+  {
+   "time": 1714608000000,
+   "equity": 24.101777384100327
+  },
+  {
+   "time": 1714953600000,
+   "equity": 23.875300624489583
+  },
+  {
+   "time": 1715299200000,
+   "equity": 23.769765463619684
+  },
+  {
+   "time": 1715644800000,
+   "equity": 23.018842203583887
+  },
+  {
+   "time": 1715990400000,
+   "equity": 23.55463609723105
+  },
+  {
+   "time": 1716336000000,
+   "equity": 24.214005775617967
+  },
+  {
+   "time": 1716681600000,
+   "equity": 22.36117933763059
+  },
+  {
+   "time": 1717027200000,
+   "equity": 22.83601742772041
+  },
+  {
+   "time": 1717372800000,
+   "equity": 22.17574728924805
+  },
+  {
+   "time": 1717718400000,
+   "equity": 21.653356933254816
+  },
+  {
+   "time": 1718064000000,
+   "equity": 20.587913722400465
+  },
+  {
+   "time": 1718409600000,
+   "equity": 21.00828666945339
+  },
+  {
+   "time": 1718755200000,
+   "equity": 20.959838702022424
+  },
+  {
+   "time": 1719100800000,
+   "equity": 20.13804814875833
+  },
+  {
+   "time": 1719446400000,
+   "equity": 20.13805823290863
+  },
+  {
+   "time": 1719705600000,
+   "equity": 20.13805823290863
+  },
+  {
+   "time": 1720051200000,
+   "equity": 20.13805823290863
+  },
+  {
+   "time": 1720396800000,
+   "equity": 20.13805823290863
+  },
+  {
+   "time": 1720742400000,
+   "equity": 20.13805823290863
+  },
+  {
+   "time": 1721088000000,
+   "equity": 20.13805823290863
+  },
+  {
+   "time": 1721433600000,
+   "equity": 20.13805823290863
+  },
+  {
+   "time": 1721779200000,
+   "equity": 19.377939470848375
+  },
+  {
+   "time": 1722124800000,
+   "equity": 20.122323981578482
+  },
+  {
+   "time": 1722470400000,
+   "equity": 18.214566602470473
+  },
+  {
+   "time": 1722816000000,
+   "equity": 14.123716637800191
+  },
+  {
+   "time": 1723161600000,
+   "equity": 17.007662476155136
+  },
+  {
+   "time": 1723507200000,
+   "equity": 15.405719898485332
+  },
+  {
+   "time": 1723852800000,
+   "equity": 15.405719898485332
+  },
+  {
+   "time": 1724198400000,
+   "equity": 15.405719898485332
+  },
+  {
+   "time": 1724544000000,
+   "equity": 15.405719898485332
+  },
+  {
+   "time": 1724889600000,
+   "equity": 15.405719898485332
+  },
+  {
+   "time": 1725235200000,
+   "equity": 15.779290656568989
+  },
+  {
+   "time": 1725580800000,
+   "equity": 14.607011985332344
+  },
+  {
+   "time": 1725926400000,
+   "equity": 15.086724367127294
+  },
+  {
+   "time": 1726272000000,
+   "equity": 15.086724367127294
+  },
+  {
+   "time": 1726617600000,
+   "equity": 15.207308505545978
+  },
+  {
+   "time": 1726963200000,
+   "equity": 16.000969646496724
+  },
+  {
+   "time": 1727308800000,
+   "equity": 16.207538984552393
+  },
+  {
+   "time": 1727654400000,
+   "equity": 15.530947193431956
+  },
+  {
+   "time": 1728000000000,
+   "equity": 14.588844356923035
+  },
+  {
+   "time": 1728345600000,
+   "equity": 14.716992262453813
+  },
+  {
+   "time": 1728691200000,
+   "equity": 14.96457718848345
+  },
+  {
+   "time": 1729036800000,
+   "equity": 15.497314556809956
+  },
+  {
+   "time": 1729382400000,
+   "equity": 16.81520907966027
+  },
+  {
+   "time": 1729728000000,
+   "equity": 17.798607507915197
+  },
+  {
+   "time": 1729987200000,
+   "equity": 17.74235591242768
+  },
+  {
+   "time": 1730332800000,
+   "equity": 16.944788647836866
+  },
+  {
+   "time": 1730678400000,
+   "equity": 15.86596340580848
+  },
+  {
+   "time": 1731024000000,
+   "equity": 20.074788139606365
+  },
+  {
+   "time": 1731369600000,
+   "equity": 21.259085123173833
+  },
+  {
+   "time": 1731715200000,
+   "equity": 21.667913683234868
+  },
+  {
+   "time": 1732060800000,
+   "equity": 23.653795902499407
+  },
+  {
+   "time": 1732406400000,
+   "equity": 25.386545942070132
+  },
+  {
+   "time": 1732752000000,
+   "equity": 23.865743878354145
+  },
+  {
+   "time": 1733097600000,
+   "equity": 23.303548138781842
+  },
+  {
+   "time": 1733443200000,
+   "equity": 25.577029150010304
+  },
+  {
+   "time": 1733788800000,
+   "equity": 23.206519845237498
+  },
+  {
+   "time": 1734134400000,
+   "equity": 24.754623218307515
+  },
+  {
+   "time": 1734480000000,
+   "equity": 23.197245552182835
+  },
+  {
+   "time": 1734825600000,
+   "equity": 20.990795293514996
+  },
+  {
+   "time": 1735171200000,
+   "equity": 20.99080580467939
+  },
+  {
+   "time": 1735516800000,
+   "equity": 21.24872386185289
+  },
+  {
+   "time": 1735862400000,
+   "equity": 21.535510539811437
+  },
+  {
+   "time": 1736208000000,
+   "equity": 21.367124440070207
+  },
+  {
+   "time": 1736553600000,
+   "equity": 21.367124440070207
+  },
+  {
+   "time": 1736899200000,
+   "equity": 21.367124440070207
+  },
+  {
+   "time": 1737244800000,
+   "equity": 21.367124440070207
+  },
+  {
+   "time": 1737590400000,
+   "equity": 21.36301261891996
+  },
+  {
+   "time": 1737936000000,
+   "equity": 19.825206566544622
+  },
+  {
+   "time": 1738281600000,
+   "equity": 19.561872050440833
+  },
+  {
+   "time": 1738627200000,
+   "equity": 17.17752165212162
+  },
+  {
+   "time": 1738972800000,
+   "equity": 17.17752165212162
+  },
+  {
+   "time": 1739318400000,
+   "equity": 16.810805946439647
+  },
+  {
+   "time": 1739664000000,
+   "equity": 16.083801379897306
+  },
+  {
+   "time": 1740009600000,
+   "equity": 16.082955139013414
+  },
+  {
+   "time": 1740355200000,
+   "equity": 16.082955139013414
+  },
+  {
+   "time": 1740614400000,
+   "equity": 16.082955139013414
+  },
+  {
+   "time": 1740960000000,
+   "equity": 14.805305103854694
+  },
+  {
+   "time": 1741305600000,
+   "equity": 15.285109037701192
+  },
+  {
+   "time": 1741651200000,
+   "equity": 14.254064551123621
+  },
+  {
+   "time": 1741996800000,
+   "equity": 14.254064551123621
+  },
+  {
+   "time": 1742342400000,
+   "equity": 14.254064551123621
+  },
+  {
+   "time": 1742688000000,
+   "equity": 14.254064551123621
+  },
+  {
+   "time": 1743033600000,
+   "equity": 14.254064551123621
+  },
+  {
+   "time": 1743379200000,
+   "equity": 14.254064551123621
+  },
+  {
+   "time": 1743724800000,
+   "equity": 14.254064551123621
+  },
+  {
+   "time": 1744070400000,
+   "equity": 14.164532459413326
+  },
+  {
+   "time": 1744416000000,
+   "equity": 15.279082555593051
+  },
+  {
+   "time": 1744761600000,
+   "equity": 15.244168554440517
+  },
+  {
+   "time": 1745107200000,
+   "equity": 16.00214023387779
+  },
+  {
+   "time": 1745452800000,
+   "equity": 17.707286324372962
+  },
+  {
+   "time": 1745798400000,
+   "equity": 17.160571682696155
+  },
+  {
+   "time": 1746144000000,
+   "equity": 17.18494749474544
+  },
+  {
+   "time": 1746489600000,
+   "equity": 17.049139399042286
+  },
+  {
+   "time": 1746835200000,
+   "equity": 20.648634311653268
+  },
+  {
+   "time": 1747180800000,
+   "equity": 20.80252978836001
+  },
+  {
+   "time": 1747526400000,
+   "equity": 19.910084090664157
+  },
+  {
+   "time": 1747872000000,
+   "equity": 21.241578636422606
+  },
+  {
+   "time": 1748217600000,
+   "equity": 20.435539792630134
+  },
+  {
+   "time": 1748563200000,
+   "equity": 20.17759460883737
+  },
+  {
+   "time": 1748908800000,
+   "equity": 20.67196297406689
+  },
+  {
+   "time": 1749254400000,
+   "equity": 20.124108447426693
+  },
+  {
+   "time": 1749600000000,
+   "equity": 20.495435433863502
+  },
+  {
+   "time": 1749945600000,
+   "equity": 19.919856631919938
+  },
+  {
+   "time": 1750291200000,
+   "equity": 19.65358581932382
+  },
+  {
+   "time": 1750636800000,
+   "equity": 17.366216226812007
+  },
+  {
+   "time": 1750982400000,
+   "equity": 17.366216226812007
+  },
+  {
+   "time": 1751241600000,
+   "equity": 17.120757098631685
+  },
+  {
+   "time": 1751587200000,
+   "equity": 17.25461814917284
+  },
+  {
+   "time": 1751932800000,
+   "equity": 17.404617818025944
+  },
+  {
+   "time": 1752278400000,
+   "equity": 18.762342199897642
+  },
+  {
+   "time": 1752624000000,
+   "equity": 21.520650254847205
+  },
+  {
+   "time": 1752969600000,
+   "equity": 23.980426715079105
+  },
+  {
+   "time": 1753315200000,
+   "equity": 23.66285293894235
+  },
+  {
+   "time": 1753660800000,
+   "equity": 24.25050805112626
+  },
+  {
+   "time": 1754006400000,
+   "equity": 22.266549666738257
+  },
+  {
+   "time": 1754352000000,
+   "equity": 23.056813656401175
+  },
+  {
+   "time": 1754697600000,
+   "equity": 27.197209690126236
+  },
+  {
+   "time": 1755043200000,
+   "equity": 30.31664592977467
+  },
+  {
+   "time": 1755388800000,
+   "equity": 28.548637713159653
+  },
+  {
+   "time": 1755734400000,
+   "equity": 26.971748267550357
+  },
+  {
+   "time": 1756080000000,
+   "equity": 27.934874525711432
+  },
+  {
+   "time": 1756425600000,
+   "equity": 27.83274024594886
+  },
+  {
+   "time": 1756771200000,
+   "equity": 27.61774758704864
+  },
+  {
+   "time": 1757116800000,
+   "equity": 27.277129764040456
+  },
+  {
+   "time": 1757462400000,
+   "equity": 29.759159354064042
+  },
+  {
+   "time": 1757808000000,
+   "equity": 31.842977849468443
+  },
+  {
+   "time": 1758153600000,
+   "equity": 32.87094184911345
+  },
+  {
+   "time": 1758499200000,
+   "equity": 29.63241746687784
+  },
+  {
+   "time": 1758844800000,
+   "equity": 28.6744150490243
+  },
+  {
+   "time": 1759190400000,
+   "equity": 30.09828717848824
+  },
+  {
+   "time": 1759536000000,
+   "equity": 34.34334212912647
+  },
+  {
+   "time": 1759881600000,
+   "equity": 39.01845361687591
+  },
+  {
+   "time": 1760227200000,
+   "equity": 38.876693134483254
+  },
+  {
+   "time": 1760572800000,
+   "equity": 34.166663801597096
+  },
+  {
+   "time": 1760918400000,
+   "equity": 32.83441371022695
+  },
+  {
+   "time": 1761264000000,
+   "equity": 33.09764054279604
+  },
+  {
+   "time": 1761609600000,
+   "equity": 32.93170616761643
+  }
+ ],
+ "survivorship_note": "Survivorship bias: SOL and BNB were picked knowing they survived (and grew); coins that faded are not in the list, so these results may look better than reality.",
+ "limitations": [
+  "Design data only (before 2025-10-29): evidence about the past, not validation.",
+  "Survivorship bias: SOL and BNB were picked knowing they survived (and grew); coins that faded are not in the list, so these results may look better than reality.",
+  "Four assets, one price source (Binance USDT pairs, daily); fixed costs; trades at the Monday open.",
+  "Spot only and long only: a weak market means cash, never a short."
+ ]
+}

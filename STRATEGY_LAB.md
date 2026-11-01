@@ -11,7 +11,7 @@ sold, no exchange account, no leverage, futures, margin or shorting. The Lab is 
 | 3 | Range trading (4h, only in the SIDEWAYS regime) | same | implemented, pre-registered, design backtest run once: INCONCLUSIVE (4 trades) |
 | 4 | Breakout trading (never from a wick alone) | same | implemented, pre-registered, design backtest run once: FAIL (max drawdown 23.7% > 15%) |
 | 4b | Breakout-0.5R (variant: identical rules, 0.5% risk) | same | **chosen after design results: forward test only, no design verdict** |
-| 5 | Narrative / sector rotation (BTC, ETH, SOL, BNB; price, relative strength, volume) | BTC STRONGER / ALTCOIN STRENGTH / NEUTRAL / NO TRADE | planned |
+| 5 | Narrative / sector rotation (BTC, ETH, SOL, BNB; price, relative strength, volume) | BTC STRONGER / ALTCOIN STRENGTH / NEUTRAL / NO TRADE | implemented, pre-registered, design backtest run once: PASS (strong survivorship bias) |
 
 ## Shared result schema (`strategy-result-1`, `services/strategies/base.py`)
 
@@ -160,10 +160,34 @@ the budget basis. The locked study and its verdict are unchanged.
   variant shows NO TRADE and its forward test pauses ("dependency changed").
 - Breakout itself is unchanged: its FAIL verdict and its 1% forward test stand.
 
+## Rotation (round 5)
+
+- **Rules** (`PREREGISTRATION_ROTATION.md`, config hash `f3de8ea9c08bc780`): BTC, ETH, SOL, BNB (Binance USDT pairs,
+  daily closed candles). Weekly at the Monday 00:00 UTC open: rank by the 28-day return on closes up to Sunday; hold
+  the top asset 100%, or cash if its return is ≤ 0 (or fewer than two assets can be ranked); NEUTRAL when the top two
+  are within 2 points (keep the holding if it is one of them). 0.10% fee + 0.05% slippage per side. Price, relative
+  strength and volume only (volume shown, not used); **news is live context only, never in the rule or backtest**.
+- **Data:** ETH/SOL/BNB daily candles from Binance's public klines (`scripts/download_assets.py`, then refreshed
+  daily by the app; BTC's candles untouched), 2021-05-01 onwards, no gaps. Missing data is N/A, never zero.
+- **Criteria** (against BTC buy & hold, same window): switches ≥ 30 else INCONCLUSIVE; return / max drawdown ≥ BTC's;
+  max drawdown ≤ BTC's; beats ≥ 90% of random weekly rotations (cash in the same weeks, a random asset otherwise).
+- **Design result** (`data/strategy_rotation_design.md`, run once on 2026-11-01, Mondays 2021-06-28 … 2025-10-27,
+  227 weeks): **PASS** — net **+3,193.17%** vs BTC buy & hold +224.36%; max drawdown 59.70% vs BTC 76.63%;
+  return / drawdown 53.49 vs 2.93; 91 switches; beat 97.7% of 1,000 random weekly rotations (median +564.89%).
+  Weeks held: SOL 72, cash 68, ETH 37, BTC 25, BNB 25. Fees and slippage 242% of the starting account (they grow with
+  the account). Four of nine 182-day windows lost money (worst −27.41%). Sensitivity: every variant beat BTC; the
+  no-cash variant and the 56-day lookback had drawdowns of 79–84%.
+- **Checked independently** (read-only): all 227 weekly decisions re-derived from the raw candles without the engine
+  code match; compounding the held assets' Monday-to-Monday opens without costs gives exactly the engine's no-cost
+  result (+3,914.52%); every decision uses only closes before its Monday open.
+- **Read with care:** ⚠ **survivorship bias** — SOL and BNB were picked knowing they survived; SOL alone was held 72
+  weeks and went from $33.00 to $198.70 (daily closes, 2021-06-28 to 2025-10-27). A drawdown of 60% is still severe. Design data only: this is
+  not validation; the result says the rule worked on these four hand-picked survivors in 2021–2025.
+
 ## Charts (visualisation only, `services/strategy_charts.py`)
 
 - **Live chart** (Chart tab of each strategy): the strategy's own timeframe and closed candles with only the
-  indicators its rules use (breakout: the 20-bar high, the 10-bar trailing low, the volume threshold; trend: EMA 21/50/200, the daily EMA 50 level, ADX; range: the range box, midpoint, touches,
+  indicators its rules use (rotation: the 28-day return ranking with N/A shown, the four prices started at 100, news as context; breakout: the 20-bar high, the 10-bar trailing low, the volume threshold; trend: EMA 21/50/200, the daily EMA 50 level, ADX; range: the range box, midpoint, touches,
   sideways shading, ADX; DCA: scheduled buy days, average buy price). Computed by the strategy's own functions
   (`trend.indicators`, `range.features` / `regime_labels`, `dca.scheduled_days` / `simulate`); the plan (entry band,
   stop, targets, R:R) comes from the strategy's own result. Without a setup a box lists each rule as ✓ / ✗ from the

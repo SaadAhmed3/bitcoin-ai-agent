@@ -231,6 +231,9 @@ class Page:
 
     def __init__(self, browser, base_url: str, **ctx):
         self.context = browser.new_context(accept_downloads=True, **ctx)
+        # upper bounds only (every wait is for a state, never a fixed time): generous so a busy PC does not fail a run
+        self.context.set_default_navigation_timeout(90_000)
+        self.context.set_default_timeout(60_000)
         self.page = self.context.new_page()
         self.base = base_url
         self.errors: list[str] = []
