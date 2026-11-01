@@ -387,6 +387,11 @@
           <tbody><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
         </table>
       </div>
+      <div class="grid-2 strat-cmp-charts">
+        <div><h3>Account in the design backtests (start = 100)</h3><div id="stratCmpEquity" class="chart-box strat-chart"></div></div>
+        <div><h3>Net return vs max drawdown</h3><div id="stratCmpScatter" class="chart-box strat-chart"></div></div>
+      </div>
+      <p class="muted small how-to" id="stratCmpHow"></p>
     </section>
 
     <section id="stratDetail" class="card" data-views="strategies">
@@ -395,7 +400,29 @@
         <div class="row-gap"><select id="stratDetailPick" class="ov-select" aria-label="Strategy to show"></select>
           <span class="tag calc">Calculated</span></div>
       </div>
-      <div class="grid-2 strat-detail">
+      <div class="seg strat-tabs" id="stratTabs" role="tablist" aria-label="Strategy details view">
+        <button type="button" role="tab" data-tab="overview" class="on" aria-selected="true">Overview</button>
+        <button type="button" role="tab" data-tab="chart" aria-selected="false">Chart</button>
+      </div>
+      <div id="stratTabChart" class="strat-tab" hidden>
+        <h3>Live chart</h3>
+        <p class="strat-design-warning" id="stratLiveBanner" hidden></p>
+        <div id="stratLiveChart" class="chart-box strat-chart tall"></div>
+        <ul class="strat-checklist" id="stratChecklist" aria-label="Rules of the strategy on the last closed candle"></ul>
+        <p class="muted small how-to" id="stratLiveHow"></p>
+        <h3 class="sub">Design backtest history</h3>
+        <p class="muted small" id="stratHistSource"></p>
+        <div class="strat-hist">
+          <div id="stratHistChart" class="chart-box strat-chart tall"></div>
+          <div class="table-wrap strat-trades"><table class="table" id="stratTradeList">
+            <thead><tr><th>Entry</th><th>Result</th><th>Exit reason</th></tr></thead><tbody></tbody></table></div>
+        </div>
+        <p class="muted small how-to" id="stratHistHow"></p>
+        <h3 class="sub">Forward test</h3>
+        <div id="stratFwdChart" class="chart-box strat-chart"></div>
+        <p class="muted small how-to" id="stratFwdHow"></p>
+      </div>
+      <div class="grid-2 strat-detail strat-tab" id="stratTabOverview">
         <div><h3>Design backtest</h3><div id="stratBacktest"><p class="empty">Loading…</p></div>
           <h3 class="sub">Forward test</h3><div id="stratForward"><p class="empty">Loading…</p></div></div>
         <div><details class="fold strat-cfg" id="stratCfg-dca"><summary>Settings</summary>
@@ -543,6 +570,7 @@
 </div>
 <script id="appConfig" type="application/json">{{ {"timeframes": timeframes, "displayTz": display_tz, "theme": theme, "version": version}|tojson }}</script>
 <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
+<script src="{{ url_for('static', filename='js/strategy_charts.js') }}"></script>
 <script src="{{ url_for('static', filename='js/strategy_lab.js') }}"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>

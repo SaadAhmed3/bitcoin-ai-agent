@@ -2,6 +2,22 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## Strategy Lab: strategy charts — 2026-11-01
+
+**Visualisation only.** No strategy rule, result or forward test changed; the strategy modules, the four protected
+files and `services/forward_tests.py` are untouched (forward fingerprints unchanged).
+
+- **Chart tab** per strategy: live chart (only the indicators the strategy uses, computed by its own functions; the
+  plan drawn when a setup exists; otherwise a ✓/✗ rule box; "Failed on design data: research only" banner),
+  design-backtest history (every trade, equity vs buy & hold, drawdown, a clickable trade list that zooms; DCA:
+  invested vs value and the worst point), forward-test chart (empty until day 1), "How to read this chart" notes.
+- **Comparison charts:** design equity curves normalised to 100 and net return vs max drawdown; hypothetical, not
+  ranked.
+- History series are recomputed in memory with the locked configuration and shown only when every stored metric is
+  reproduced exactly (all three stored results verify); nothing is written. `services/strategy_charts.py`,
+  `static/js/strategy_charts.js`; API `/api/strategies/<id>/chart/{live,history,forward}`, `/api/strategies/compare-chart`.
+- Tests (failed before): `tests/test_strategy_charts.py` (9), `tests/e2e/test_strategy_charts_e2e.py` (5).
+
 ## Strategy Lab, round 3: Range trading — 2026-11-01
 
 **Research only, separate from signal-1.8** (unchanged; protected files untouched; forward tests "unchanged").

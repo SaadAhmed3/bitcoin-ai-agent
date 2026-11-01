@@ -609,3 +609,22 @@ nav a .label { flex: 1; min-width: 0; }
 .strat-kinds { margin: -4px 0 6px; }
 .strat-supp { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
 .strat-design-warning { margin: 4px 0; padding: 4px 8px; border-left: 3px solid var(--down); color: var(--text); font-size: 12px; font-weight: 600; }
+
+/* Strategy Lab charts */
+.strat-tabs { margin: 0 0 12px; }
+.strat-chart { min-height: 320px; }
+.strat-chart.tall { min-height: 460px; }
+.strat-hist { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 12px; align-items: start; }
+.strat-trades { max-height: 460px; overflow: auto; }
+.strat-trades tr[data-i] { cursor: pointer; }
+.strat-trades tr.sel td { background: var(--accent-soft); }
+.strat-trades tr.win td.num { color: var(--up); }
+.strat-trades tr.loss td.num { color: var(--down); }
+.strat-checklist { list-style: none; padding: 0; margin: 8px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 2px 14px; font-size: 12px; }
+.strat-checklist li.met { color: var(--text); }
+.strat-checklist li.not { color: var(--muted); }
+.how-to { margin-top: 4px; }
+.strat-cmp-charts { margin-top: 12px; }
+@media (max-width: 900px) { .strat-hist { grid-template-columns: 1fr; } .strat-trades { max-height: 260px; } }
+.strat-chart.is-empty { min-height: 0; }
+.strat-chart.is-empty .empty { padding: 18px 0; }
