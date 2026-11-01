@@ -112,6 +112,9 @@ def test_chart_tab_fits_a_phone(browser, lab_server):
                              has_touch=True)
     try:
         assert no_horizontal_scroll(page) == []
+        anns = page.evaluate("() => (document.getElementById('stratLiveChart').layout.annotations || []).map((a) => a.text)")
+        assert not any("No setup" in a for a in anns)                              # on a phone: the list below instead
+        assert page.locator("#stratChecklist li").count() >= 6
         assert p.errors == []
     finally:
         p.context.close()

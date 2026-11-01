@@ -107,7 +107,7 @@
       (d.plan.targets || []).forEach((t, i) => traces.push(line([x[Math.max(0, x.length - 30)], last], [t, t], `Target ${i + 1} ${usd(t)}`, c.up, { line: { width: 2 } })));
       ann.push({ xref: "paper", x: 0.99, xanchor: "right", yref: "y", y: hi, yanchor: "bottom", showarrow: false,
         text: `Entry ${usd(e.low)} · R:R ${d.plan.rr}`, font: { size: 11, color: c.text }, bgcolor: alpha(c.info, 0.2) });
-    } else if ((d.checklist || []).length) {         // no setup: why, rule by rule
+    } else if ((d.checklist || []).length && !narrow()) {   // no setup: why, rule by rule (phones: the list below)
       ann.push({ xref: "paper", yref: "paper", x: 0.01, y: 0.99, xanchor: "left", yanchor: "top", align: "left", showarrow: false,
         text: ["<b>No setup</b>", ...d.checklist.map((r) => `${r.met ? "✓" : "✗"} ${esc(r.rule)}`)].join("<br>"),
         font: { size: 10, color: c.text }, bgcolor: alpha(css("--card") || "#141922", 0.85), bordercolor: c.line, borderwidth: 1, borderpad: 6 });
