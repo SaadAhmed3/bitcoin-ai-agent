@@ -128,7 +128,7 @@ def test_comparison_charts_are_hypothetical_and_unranked(browser, lab_server):
         assert "not ranked" in page.locator("#stratCmpHow").text_content()
         inside = page.evaluate("""() => {
             const box = document.querySelector('#stratCmpScatter .bglayer rect.bg').getBoundingClientRect();
-            return [...document.querySelectorAll('#stratCmpScatter .textpoint text')].map((t) => {
+            return [...document.querySelectorAll('#stratCmpScatter .annotation-text')].map((t) => {
                 const r = t.getBoundingClientRect();
                 return r.left >= box.left - 0.5 && r.right <= box.right + 0.5 && r.top >= box.top - 0.5 && r.bottom <= box.bottom + 0.5;
             }); }""")
@@ -178,5 +178,34 @@ def test_the_forward_only_variant_is_labelled_on_its_chart_tab(browser, lab_serv
         page.locator("#stratTabs button[data-tab='overview']").click()
         assert label in page.locator("#stratBacktest").text_content().lower()
         assert p.errors == []
+    finally:
+        p.context.close()
+
+
+def test_scatter_labels_never_overlap_when_one_strategy_dwarfs_the_others(browser, fresh_server):
+    """Like the real data: one result far above three that sit close together near zero."""
+    db = fresh_server.db
+    from services.strategy_forward import StrategyForward
+    from services.strategy_lab import StrategyLab
+    lab = StrategyLab(db, None, StrategyForward(db))
+    lab.ensure_defaults()
+    sample = [{"time": 1_650_000_000_000 + i * 86_400_000, "equity": 1.0 + i * 0.01} for i in range(5)]
+    for sid, ret, dd, verdict in (("trend", -7.8, 9.6, "FAIL"), ("range", 1.9, 0.6, "INCONCLUSIVE"),
+                                  ("breakout", 51.1, 23.7, "FAIL"), ("rotation", 3193.2, 59.7, "PASS")):
+        db.strategy_backtest_add(sid, 1, lab.config(sid)["hash"], "design", "sha",
+                                 {"verdict": verdict, "equity_sample": sample, "period": {"first_day": 0, "last_day": 1},
+                                  "metrics": {"net_return_pct": ret, "max_drawdown_pct": dd, "trades": 40}}, now=1)
+    p = Page(browser, fresh_server.url, viewport={"width": 1280, "height": 900})
+    try:
+        page = p.goto("/#/strategies")
+        rendered(page, "stratCmpScatter", "compare")
+        boxes = page.evaluate("""() => [...document.querySelectorAll('#stratCmpScatter .annotation-text')]
+            .map((t) => { const r = t.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; })""")
+        assert len(boxes) == 4
+        hit = [(i, j) for i in range(4) for j in range(i + 1, 4)
+               if boxes[i][0] < boxes[j][2] and boxes[j][0] < boxes[i][2] and boxes[i][1] < boxes[j][3] and boxes[j][1] < boxes[i][3]]
+        assert hit == [], boxes
+        colors = page.evaluate("() => document.getElementById('stratCmpScatter').data[0].marker.color")
+        assert len(set(colors)) == 4                                                 # one colour per strategy
     finally:
         p.context.close()

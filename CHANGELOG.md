@@ -2,6 +2,15 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## Strategy charts: labels that never overlap — 2026-11-02
+
+- Comparison scatter: labels are annotations placed greedily in pixels (several levels on both sides of each point,
+  a thin line back to it), inside the plot and clear of other labels and points, so one far-away result (Rotation)
+  no longer squeezes the others into overlapping. Test (failed before): four real-like results, no two labels touch.
+- One fixed colour per strategy (Rotation no longer shares Trend's orange); BNB no longer shares BTC's amber.
+- Breakout-0.5R card: "Design backtest: none, by design (chosen after design results: forward test only)" instead
+  of "not run yet".
+
 ## Strategy Lab, round 5: Rotation — 2026-11-02
 
 - `services/strategies/rotation.py` (self-contained, own forward fingerprint): weekly relative-strength rotation

@@ -134,7 +134,7 @@
   }
 
   // Rotation: the ranking the Monday rule uses (bars, N/A shown as such) and the four prices started at 100.
-  const ASSET_COLORS = { BTCUSDT: "#f59e0b", ETHUSDT: "#818cf8", SOLUSDT: "#2dd4bf", BNBUSDT: "#eab308" };
+  const ASSET_COLORS = { BTCUSDT: "#f59e0b", ETHUSDT: "#818cf8", SOLUSDT: "#2dd4bf", BNBUSDT: "#f472b6" };
   function drawRotationLive(d) {
     const c = colors(), s = d.series, x = s.time.map(iso), names = d.names || {};
     const rk = d.ranking || [];
@@ -288,28 +288,64 @@
 
   // ---------------------------------------------------------------- D. comparison
   const SHORT = { dca: "DCA", trend: "Trend", range: "Range", breakout: "Breakout", breakout_05r: "Breakout-0.5R", rotation: "Rotation" };
+  // Scatter labels: annotations placed greedily in pixels (by x). Each label tries offsets on both sides of its point,
+  // one level further away at a time, and takes the first spot inside the plot and clear of every label already placed
+  // and of every point; a thin line leads back to its point. A far-away point never squeezes the others together.
+  function placeLabels(pts, xr, yr, w, h) {
+    const sx = w / (xr[1] - xr[0]), sy = h / (yr[1] - yr[0]), TH = 16, R = 8;
+    const at = pts.map((p) => [(p.x - xr[0]) * sx, (yr[1] - p.y) * sy]);
+    const hits = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+    const dots = at.map(([x, y]) => [x - R, y - R, x + R, y + R]);
+    const placed = [], out = [];
+    const tries = [];
+    for (const dy of [0, -20, 20, -40, 40, -60, 60, -80, 80, -100, 100]) for (const side of [1, -1]) tries.push([side, dy]);
+    pts.map((p, i) => i).sort((a, b) => pts[a].x - pts[b].x).forEach((i) => {
+      const [px, py] = at[i], tw = pts[i].text.length * 7 + 6;
+      let pick = null;
+      for (const [side, dy] of tries) {
+        const x0 = side > 0 ? px + 12 : px - 12 - tw, y0 = py + dy - TH / 2;
+        const box = [x0, y0, x0 + tw, y0 + TH];
+        if (box[0] < 0 || box[2] > w || box[1] < 0 || box[3] > h) continue;
+        if (placed.some((b) => hits(box, b)) || dots.some((d) => hits(box, d))) continue;
+        pick = { side, dy, box };
+        break;
+      }
+      pick = pick || { side: px < w / 2 ? 1 : -1, dy: 0, box: [px, py, px, py] };
+      placed.push(pick.box);
+      out[i] = { ax: pick.side * 12, ay: pick.dy, xanchor: pick.side > 0 ? "left" : "right" };
+    });
+    return out;
+  }
+
   async function compare() {
     try {
       const d = await get("/api/strategies/compare-chart");
       how("stratCmpHow", d.how_to);
       if (!d.curves.length) { empty("stratCmpEquity", "No stored design backtest yet.", "compare"); empty("stratCmpScatter", "No stored design backtest yet.", "compare"); return; }
       if (!ok()) return;
-      const c = colors(), pal = ["#60a5fa", c.accent, "#c084fc", c.up, c.warn];
-      plot("stratCmpEquity", d.curves.map((k, i) => line(k.time.map(iso), k.value, k.name, pal[i % pal.length])),
+      const c = colors();
+      const COL = { dca: "#60a5fa", trend: c.accent, range: "#c084fc", breakout: c.up, rotation: "#f472b6" };   // one per strategy
+      const col = (id) => COL[id] || c.muted;
+      plot("stratCmpEquity", d.curves.map((k) => line(k.time.map(iso), k.value, k.name, col(k.id))),
         layout(c, { hovermode: "x unified", xaxis: { type: "date", gridcolor: c.line }, yaxis: axis(c, { type: "log", tickformat: ",.0f" }) }), "compare");
       const xs = d.scatter.map((p) => p.max_drawdown_pct), ys = d.scatter.map((p) => p.net_return_pct);
       const xMax = Math.max(...xs, 1) * 1.15;
       const ySpan = Math.max(Math.max(...ys, 0) - Math.min(...ys, 0), 10);
       const yLo = Math.min(...ys, 0) - ySpan * 0.15, yHi = Math.max(...ys, 0) + ySpan * 0.15;
-      plot("stratCmpScatter", [{ type: "scatter", mode: "markers+text", name: "Strategies",
-        x: d.scatter.map((p) => p.max_drawdown_pct), y: d.scatter.map((p) => p.net_return_pct),
-        text: d.scatter.map((p) => `${SHORT[p.id] || p.id} (${p.verdict})`),
-        textposition: d.scatter.map((p) => (p.max_drawdown_pct < xMax / 2 ? "middle right" : "middle left")),
-        marker: { size: 12, color: d.scatter.map((_, i) => pal[i % pal.length]) },
+      const labels = d.scatter.map((p) => `${SHORT[p.id] || p.id} (${p.verdict})`);
+      const area = $("stratCmpScatter").getBoundingClientRect(), M = { l: 50, r: 16, t: 20, b: 40 };
+      const xr = [-xMax * 0.05, xMax * 1.05], yr = [yLo, yHi];
+      const spots = placeLabels(d.scatter.map((p, i) => ({ x: p.max_drawdown_pct, y: p.net_return_pct, text: labels[i] })),
+        xr, yr, Math.max(200, area.width - M.l - M.r), Math.max(150, area.height - M.t - M.b));
+      plot("stratCmpScatter", [{ type: "scatter", mode: "markers", name: "Strategies",
+        x: d.scatter.map((p) => p.max_drawdown_pct), y: d.scatter.map((p) => p.net_return_pct), text: labels,
+        marker: { size: 12, color: d.scatter.map((p) => col(p.id)) },
         hovertemplate: "%{text}<br>max drawdown %{x:.2f}%<br>net return %{y:.2f}%<extra></extra>" }],
-      layout(c, { showlegend: false, xaxis: { title: { text: "max drawdown (%)", font: { size: 10 } }, gridcolor: c.line,
-          range: [-xMax * 0.05, xMax * 1.05] },
-        yaxis: axis(c, { side: "left", title: { text: "net return (%)", font: { size: 10 } }, range: [yLo, yHi] }), margin: { l: 50, r: 16, t: 20, b: 40 } }), "compare");
+      layout(c, { showlegend: false, xaxis: { title: { text: "max drawdown (%)", font: { size: 10 } }, gridcolor: c.line, range: xr },
+        yaxis: axis(c, { side: "left", title: { text: "net return (%)", font: { size: 10 } }, range: yr }), margin: M,
+        annotations: d.scatter.map((p, i) => ({ x: p.max_drawdown_pct, y: p.net_return_pct, xref: "x", yref: "y", text: labels[i],
+          showarrow: true, arrowhead: 0, arrowwidth: 1, arrowcolor: alpha(c.muted, 0.7), standoff: 7, ax: spots[i].ax,
+          ay: spots[i].ay, xanchor: spots[i].xanchor, yanchor: "middle", font: { size: 11, color: c.text } })) }), "compare");
     } catch (err) {
       empty("stratCmpEquity", `Could not load: ${err.message}`, "compare");
     }
