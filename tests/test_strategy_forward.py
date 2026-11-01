@@ -13,7 +13,7 @@ D = 86_400_000
 
 def tracker(db, rows, now):
     from services.strategy_forward import StrategyForward
-    return StrategyForward(db, clock=lambda: now, candles=lambda: rows)
+    return StrategyForward(db, clock=lambda: now, candles=lambda tf: rows)
 
 
 def test_starts_the_next_utc_midnight_once_with_its_own_fingerprint(db):

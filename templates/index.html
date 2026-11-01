@@ -391,8 +391,9 @@
 
     <section id="stratDetail" class="card" data-views="strategies">
       <div class="card-head">
-        <div><h2>DCA details</h2><p class="muted" id="stratDetailMeta">Backtest, forward test, settings and history</p></div>
-        <span class="tag calc">Calculated</span>
+        <div><h2 id="stratDetailTitle">Strategy details</h2><p class="muted" id="stratDetailMeta">Backtest, forward test, settings and history</p></div>
+        <div class="row-gap"><select id="stratDetailPick" class="ov-select" aria-label="Strategy to show"></select>
+          <span class="tag calc">Calculated</span></div>
       </div>
       <div class="grid-2 strat-detail">
         <div><h3>Design backtest</h3><div id="stratBacktest"><p class="empty">Loading…</p></div>

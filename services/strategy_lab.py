@@ -20,6 +20,28 @@ from services.strategies.base import (FORWARD_PASS, NOT_VALIDATED, STRATEGIES, c
 
 log = logging.getLogger(__name__)
 DAY = 86_400_000
+
+# Fingerprint re-bases (append-only, strategy_forward_rebases). Round 2 made the forward tracker generic and narrowed
+# each strategy's fingerprint to its own module + the tracker core, so later rounds no longer disturb earlier
+# strategies. DCA had been registered with the round-1 scheme but had not processed a single day: re-based once, at
+# app start, only while that is still true (the database refuses it afterwards).
+KNOWN_REBASES = [
+    ("dca", "f626cffd73fb1e10", "f576a36a9cb5fdeacb3a99a6e63c0915b0817a4b5295000e8f85d6bc9cd5d4f6",
+     "round 2: generic forward tracker; fingerprint = strategy module + tracker core (re-based before the first day)"),
+]
+
+
+def apply_rebases(db, now: int) -> int:
+    from services.strategy_forward import strategy_fingerprint
+    added = 0
+    for sid, cfg_hash, old_fp, reason in KNOWN_REBASES:
+        t = db.strategy_forward_test(sid, cfg_hash)
+        if (t is None or t["fingerprint"] != old_fp or db.strategy_forward_rebases(t["id"])
+                or db.strategy_forward_events(t["id"])):
+            continue
+        db.strategy_forward_rebase(t["id"], old_fp, strategy_fingerprint(sid), reason, now)
+        added += 1
+    return added
 METRICS = [("Net return", "net_return_pct", "signed_pct"), ("Win rate", "win_rate_pct", "pct"),
            ("Profit factor", "profit_factor", "num"), ("Maximum drawdown", "max_drawdown_pct", "pct"),
            ("Number of trades", "trades", "int"), ("Average reward/risk", "avg_reward_risk", "num"),
@@ -59,6 +81,7 @@ class StrategyLab:
         return ENGINES[sid]
 
     def ensure_defaults(self) -> None:
+        apply_rebases(self.db, self.clock())
         for sid, eng in ENGINES.items():
             if not self.db.strategy_configs(sid):
                 cfg = eng.validate_config({})
@@ -111,13 +134,15 @@ class StrategyLab:
         eng = self._engine(sid)
         cfg = self.config(sid)
         now = self.clock()
-        res = self.market.get_candles("1d")
+        results = {tf: self.market.get_candles(tf) for tf in eng.EVAL_TIMEFRAMES}
+        main = results[eng.EVAL_TIMEFRAMES[0]]
         try:
             regime = self.regime_fn()
         except Exception:                      # context only: never blocks the strategy
             log.exception("Regime context failed")
             regime = None
-        r = eng.evaluate(res.df, cfg["config"], now, data_quality(res, now), regime, cfg["version"]).to_dict()
+        r = eng.evaluate_frames({tf: res.df for tf, res in results.items()}, cfg["config"], now,
+                                data_quality(main, now), regime, cfg["version"]).to_dict()
         status = self.validation(sid, cfg)
         if status["status"] != FORWARD_PASS:
             r["labels"] = r["labels"] + ["NOT VALIDATED"]
@@ -146,8 +171,14 @@ class StrategyLab:
     def comparison(self, cards: list[dict]) -> dict:
         rows = []
         for label, key, kind in METRICS:
-            rows.append({"metric": label, "values": {c["id"]: _fmt(((c.get("backtest") or {}).get("metrics") or {}).get(key), kind)
-                                                     for c in cards}})
+            vals = {}
+            for c in cards:
+                m = (c.get("backtest") or {}).get("metrics") or {}
+                if key == "costs_usd" and m.get("costs_usd") is None and m.get("costs_pct") is not None:
+                    vals[c["id"]] = f"{m['costs_pct']:.2f}% of the account"      # trade strategies: % of the account
+                else:
+                    vals[c["id"]] = _fmt(m.get(key), kind)
+            rows.append({"metric": label, "values": vals})
         rows.append({"metric": "Validation status",
                      "values": {c["id"]: c["validation"]["status"] if c["implemented"] else "N/A" for c in cards}})
         return {"rows": rows, "note": COMPARE_NOTE}

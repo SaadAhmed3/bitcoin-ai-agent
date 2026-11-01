@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_schema_14_strategy_tables_are_append_only(db):
     from database.db import SCHEMA_VERSION
-    assert SCHEMA_VERSION == 14
+    assert SCHEMA_VERSION >= 14              # 15: strategy_forward_rebases
     db.strategy_config_add("dca", {"amount_usd": 100.0}, "h1", "pre-registered defaults", now=1)
     db.strategy_signal_add("dca", 1, "h1", day=0, signal="WAIT", result={}, now=1)
     db.strategy_backtest_add("dca", 1, "h1", "design", "abc", {"verdict": "PASS"}, now=1)
@@ -46,11 +46,14 @@ def test_api_lists_five_strategies_dca_live_the_rest_planned(config, db):
     assert dca["implemented"] is True and dca["result"]["signal"] in ("ACCUMULATE", "WAIT", "PAUSE")
     assert dca["result"]["schema"] == "strategy-result-1" and dca["config"]["version"] == 1
     assert dca["validation"]["status"] == "NOT VALIDATED" and "SIMULATED" in dca["result"]["labels"]
-    for s in d["strategies"][1:]:
-        assert s["implemented"] is False and s["result"] is None and s["planned_round"] in (2, 3, 4, 5)
+    trend = d["strategies"][1]                                           # round 2
+    assert trend["implemented"] is True and trend["result"]["signal"] in (
+        "BUY SETUP", "HOLD", "NO TRADE", "EXIT / REDUCE EXPOSURE") and trend["result"]["timeframe"] == "4h"
+    for s in d["strategies"][2:]:
+        assert s["implemented"] is False and s["result"] is None and s["planned_round"] in (3, 4, 5)
     cmp = d["comparison"]
     assert [r["metric"] for r in cmp["rows"]][:3] == ["Net return", "Win rate", "Profit factor"]
-    assert all(r["values"]["trend"] == "N/A" for r in cmp["rows"])
+    assert all(r["values"]["range"] == "N/A" for r in cmp["rows"])
     assert "not ranked" in cmp["note"]
     assert c.get("/api/strategies/nope").status_code == 404
 
@@ -88,7 +91,7 @@ def test_monitor_records_one_signal_per_day_and_starts_the_strategy_forward_trac
     fwd = c.get("/api/strategies/dca").get_json()["forward"]
     assert fwd["state"] in ("waiting", "running") and fwd["fingerprint_now"]
     with db.connect() as conn:                                        # the H1/H2 tracker is separate
-        assert conn.execute("SELECT COUNT(*) FROM strategy_forward_tests").fetchone()[0] == 1
+        assert [r[0] for r in conn.execute("SELECT strategy_id FROM strategy_forward_tests ORDER BY id")] == ["dca", "trend"]
 
 
 def test_comparison_shows_backtest_numbers_only_when_they_exist(config, db):
@@ -100,3 +103,14 @@ def test_comparison_shows_backtest_numbers_only_when_they_exist(config, db):
     rows = {r["metric"]: r["values"]["dca"] for r in c.get("/api/strategies").get_json()["comparison"]["rows"]}
     assert rows["Net return"] == "+12.50%" and rows["Win rate"] == "N/A" and rows["Number of trades"] == "52"
     assert rows["Maximum drawdown"] == "20.10%" and rows["Validation status"] == "BACKTESTED (design data)"
+
+
+def test_trend_backtest_numbers_show_in_the_comparison(config, db):
+    c = make_client(config, db, [FakeProvider("fake1")])
+    h = c.get("/api/strategies/trend/config").get_json()["hash"]
+    db.strategy_backtest_add("trend", 1, h, "design", "abc", {"verdict": "INCONCLUSIVE", "metrics": {
+        "net_return_pct": -3.2, "win_rate_pct": 41.0, "profit_factor": 0.9, "max_drawdown_pct": 6.5, "trades": 12,
+        "avg_reward_risk": 2.0, "costs_usd": None, "costs_pct": 1.25, "buy_hold_return_pct": 80.0}}, now=1)
+    rows = {r["metric"]: r["values"]["trend"] for r in c.get("/api/strategies").get_json()["comparison"]["rows"]}
+    assert rows["Net return"] == "-3.20%" and rows["Profit factor"] == "0.90" and rows["Number of trades"] == "12"
+    assert rows["Fees and slippage"] == "1.25% of the account" and rows["Validation status"] == "BACKTESTED (design data)"

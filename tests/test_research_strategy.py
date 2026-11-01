@@ -20,7 +20,7 @@ def rs(db, tmp_path, monkeypatch):
     from services.backtesting import HOLDOUT_START
     rows = daily(900, start=HOLDOUT_START - 700 * D, price=20_000, step=15).to_dict("records")
     monkeypatch.setattr(mod, "open_db", lambda: db)
-    monkeypatch.setattr(mod, "load_daily", lambda db_: rows)
+    monkeypatch.setattr(mod, "load_rows", lambda db_, tf: rows)
     monkeypatch.setattr(mod, "DATA_DIR", tmp_path)
     monkeypatch.setattr(mod, "prereg_committed", lambda path: True)
     return mod
@@ -48,4 +48,24 @@ def test_refuses_when_the_defaults_no_longer_match_the_preregistration(rs, db, m
 
 
 def test_unimplemented_strategy_is_refused(rs):
-    assert rs.main(["trend"]) == 2
+    assert rs.main(["range"]) == 2
+
+
+def test_trend_runs_once_on_its_own_timeframes(rs, db, tmp_path, monkeypatch):
+    from functools import partial
+
+    from services.backtesting import HOLDOUT_START
+    from services.strategies import trend
+    from test_strategy_trend import H4, uptrend
+    df4, df1 = uptrend(n=1500)
+    shift = (HOLDOUT_START - int(df4["close_time"].iloc[1200]) - 1) // H4 * H4
+    for df in (df4, df1):
+        df["open_time"] += shift
+        df["close_time"] += shift
+    seen = []
+    monkeypatch.setattr(rs, "load_rows", lambda db_, tf: seen.append(tf) or (df4 if tf == "4h" else df1).to_dict("records"))
+    monkeypatch.setattr(trend, "backtest", partial(trend.backtest, random_runs=20))
+    assert rs.main(["trend"]) == 0 and seen == ["4h", "1d"]
+    stored = db.strategy_backtests("trend")
+    assert len(stored) == 1 and stored[0]["result"]["verdict"] in ("PASS", "FAIL", "INCONCLUSIVE")
+    assert (tmp_path / "strategy_trend_design.md").exists() and rs.main(["trend"]) == 2
