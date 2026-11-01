@@ -263,10 +263,11 @@
         x: wk.map((w) => iso(w.monday + 3.5 * 86400000)), y: wk.map(() => 1), width: 7 * 86400000,
         marker: { color: sym ? ASSET_COLORS[sym] : alpha(c.muted, 0.35) }, hovertemplate: `%{x|%Y-%m-%d}: ${sym ? names[sym] : "cash"}<extra></extra>` });
     });
-    const L = layout(c, { barmode: "stack", bargap: 0, xaxis: { type: "date", gridcolor: c.line },
-      yaxis: axis(c, { domain: [0.34, 1], tickformat: ".2f", title: { text: "account (start = 1)", font: { size: 10 } } }),
+    const title = (text) => (narrow() ? undefined : { text, font: { size: 10 } });   // phones: the how-to note says it
+    const L = layout(c, { barmode: "stack", bargap: 0, xaxis: { type: "date", gridcolor: c.line, anchor: "y3" },   // dates at the bottom
+      yaxis: axis(c, { domain: [0.34, 1], tickformat: ".2f", title: title("account (start = 1)") }),
       yaxis2: axis(c, { domain: [0.22, 0.3], showticklabels: false, range: [0, 1] }),
-      yaxis3: axis(c, { domain: [0, 0.18], ticksuffix: "%", title: { text: "DD", font: { size: 10 } } }), ...phoneLegend(c) });
+      yaxis3: axis(c, { domain: [0, 0.18], ticksuffix: "%", title: title("DD") }), ...phoneLegend(c) });
     plot("stratHistChart", traces, L, "rotation");
   }
 
