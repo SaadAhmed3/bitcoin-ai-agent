@@ -20,7 +20,7 @@ from flask import Flask, Response, jsonify, render_template, request, send_from_
 from config import TIMEFRAMES, Config, ensure_dirs
 from database import Database, now_ms
 from services.http_client import HttpClient
-from services.market_data import SOURCE_DOCS, MarketDataService
+from services.market_data import SOURCE_DOCS, BinanceProvider, MarketDataService
 from services.news_collector import FEEDS, NewsCollector
 from services.news_service import NewsService
 from services.signal_engine import DEFAULT_WEIGHTS, ENGINE_VERSION, WEIGHT_RATIONALE
@@ -31,6 +31,7 @@ from services.paper_trading import PaperTrading
 from services.forward_tests import ForwardTests
 from services.advanced_analysis import AdvancedAnalysis, apply_sweep_corrections
 from services.no_trade_text import summary as no_trade_summary
+from services.asset_candles import AssetRefresher, candles_source
 from services.strategy_forward import StrategyForward
 from services.strategy_lab import StrategyLab
 from services.strategy_charts import StrategyCharts
@@ -250,7 +251,8 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
 
     # Strategy Lab (research only, separate from signal-1.8): versioned configs, daily signal records and its own
     # forward tracker (services/strategy_forward.py, not the H1/H2 tracker).
-    strategy_forward = StrategyForward(db)
+    # candles_source serves "1d" (BTC) and "1d:<SYMBOL>" (rotation's ETH/SOL/BNB) from the database
+    strategy_forward = StrategyForward(db, candles=candles_source(db))
     lab = StrategyLab(db, market, strategy_forward,
                       regime_fn=lambda: (advanced.snapshot().get("regime") or {}).get("regime"))
     lab.ensure_defaults()
@@ -260,9 +262,16 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     strategy_charts = StrategyCharts(db, lab, cache_dir=Path(config.db_path).resolve().parent / "cache" / "strategy_charts")
     app.config["BTC_STRATEGY_CHARTS"] = strategy_charts
 
+    from services.strategies import rotation as _rotation
+    # ETH/SOL/BNB daily candles: only with the real Binance provider (never from tests or another source)
+    asset_refresher = (AssetRefresher(db, market.http, _rotation.ALTS)
+                       if market.providers and isinstance(market.providers[0], BinanceProvider) else None)
+
     def strategy_lab_job():
         """Refresh the daily candles (cached), store today's strategy signals once, advance the strategy tracker."""
         market.get_candles("1d")
+        if asset_refresher is not None:
+            asset_refresher.maybe_refresh()
         lab.record_daily()
         lab.forward_job()
 

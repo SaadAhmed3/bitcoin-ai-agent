@@ -106,6 +106,11 @@ def test_dca_and_range_live_charts(browser, lab_server):
         assert {"20-bar high (level)", "10-bar low (trailing exit)", "Volume 1.2× average"} <= live
         assert not {"ADX(14)", "EMA 21", "Range high"} & live                    # only what its rules use
         assert page.locator("#stratChecklist li").count() >= 3
+        page.locator("#stratDetailPick").select_option("rotation")
+        rendered(page, "stratLiveChart", "rotation")
+        live = set(names(page, "stratLiveChart"))
+        assert {"28-day return", "BTC", "ETH", "SOL", "BNB"} <= live                 # ranking + normalised prices
+        assert "Context only" in page.locator("#stratNews").text_content()
         assert p.errors == []
     finally:
         p.context.close()

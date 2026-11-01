@@ -210,6 +210,40 @@ def test_live_breakout_level_trail_and_checklist_come_from_its_features():
         assert len(live["series"]["time"]) == min(200, i + 1)
 
 
+def test_live_rotation_ranking_comes_from_the_strategy():
+    from services.strategies import rotation as rot
+    from services.strategies.base import DataQuality
+    from services.strategy_charts import rotation_live
+    from test_strategy_rotation import frames_of, market
+    m = market(n=200, late={"SOLUSDT": 190})
+    fr = frames_of(m)
+    last = int(m["BTCUSDT"]["close_time"].iloc[-1])
+    c = rot.validate_config({})
+    result = rot.evaluate_frames(fr, c, now=last + 1, data=DataQuality("binance", 1, last, False, 0, [])).to_dict()
+    live = rotation_live(fr, c, result)
+    ret = rot.returns_at(rot.panel(fr), last + 1, 28)
+    assert {x["symbol"]: x["return_pct"] for x in live["ranking"]} == {
+        s: (None if v is None else v * 100) for s, v in ret.items()}
+    assert [x["symbol"] for x in live["ranking"] if x["return_pct"] is not None][0] == max(
+        (s for s in ret if ret[s] is not None), key=lambda s: ret[s])
+    assert live["series"]["SOLUSDT"][0] is None and len(live["series"]["time"]) == 90       # N/A before it exists
+    assert all(v is None or v > 0 for v in live["series"]["BTCUSDT"])
+
+
+def test_rotation_history_verifies(db):
+    from services.strategies import rotation as rot
+    from test_strategy_rotation import SYMS, rows_of, shifted
+    m = shifted()
+    for s in SYMS:
+        db.upsert_candles("binance", s, "1d", m[s].to_dict("records"), 1)
+    res = rot.backtest(*rows_of(m), rot.validate_config({}), random_runs=20)
+    db.strategy_backtest_add("rotation", 1, res["config_hash"], "design", "sha", res, now=1)
+    h = charts(db).history("rotation", wait=True)
+    assert h["verified"] is True and h["mismatches"] == []
+    assert [w["holding"] for w in h["weeks"]] == [w["holding"] for w in res["weeks"]]
+    assert h["btc_buy_hold"]["value"][-1] == pytest.approx(1 + res["btc_buy_and_hold"]["net_return_pct"] / 100, abs=1e-12)
+
+
 def test_live_dca_marks_scheduled_days_and_the_average_price():
     from services.strategies import dca
     from services.strategies.base import DataQuality

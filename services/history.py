@@ -1,4 +1,4 @@
-"""Download historical BTC/USDT candles from Binance's public market-data API into SQLite.
+"""Download historical Binance candles (BTC/USDT by default; any USDT pair via `symbol`) into SQLite.
 
 Uses /api/v3/klines with startTime paging (1000 candles per request), the same
 validation as live data (closed candles only, malformed rows dropped), and the
@@ -18,9 +18,11 @@ DAY_MS = 86_400_000
 
 
 def download(db: Database, http: HttpClient, timeframe: str, start_ms: int, end_ms: int | None = None,
-             progress: Callable[[str], None] | None = None, clock: Callable[[], int] = now_ms) -> dict:
+             progress: Callable[[str], None] | None = None, clock: Callable[[], int] = now_ms,
+             symbol: str = BinanceProvider.symbol) -> dict:
     """Fetch [start_ms, end_ms) for one timeframe. Returns counts and gap info."""
     provider = BinanceProvider(http)
+    provider.symbol = symbol
     step = TIMEFRAMES[timeframe] * 1000
     end_ms = end_ms or clock()
     cursor, total, pages = start_ms, 0, 0

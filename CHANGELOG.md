@@ -2,6 +2,23 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## Strategy Lab, round 5: Rotation — 2026-11-02
+
+- `services/strategies/rotation.py` (self-contained, own forward fingerprint): weekly relative-strength rotation
+  between BTC, ETH, SOL and BNB on daily closed candles; cash on non-positive momentum; NEUTRAL band 2 points.
+- `PREREGISTRATION_ROTATION.md` committed before the first backtest (config hash `f3de8ea9c08bc780`), with the
+  survivorship-bias warning.
+- `services/asset_candles.py` + `scripts/download_assets.py`: ETH/SOL/BNB daily candles from Binance's public klines
+  (`history.download` takes a symbol); the forward tracker reads them as "1d:<SYMBOL>" through its candle source (the
+  tracker core unchanged); the app refreshes them daily with a back-off. DB backed up before the download.
+- Design backtest run once (`data/strategy_rotation_design.md`): **PASS** — +3,193.17% vs BTC +224.36%, max drawdown
+  59.70% vs 76.63%, 91 switches, beat 97.7% of random rotations. Checked independently (decisions re-derived from raw
+  candles; no-cost compounding identical). Strong survivorship bias stated everywhere.
+- Charts: live ranking (N/A shown) with prices started at 100 and news as context only; history verified exactly
+  against the stored result (account vs BTC, drawdown, weekly holdings); forward.
+- Tests (failed before): `tests/test_strategy_rotation.py` (10), `tests/test_asset_candles.py` (3), plus rotation
+  cases in the lab, research-script, chart and e2e tests.
+
 ## Breakout-0.5R variant and deterministic e2e waits — 2026-11-02
 
 - **Breakout-0.5R** (`services/strategies/breakout_05r.py`, `PREREGISTRATION_BREAKOUT_05R.md`): forward-only variant

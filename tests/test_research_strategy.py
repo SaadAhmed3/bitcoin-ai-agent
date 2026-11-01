@@ -47,8 +47,8 @@ def test_refuses_when_the_defaults_no_longer_match_the_preregistration(rs, db, m
     assert rs.main(["dca"]) == 2 and db.strategy_backtests("dca") == []
 
 
-def test_unimplemented_strategy_is_refused(rs):
-    assert rs.main(["rotation"]) == 2
+def test_unknown_strategy_is_refused(rs):
+    assert rs.main(["nope"]) == 2
 
 
 def test_a_forward_only_variant_never_gets_a_design_backtest(rs, db):
@@ -88,3 +88,27 @@ def test_breakout_runs_once_on_its_own_timeframes(rs, db, tmp_path, monkeypatch)
     stored = db.strategy_backtests("breakout")
     assert len(stored) == 1 and stored[0]["result"]["period"]["kind"] == "design"
     assert (tmp_path / "strategy_breakout_design.md").exists() and rs.main(["breakout"]) == 2
+
+
+def test_rotation_runs_once_on_btc_and_the_three_alts(rs, db, tmp_path, monkeypatch):
+    from functools import partial
+
+    from services.strategies import rotation
+    from test_strategy_rotation import SYMS, shifted
+    m = shifted()
+    seen = []
+    by_key = {"1d": m["BTCUSDT"], **{f"1d:{s}": m[s] for s in SYMS[1:]}}
+    monkeypatch.setattr(rs, "load_rows", lambda db_, tf: seen.append(tf) or by_key[tf].to_dict("records"))
+    monkeypatch.setattr(rotation, "backtest", partial(rotation.backtest, random_runs=20))
+    assert rs.main(["rotation"]) == 0 and seen == ["1d", "1d:ETHUSDT", "1d:SOLUSDT", "1d:BNBUSDT"]
+    assert len(db.strategy_backtests("rotation")) == 1 and rs.main(["rotation"]) == 2
+
+
+def test_load_rows_reads_another_symbol(db):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("rs2", ROOT / "scripts" / "research_strategy.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    db.upsert_candles("binance", "ETHUSDT", "1d", [{"open_time": 0, "open": 1, "high": 1, "low": 1, "close": 1,
+                                                    "volume": 1, "close_time": 86_399_999}], 1)
+    assert len(mod.load_rows(db, "1d:ETHUSDT")) == 1 and mod.load_rows(db, "1d") == []

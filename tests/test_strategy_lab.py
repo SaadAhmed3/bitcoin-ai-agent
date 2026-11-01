@@ -58,10 +58,11 @@ def test_api_lists_five_strategies_dca_live_the_rest_planned(config, db):
     assert "chosen after design results: forward test only, no design verdict" in var["validation"]["label"].lower()
     assert var["result"]["design_warning"].lower() == "chosen after design results: forward test only, no design verdict"
     rot = d["strategies"][5]
-    assert rot["implemented"] is False and rot["result"] is None and rot["planned_round"] == 5
+    assert rot["implemented"] is True and rot["result"]["signal"] == "NO TRADE"        # no ETH/SOL/BNB stored here
+    assert rot["result"]["timeframe"] == "1d" and "news_context" in rot["result"]
     cmp = d["comparison"]
     assert [r["metric"] for r in cmp["rows"]][:3] == ["Net return", "Win rate", "Profit factor"]
-    assert all(r["values"]["rotation"] == "N/A" for r in cmp["rows"])
+    assert all(r["values"]["rotation"] == "N/A" for r in cmp["rows"][:-1])            # no stored design result
     assert all(r["values"]["breakout_05r"] == "N/A" for r in cmp["rows"][:-1])        # no design numbers, ever
     assert "no design verdict" in cmp["rows"][-1]["values"]["breakout_05r"]
     assert "not ranked" in cmp["note"]
@@ -101,7 +102,7 @@ def test_monitor_records_one_signal_per_day_and_starts_the_strategy_forward_trac
     fwd = c.get("/api/strategies/dca").get_json()["forward"]
     assert fwd["state"] in ("waiting", "running") and fwd["fingerprint_now"]
     with db.connect() as conn:                                        # the H1/H2 tracker is separate
-        assert [r[0] for r in conn.execute("SELECT strategy_id FROM strategy_forward_tests ORDER BY id")] == ["dca", "trend", "range", "breakout", "breakout_05r"]
+        assert [r[0] for r in conn.execute("SELECT strategy_id FROM strategy_forward_tests ORDER BY id")] == ["dca", "trend", "range", "breakout", "breakout_05r", "rotation"]
 
 
 def test_comparison_shows_backtest_numbers_only_when_they_exist(config, db):
@@ -154,3 +155,33 @@ def test_every_live_result_of_a_failed_strategy_says_research_only(config, db):
     c.application.config["BTC_MONITOR"].run_once()                            # the stored daily record says it too
     rec = db.strategy_signals("trend", 1)[0]["result"]
     assert rec["design_warning"] == "Failed on design data: research only"
+
+
+def test_rotation_reads_the_stored_alt_candles_and_shows_news_as_context_only(db):
+    from services.strategies import rotation as rot
+    from services.strategy_forward import StrategyForward
+    from services.strategy_lab import StrategyLab
+    from test_strategy_rotation import SYMS, market
+
+    m = market(n=200)
+    last = int(m["BTCUSDT"]["close_time"].iloc[-1])
+    for s in SYMS[1:]:
+        db.upsert_candles("binance", s, "1d", m[s].to_dict("records"), 1)
+
+    class Market:
+        def get_candles(self, tf):
+            from types import SimpleNamespace
+            return SimpleNamespace(df=m["BTCUSDT"], provider="binance", fetched_at=last + 1, is_stale=False, gaps=0,
+                                   warnings=[])
+
+    db.insert_news([{"id": "n1", "feed": "f", "publisher": "P", "title": "Ethereum upgrade ships", "link": "https://x.test/1",
+                        "summary": "", "published_at": last - 3_600_000, "collected_at": last}])
+    lab = StrategyLab(db, Market(), StrategyForward(db), clock=lambda: last + 1)
+    r = lab.evaluate("rotation")
+    p = rot.panel({"1d": m["BTCUSDT"], **{f"1d:{s}": m[s] for s in SYMS[1:]}})
+    want = rot.decide(rot.returns_at(p, last + 1, 28), rot.replay_holding(p, last + 1, rot.validate_config({})),
+                      rot.validate_config({}))[1]
+    assert r["signal"] == want
+    news = r["news_context"]
+    assert news["note"].startswith("Context only") and news["items"][0]["title"] == "Ethereum upgrade ships"
+    assert news["items"][0]["assets"] == ["ETHUSDT"]
