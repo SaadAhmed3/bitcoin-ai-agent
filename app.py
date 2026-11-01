@@ -31,6 +31,8 @@ from services.paper_trading import PaperTrading
 from services.forward_tests import ForwardTests
 from services.advanced_analysis import AdvancedAnalysis, apply_sweep_corrections
 from services.no_trade_text import summary as no_trade_summary
+from services.strategy_forward import StrategyForward
+from services.strategy_lab import StrategyLab
 from services.risk_manager import RISK_RANGES, RiskSettings, position_size
 from services.technical_analysis import analyze, chart_series
 from services.assistant import Assistant, AssistantBusy, load_study
@@ -245,7 +247,23 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         """Once per newly closed 4h candle: the shadow row, a regime change and new sweep status updates."""
         advanced.record()
 
-    monitor = AlertMonitor(alerts, interval=60.0, jobs=[paper_levels_check, forward_tests_job, advanced_shadow_job])
+    # Strategy Lab (research only, separate from signal-1.8): versioned configs, daily signal records and its own
+    # forward tracker (services/strategy_forward.py, not the H1/H2 tracker).
+    strategy_forward = StrategyForward(db)
+    lab = StrategyLab(db, market, strategy_forward,
+                      regime_fn=lambda: (advanced.snapshot().get("regime") or {}).get("regime"))
+    lab.ensure_defaults()
+    app.config["BTC_STRATEGY_LAB"] = lab
+    app.config["BTC_STRATEGY_FORWARD"] = strategy_forward
+
+    def strategy_lab_job():
+        """Refresh the daily candles (cached), store today's strategy signals once, advance the strategy tracker."""
+        market.get_candles("1d")
+        lab.record_daily()
+        lab.forward_job()
+
+    monitor = AlertMonitor(alerts, interval=60.0, jobs=[paper_levels_check, forward_tests_job, advanced_shadow_job,
+                                                         strategy_lab_job])
     app.config["BTC_MONITOR"] = monitor
     if start_monitor:
         monitor.start()
@@ -462,6 +480,29 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         mode = request.args.get("mode", "last")
         num = lambda k: int(float(request.args[k])) if request.args.get(k) else None  # noqa: E731
         return jsonify(advanced.chart_profile(tf_arg(), limit, mode, num("from"), num("to")))
+
+    @app.get("/api/strategies")
+    def strategies():
+        """Strategy Lab: five research strategies (implemented ones evaluated now) and the comparison table."""
+        cards = lab.cards()
+        return jsonify({"strategies": cards, "comparison": lab.comparison(cards)})
+
+    @app.get("/api/strategies/<sid>")
+    def strategy_detail(sid: str):
+        return jsonify(lab.detail(sid))
+
+    @app.get("/api/strategies/<sid>/config")
+    def strategy_config_get(sid: str):
+        return jsonify(lab.config(sid))
+
+    @app.put("/api/strategies/<sid>/config")
+    def strategy_config_put(sid: str):
+        """A changed configuration is a new version: NOT VALIDATED (settings changed), nothing inherited."""
+        return jsonify(lab.update_config(sid, request.get_json(silent=True)))
+
+    @app.post("/api/strategies/<sid>/config/reset")
+    def strategy_config_reset(sid: str):
+        return jsonify(lab.reset_config(sid))
 
     @app.get("/api/advanced/shadow")
     def advanced_shadow():

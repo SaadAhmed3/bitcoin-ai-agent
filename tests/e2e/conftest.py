@@ -263,7 +263,7 @@ class Page:
         return self.page
 
 
-VIEWS = ["overview", "market", "news", "signal", "research", "paper", "alerts", "assistant", "system"]
+VIEWS = ["overview", "market", "news", "signal", "research", "strategies", "paper", "alerts", "assistant", "system"]
 
 
 def wait_view_ready(page, view: str, timeout: float = 30_000) -> None:

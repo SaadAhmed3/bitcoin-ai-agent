@@ -12,13 +12,14 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
-SCHEMA_VERSION = 13  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
+SCHEMA_VERSION = 14  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
                      # 7: holdout_runs (0.9.2), 8: holdout_runs.holdout_start (0.9.3),
                      # 9: holdout_runs.verdict + criteria, write-once triggers (0.9.4),
                      # 10: forward_tests + forward_events, append-only (research-1),
                      # 11: holdout_contaminations, append-only (0.9.7),
                      # 12: regime_changes, sweep_events, sweep_updates, shadow_context, append-only (advanced analysis),
-                     # 13: sweep_corrections, append-only (0.9.8 follow-up).
+                     # 13: sweep_corrections, append-only (0.9.8 follow-up),
+                     # 14: strategy_configs/signals/backtests/forward_tests/forward_events, append-only (Strategy Lab).
                     # Migrations are additive; an upgrade backs the file up first.
 
 SCHEMA = """
@@ -304,6 +305,80 @@ CREATE TABLE IF NOT EXISTS shadow_context (
     detail             TEXT    NOT NULL,
     created_at         INTEGER NOT NULL
 );
+-- Strategy Lab (research only, separate from the live signal engine). Versioned configurations, one stored signal per
+-- strategy and day, one design backtest per strategy and configuration, and a separate forward tracker. Append-only.
+CREATE TABLE IF NOT EXISTS strategy_configs (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    strategy_id  TEXT    NOT NULL,
+    version      INTEGER NOT NULL,
+    config       TEXT    NOT NULL,
+    config_hash  TEXT    NOT NULL,
+    reason       TEXT    NOT NULL,
+    created_at   INTEGER NOT NULL,
+    UNIQUE (strategy_id, version)
+);
+CREATE TABLE IF NOT EXISTS strategy_signals (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    strategy_id     TEXT    NOT NULL,
+    config_version  INTEGER NOT NULL,
+    config_hash     TEXT    NOT NULL,
+    day             INTEGER NOT NULL,
+    signal          TEXT    NOT NULL,
+    result          TEXT    NOT NULL,
+    created_at      INTEGER NOT NULL,
+    UNIQUE (strategy_id, day)
+);
+CREATE TABLE IF NOT EXISTS strategy_backtests (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    strategy_id     TEXT    NOT NULL,
+    config_version  INTEGER NOT NULL,
+    config_hash     TEXT    NOT NULL,
+    period          TEXT    NOT NULL CHECK (period IN ('design')),
+    prereg_sha      TEXT    NOT NULL,
+    result          TEXT    NOT NULL,
+    created_at      INTEGER NOT NULL,
+    UNIQUE (strategy_id, config_hash, period)
+);
+CREATE TABLE IF NOT EXISTS strategy_forward_tests (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    strategy_id  TEXT    NOT NULL,
+    config_hash  TEXT    NOT NULL,
+    config       TEXT    NOT NULL,
+    fingerprint  TEXT    NOT NULL,
+    start_day    INTEGER NOT NULL,
+    created_at   INTEGER NOT NULL,
+    UNIQUE (strategy_id, config_hash)
+);
+CREATE TABLE IF NOT EXISTS strategy_forward_events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    test_id     INTEGER NOT NULL REFERENCES strategy_forward_tests (id),
+    day         INTEGER NOT NULL,
+    kind        TEXT    NOT NULL CHECK (kind IN ('buy', 'mark')),
+    detail      TEXT    NOT NULL,
+    created_at  INTEGER NOT NULL,
+    UNIQUE (test_id, day, kind)
+);
+CREATE TRIGGER IF NOT EXISTS strategy_configs_no_update BEFORE UPDATE ON strategy_configs
+    BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS strategy_configs_no_delete BEFORE DELETE ON strategy_configs
+    BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS strategy_signals_no_update BEFORE UPDATE ON strategy_signals
+    BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS strategy_signals_no_delete BEFORE DELETE ON strategy_signals
+    BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS strategy_backtests_no_update BEFORE UPDATE ON strategy_backtests
+    BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS strategy_backtests_no_delete BEFORE DELETE ON strategy_backtests
+    BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS strategy_forward_tests_no_update BEFORE UPDATE ON strategy_forward_tests
+    BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS strategy_forward_tests_no_delete BEFORE DELETE ON strategy_forward_tests
+    BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS strategy_forward_events_no_update BEFORE UPDATE ON strategy_forward_events
+    BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS strategy_forward_events_no_delete BEFORE DELETE ON strategy_forward_events
+    BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
+
 -- A stored sweep event is never changed or deleted; a later finding (e.g. a duplicate of the same move) is recorded
 -- here, once per event, and every reader excludes superseded events.
 CREATE TABLE IF NOT EXISTS sweep_corrections (
@@ -721,6 +796,91 @@ class Database:
         with self.connect() as conn:
             r = conn.execute("SELECT MAX(close_time) AS t FROM shadow_context").fetchone()
         return r["t"] if r else None
+
+    # ---------------------------------------------------------------- Strategy Lab (append-only)
+    def strategy_config_add(self, strategy_id: str, config: dict, config_hash: str, reason: str, now: int) -> int:
+        """Append a new configuration version; returns the version number."""
+        with self.connect() as conn:
+            row = conn.execute("SELECT COALESCE(MAX(version), 0) AS v FROM strategy_configs WHERE strategy_id=?",
+                               (strategy_id,)).fetchone()
+            version = int(row["v"]) + 1
+            conn.execute("INSERT INTO strategy_configs (strategy_id, version, config, config_hash, reason, created_at) "
+                         "VALUES (?,?,?,?,?,?)", (strategy_id, version, json.dumps(config), config_hash, reason, now))
+        return version
+
+    def strategy_configs(self, strategy_id: str) -> list[dict]:
+        """All configuration versions, newest first."""
+        with self.connect() as conn:
+            rows = conn.execute("SELECT * FROM strategy_configs WHERE strategy_id=? ORDER BY version DESC",
+                                (strategy_id,)).fetchall()
+        return [{**dict(r), "config": json.loads(r["config"])} for r in rows]
+
+    def strategy_signal_add(self, strategy_id: str, config_version: int, config_hash: str, day: int, signal: str,
+                            result: dict, now: int) -> bool:
+        """One stored signal per strategy and UTC day (the first evaluation of the day)."""
+        with self.connect() as conn:
+            cur = conn.execute("INSERT OR IGNORE INTO strategy_signals (strategy_id, config_version, config_hash, day, "
+                               "signal, result, created_at) VALUES (?,?,?,?,?,?,?)",
+                               (strategy_id, config_version, config_hash, day, signal, json.dumps(result), now))
+        return cur.rowcount == 1
+
+    def strategy_signals(self, strategy_id: str, limit: int = 30) -> list[dict]:
+        with self.connect() as conn:
+            rows = conn.execute("SELECT * FROM strategy_signals WHERE strategy_id=? ORDER BY day DESC LIMIT ?",
+                                (strategy_id, limit)).fetchall()
+        return [{**dict(r), "result": json.loads(r["result"])} for r in rows]
+
+    def strategy_backtest_add(self, strategy_id: str, config_version: int, config_hash: str, period: str,
+                              prereg_sha: str, result: dict, now: int) -> int:
+        """One design backtest per strategy and configuration: a second one raises IntegrityError."""
+        with self.connect() as conn:
+            cur = conn.execute("INSERT INTO strategy_backtests (strategy_id, config_version, config_hash, period, "
+                               "prereg_sha, result, created_at) VALUES (?,?,?,?,?,?,?)",
+                               (strategy_id, config_version, config_hash, period, prereg_sha,
+                                json.dumps(result, default=float), now))
+        return int(cur.lastrowid)
+
+    def strategy_backtests(self, strategy_id: str, config_hash: str | None = None) -> list[dict]:
+        sql, args = "SELECT * FROM strategy_backtests WHERE strategy_id=?", [strategy_id]
+        if config_hash is not None:
+            sql, args = sql + " AND config_hash=?", args + [config_hash]
+        with self.connect() as conn:
+            rows = conn.execute(sql + " ORDER BY id DESC", args).fetchall()
+        return [{**dict(r), "result": json.loads(r["result"])} for r in rows]
+
+    def strategy_forward_start(self, strategy_id: str, config_hash: str, config: dict, fingerprint: str,
+                               start_day: int, now: int) -> dict:
+        with self.connect() as conn:
+            conn.execute("INSERT OR IGNORE INTO strategy_forward_tests (strategy_id, config_hash, config, fingerprint, "
+                         "start_day, created_at) VALUES (?,?,?,?,?,?)",
+                         (strategy_id, config_hash, json.dumps(config), fingerprint, start_day, now))
+        return self.strategy_forward_test(strategy_id, config_hash)
+
+    def strategy_forward_test(self, strategy_id: str, config_hash: str) -> dict | None:
+        with self.connect() as conn:
+            r = conn.execute("SELECT * FROM strategy_forward_tests WHERE strategy_id=? AND config_hash=?",
+                             (strategy_id, config_hash)).fetchone()
+        return {**dict(r), "config": json.loads(r["config"])} if r else None
+
+    def strategy_forward_tests(self) -> list[dict]:
+        with self.connect() as conn:
+            rows = conn.execute("SELECT * FROM strategy_forward_tests ORDER BY id").fetchall()
+        return [{**dict(r), "config": json.loads(r["config"])} for r in rows]
+
+    def strategy_forward_add_events(self, rows: list[dict], now: int) -> int:
+        added = 0
+        with self.connect() as conn:
+            for r in rows:
+                added += conn.execute("INSERT OR IGNORE INTO strategy_forward_events (test_id, day, kind, detail, "
+                                      "created_at) VALUES (?,?,?,?,?)",
+                                      (r["test_id"], r["day"], r["kind"], json.dumps(r["detail"]), now)).rowcount
+        return added
+
+    def strategy_forward_events(self, test_id: int) -> list[dict]:
+        with self.connect() as conn:
+            rows = conn.execute("SELECT * FROM strategy_forward_events WHERE test_id=? ORDER BY day, "
+                                "CASE kind WHEN 'buy' THEN 0 ELSE 1 END", (test_id,)).fetchall()
+        return [{**dict(r), "detail": json.loads(r["detail"])} for r in rows]
 
     def holdout_runs(self, limit: int = 50) -> list[dict]:
         with self.connect() as conn:

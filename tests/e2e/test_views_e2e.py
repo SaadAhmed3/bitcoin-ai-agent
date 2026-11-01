@@ -13,11 +13,12 @@ pytestmark = pytest.mark.e2e
 smoke = pytest.mark.smoke
 
 VIEW_TITLES = {"overview": "Overview", "market": "Market & chart", "news": "News & calendar", "signal": "Signal details",
-               "research": "Research (backtest)", "paper": "Risk & paper", "alerts": "Alerts", "assistant": "Ask the data",
+               "research": "Research (backtest)", "strategies": "Strategy Lab", "paper": "Risk & paper", "alerts": "Alerts", "assistant": "Ask the data",
                "system": "System & sources"}
 VIEW_SECTIONS = {"overview": ["#overview", "#sigSummary", "#chart", "#ovExtra", "#watchlist"],
                  "market": ["#chart", "#analysis", "#mtf"], "news": ["#news", "#calendar"],
-                 "signal": ["#signal", "#sighist"], "research": ["#backtest"], "paper": ["#risk"],
+                 "signal": ["#signal", "#sighist"], "research": ["#backtest"],
+                 "strategies": ["#stratLab", "#stratCompareCard", "#stratDetail"], "paper": ["#risk"],
                  "alerts": ["#alerts"], "assistant": ["#assistant"], "system": ["#sources", "#system"]}
 ALL_SECTIONS = sorted({s for v in VIEW_SECTIONS.values() for s in v})
 
