@@ -27,3 +27,5 @@ prompt_*.md
 .coverage
 .coverage.*
 htmlcov/
+# derived chart cache (never a result; rebuilt when its key changes)
+data/cache/

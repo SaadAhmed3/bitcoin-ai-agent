@@ -139,8 +139,10 @@ the budget basis. The locked study and its verdict are unchanged.
   list (a click zooms to the trade). DCA: invested capital vs value, the BTC price and the worst point for the invested
   money. Series that are not stored at full resolution (equity, drawdown, buy & hold, fees) are **recomputed in memory**
   with the locked configuration and shown only if **every stored metric, the trade list and the buy & hold return are
-  reproduced exactly**; otherwise the mismatch is shown and only stored data is drawn. Nothing is written. All three
-  stored results verified exactly on 2026-11-01 (range needs about 4 minutes, prepared in the background at app start).
+  reproduced exactly**; otherwise the mismatch is shown and only stored data is drawn. No result is written. All three
+  stored results verified exactly on 2026-11-01. Verified series are kept in a derived cache
+  (`data/cache/strategy_charts/`, keyed by the strategy's forward fingerprint + the stored result's SHA-256 + the cache
+  version), reused on app start and recomputed only when the key changes (range needs about 4 minutes).
 - **Forward chart:** the strategy forward tracker's stored events; empty until its first processed bar.
 - **Comparison:** the stored design equity samples normalised to 100 and net return vs max drawdown; hypothetical,
   not ranked.

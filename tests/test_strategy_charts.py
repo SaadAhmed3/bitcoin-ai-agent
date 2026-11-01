@@ -213,3 +213,57 @@ def test_comparison_curves_start_at_100_and_the_scatter_uses_stored_metrics(db, 
     pt = next(p for p in cmp["scatter"] if p["id"] == "trend")
     assert (pt["net_return_pct"], pt["max_drawdown_pct"]) == (stored["trend"]["metrics"]["net_return_pct"],
                                                               stored["trend"]["metrics"]["max_drawdown_pct"])
+
+
+# ---------------------------------------------------------------- derived cache of verified series (data/cache/)
+def test_a_second_start_reuses_the_cache_and_does_not_recompute(db, stored, tmp_path, monkeypatch):
+    from services.strategy_charts import StrategyCharts
+    from services.strategy_forward import StrategyForward
+    from services.strategy_lab import StrategyLab
+    lab = StrategyLab(db, None, StrategyForward(db))
+    lab.ensure_defaults()
+    before = table_snapshot(db)
+    first = StrategyCharts(db, lab, cache_dir=tmp_path / "cache")
+    h1 = first.history("trend", wait=True)
+    files = list((tmp_path / "cache").glob("trend-*.json"))
+    assert h1["verified"] and len(files) == 1
+    second = StrategyCharts(db, lab, cache_dir=tmp_path / "cache")             # "app restart"
+    monkeypatch.setattr(second, "compute_history", lambda *a, **k: (_ for _ in ()).throw(AssertionError("recomputed")))
+    second.warm()
+    h2 = second.history("trend")
+    assert h2["status"] == "ok" and h2["from_cache"] is True
+    assert h2["equity"] == h1["equity"] and h2["trades"] == h1["trades"] and h2["metrics"] == stored["trend"]["metrics"]
+    assert table_snapshot(db) == before                                       # results untouched
+
+
+def test_the_cache_key_changes_with_the_result_and_bad_files_are_ignored(db, stored, tmp_path):
+    import json as _json
+    from services.strategy_charts import StrategyCharts, cache_key
+    from services.strategy_forward import StrategyForward
+    from services.strategy_lab import StrategyLab
+    lab = StrategyLab(db, None, StrategyForward(db))
+    lab.ensure_defaults()
+    res = lab.backtest_for("trend", lab.config("trend")["hash"])
+    other = {**res, "verdict": "PASS"}
+    assert cache_key("trend", res) != cache_key("trend", other)               # a different result -> a new key
+    c = StrategyCharts(db, lab, cache_dir=tmp_path / "cache")
+    c.history("trend", wait=True)
+    f = next((tmp_path / "cache").glob("trend-*.json"))
+    f.write_text("{not json", encoding="utf-8")                                # a broken cache file
+    again = StrategyCharts(db, lab, cache_dir=tmp_path / "cache").history("trend", wait=True)
+    assert again["verified"] is True and again.get("from_cache") is not True   # recomputed, not trusted
+    assert _json.loads(f.read_text(encoding="utf-8"))["key"] == cache_key("trend", res)   # and rewritten
+
+
+def test_unverified_series_are_never_cached(db, stored, tmp_path):
+    import json as _json
+    from services.strategy_charts import StrategyCharts
+    from services.strategy_forward import StrategyForward
+    from services.strategy_lab import StrategyLab
+    lab = StrategyLab(db, None, StrategyForward(db))
+    lab.ensure_defaults()
+    res = _json.loads(_json.dumps(stored["trend"]))
+    res["metrics"]["net_return_pct"] += 0.5
+    c = StrategyCharts(db, lab, cache_dir=tmp_path / "cache")
+    h = c._compute_and_cache("trend", {**res, "id": 99})
+    assert h["verified"] is False and not list((tmp_path / "cache").glob("trend-*.json"))

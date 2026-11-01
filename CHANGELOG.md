@@ -2,6 +2,16 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## Strategy charts: fixes and a derived cache — 2026-11-01
+
+- Scatter labels stay inside the plot (padded axes, labels toward the inside).
+- Live charts: the rule checklist is no longer drawn over the candles; it is listed once, under the chart.
+- DCA live: the scheduled-day markers and the average line are labelled hypothetical (no forward buys yet).
+- **Derived cache** of the verified history series under `data/cache/strategy_charts/` (git-ignored), keyed by the
+  strategy's forward fingerprint, the SHA-256 of the stored result, the cache version (and for range the pinned
+  regime module). Reused on app start; recomputed only when the key changes; only verified series are cached; an
+  unreadable file is ignored and rewritten. The cache is never a result: stored results stay the source of truth.
+
 ## Strategy Lab: strategy charts — 2026-11-01
 
 **Visualisation only.** No strategy rule, result or forward test changed; the strategy modules, the four protected

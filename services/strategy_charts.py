@@ -14,9 +14,13 @@ The strategy modules, the four protected files and services/forward_tests.py are
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
+import os
 import threading
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -27,12 +31,15 @@ from services.strategies import dca, dca_metrics, range as rng, trend
 from services.technical_analysis import ema
 
 log = logging.getLogger(__name__)
+# Derived cache of VERIFIED history series (never a result): data/cache/strategy_charts/<sid>-<key>.json. The key
+# covers what the series depend on; any change gives a new key and a recomputation.
+CACHE_VERSION = "strategy-charts-1"
 LIVE_BARS = 200
 DCA_LIVE_DAYS = 120
 FAILED_BANNER = "Failed on design data: research only"
 HOW_TO = {
     "live": "Closed candles of the strategy's own timeframe with only the indicators its rules use. A setup draws its "
-            "entry band, stop (red) and target (green); without a setup the box lists each rule as met (✓) or not (✗).",
+            "entry band, stop (red) and target (green); the list under the chart shows each rule as met (✓) or not (✗).",
     "history": "Every design-backtest trade: ▲ entry, ▼ exit, the line green for a win and red for a loss; click a "
                "trade in the list to zoom to it. Below: the account (equity) against buy & hold, and the drawdown.",
     "history_dca": "Design period: money invested so far (steps) against what the BTC bought is worth, the BTC price, "
@@ -166,10 +173,26 @@ def dca_live(frames: dict, cfg: dict, result: dict) -> dict[str, Any]:
 LIVE = {"trend": trend_live, "range": range_live, "dca": dca_live}
 
 
+# --------------------------------------------------------------------------- derived cache
+def result_hash(res: dict) -> str:
+    """SHA-256 of the stored result itself (without the database row id / time added when it is read)."""
+    body = {k: v for k, v in res.items() if k not in ("id", "created_at")}
+    return hashlib.sha256(json.dumps(body, sort_keys=True, default=float).encode()).hexdigest()
+
+
+def cache_key(sid: str, res: dict) -> str:
+    """The strategy's forward fingerprint (its module + the tracker core), the stored result, this cache's version,
+    and for range the pinned regime module."""
+    from services.strategy_forward import strategy_fingerprint
+    extra = rng.REGIME_SHA256 if sid == "range" else ""
+    return hashlib.sha256(json.dumps([CACHE_VERSION, sid, strategy_fingerprint(sid), result_hash(res), extra]).encode()).hexdigest()
+
+
 # --------------------------------------------------------------------------- service
 class StrategyCharts:
-    def __init__(self, db, lab):
+    def __init__(self, db, lab, cache_dir: str | Path | None = None):
         self.db, self.lab = db, lab
+        self.cache_dir = Path(cache_dir) if cache_dir else None
         self._history: dict = {}
         self._busy: set = set()
         self._lock = threading.Lock()
@@ -195,10 +218,14 @@ class StrategyCharts:
         res = self.lab.backtest_for(sid, cfg["hash"])
         if res is None:
             return {"status": "none", "note": "No design backtest for these settings."}
-        key = (sid, res["id"])
+        key = cache_key(sid, res)
         with self._lock:
             if key in self._history:
                 return self._history[key]
+            cached = self._load_cache(sid, key)
+            if cached is not None:
+                self._history[key] = cached
+                return cached
             if not wait:
                 if key not in self._busy:
                     self._busy.add(key)
@@ -208,9 +235,43 @@ class StrategyCharts:
         self._fill(key, sid, res)
         return self._history[key]
 
+    # ---------------------------------------------------------------- derived cache (never a result)
+    def _cache_file(self, sid: str, key: str) -> Path | None:
+        return self.cache_dir / f"{sid}-{key[:24]}.json" if self.cache_dir else None
+
+    def _load_cache(self, sid: str, key: str) -> dict | None:
+        f = self._cache_file(sid, key)
+        if f is None or not f.exists():
+            return None
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+            if data.get("key") != key or not data.get("payload", {}).get("verified"):
+                return None
+            return {**data["payload"], "from_cache": True}
+        except (OSError, ValueError, AttributeError):
+            log.warning("Ignoring an unreadable chart cache file %s", f)
+            return None
+
+    def _compute_and_cache(self, sid: str, res: dict) -> dict:
+        out = self.compute_history(sid, res)
+        f = self._cache_file(sid, cache_key(sid, res))
+        if f is not None and out.get("verified"):              # only verified series are cached
+            try:
+                f.parent.mkdir(parents=True, exist_ok=True)
+                tmp = f.with_suffix(".tmp")
+                tmp.write_text(json.dumps({"key": cache_key(sid, res), "sid": sid, "version": CACHE_VERSION,
+                                           "payload": out}, default=float), encoding="utf-8")
+                os.replace(tmp, f)
+                for old in f.parent.glob(f"{sid}-*.json"):      # older keys of this strategy are stale
+                    if old != f:
+                        old.unlink(missing_ok=True)
+            except OSError:
+                log.warning("Could not write the chart cache %s", f)
+        return out
+
     def _fill(self, key, sid: str, res: dict) -> None:
         try:
-            out = self.compute_history(sid, res)
+            out = self._compute_and_cache(sid, res)
         except Exception as exc:                 # never break the page; show the stored data instead
             log.exception("History chart for %s failed", sid)
             out = {"status": "error", "note": str(exc)}

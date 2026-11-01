@@ -46,6 +46,8 @@ def test_trend_live_chart_shows_its_own_indicators_the_checklist_and_the_banner(
         n = names(page, "stratLiveChart")
         assert {"EMA 21", "EMA 50", "EMA 200", "ADX(14)", "Daily EMA 50"} <= set(n)
         assert not {"RSI 14", "VWAP", "Bollinger"} & set(n)                      # only what the rules use
+        anns = page.evaluate("() => (document.getElementById('stratLiveChart').layout.annotations || []).map((a) => a.text)")
+        assert not any("No setup" in a or "✓" in a or "✗" in a for a in anns)       # the rules are listed once, below
         items = page.locator("#stratChecklist li").all_text_contents()
         assert len(items) >= 6 and all(i[0] in "✓✗" for i in items)
         assert page.locator("#stratLiveBanner").text_content() == "Failed on design data: research only"
@@ -83,7 +85,11 @@ def test_history_markers_are_the_stored_trades_and_a_click_zooms_to_one(browser,
 def test_dca_and_range_live_charts(browser, lab_server):
     p, page = open_chart_tab(browser, lab_server, "dca")
     try:
-        assert {"BTC", "Scheduled buy days"} <= set(names(page, "stratLiveChart"))
+        live = set(names(page, "stratLiveChart"))
+        assert {"BTC", "Scheduled buy days (hypothetical)"} <= live                  # no forward buys yet
+        assert not {"Scheduled buy days", "Average buy price"} & live
+        avg = [n for n in live if n.startswith("Hypothetical average")]
+        assert avg == ["Hypothetical average of the scheduled buys in view"]
         page.locator("#stratDetailPick").select_option("range")
         page.wait_for_function("() => (document.getElementById('stratLiveChart').data || []).some((t) => t.name === 'Range high')",
                                timeout=60_000)
@@ -102,6 +108,13 @@ def test_comparison_charts_are_hypothetical_and_unranked(browser, lab_server):
         assert page.evaluate("() => document.getElementById('stratCmpEquity').data[0].y[0]") == 100
         assert page.evaluate("() => document.getElementById('stratCmpScatter').data[0].x.length") >= 1
         assert "not ranked" in page.locator("#stratCmpHow").text_content()
+        inside = page.evaluate("""() => {
+            const box = document.querySelector('#stratCmpScatter .bglayer rect.bg').getBoundingClientRect();
+            return [...document.querySelectorAll('#stratCmpScatter .textpoint text')].map((t) => {
+                const r = t.getBoundingClientRect();
+                return r.left >= box.left - 0.5 && r.right <= box.right + 0.5 && r.top >= box.top - 0.5 && r.bottom <= box.bottom + 0.5;
+            }); }""")
+        assert inside and all(inside)                                              # every label inside the plot area
         assert p.errors == []
     finally:
         p.context.close()
