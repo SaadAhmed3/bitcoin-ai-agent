@@ -1,0 +1,2021 @@
+{
+ "study": "rotation survivorship stress test",
+ "reported_only": true,
+ "note": "Reported only: a survivorship stress test of the Rotation rule. The Rotation strategy, its stored design result and its PASS verdict are unchanged.",
+ "preregistration": "PREREGISTRATION_ROTATION_STRESS.md",
+ "config": {
+  "lookback_days": 28,
+  "cash_filter": "on",
+  "neutral_band_pct": 2.0,
+  "fee_pct": 0.1,
+  "slippage_pct": 0.05
+ },
+ "config_hash": "f3de8ea9c08bc780",
+ "period": {
+  "first_monday": 1624838400000,
+  "last_day": 1761609600000,
+  "holdout_start": 1761696000000
+ },
+ "universe": {
+  "requested": [
+   "BTCUSDT",
+   "ETHUSDT",
+   "SOLUSDT",
+   "BNBUSDT",
+   "ADAUSDT",
+   "DOGEUSDT",
+   "XRPUSDT",
+   "DOTUSDT",
+   "UNIUSDT",
+   "BCHUSDT",
+   "LTCUSDT",
+   "LINKUSDT",
+   "MATICUSDT",
+   "THETAUSDT",
+   "XLMUSDT",
+   "ICPUSDT",
+   "LUNAUSDT",
+   "FTTUSDT"
+  ],
+  "available": [
+   "BTCUSDT",
+   "ETHUSDT",
+   "SOLUSDT",
+   "BNBUSDT",
+   "ADAUSDT",
+   "DOGEUSDT",
+   "XRPUSDT",
+   "DOTUSDT",
+   "UNIUSDT",
+   "BCHUSDT",
+   "LTCUSDT",
+   "LINKUSDT",
+   "MATICUSDT",
+   "THETAUSDT",
+   "XLMUSDT",
+   "ICPUSDT",
+   "LUNAUSDT",
+   "FTTUSDT"
+  ],
+  "not_available": [],
+  "history_ends": {
+   "MATICUSDT": 1725926400000,
+   "LUNAUSDT": 1652400000000,
+   "FTTUSDT": 1668470400000
+  },
+  "max_gap_days": 7
+ },
+ "stress": {
+  "net_return_pct": 259.02321398793504,
+  "max_drawdown_pct": 76.4886824053085,
+  "switches": 107,
+  "weeks": 227,
+  "costs_pct": 100.91924520455638,
+  "return_to_drawdown": 3.386425361799123,
+  "random_beaten_pct": 84.1,
+  "random_median_pct": 24.99526922174491
+ },
+ "criteria_reported": [
+  {
+   "id": "C1",
+   "rule": "return / max drawdown >= BTC buy & hold's (same window)",
+   "value": 3.386425361799123,
+   "btc": 2.927829570634778,
+   "passed": true
+  },
+  {
+   "id": "C2",
+   "rule": "max drawdown <= BTC buy & hold's",
+   "value": 76.4886824053085,
+   "btc": 76.62925431645935,
+   "passed": true
+  },
+  {
+   "id": "C3",
+   "rule": "beats >= 90% of 1,000 random weekly rotations among the same assets",
+   "value": 84.1,
+   "passed": false
+  }
+ ],
+ "verdict_if_it_were_judged": "FAIL",
+ "original": {
+  "net_return_pct": 3193.1706167616435,
+  "max_drawdown_pct": 59.701953871969074,
+  "return_to_drawdown": 53.48519453164636,
+  "switches": 91,
+  "random_beaten_pct": 97.7,
+  "verdict": "PASS"
+ },
+ "btc_buy_and_hold": {
+  "net_return_pct": 224.3573967634224,
+  "max_drawdown_pct": 76.62925431645935
+ },
+ "weeks_held": {
+  "SOLUSDT": 32,
+  "cash": 30,
+  "XRPUSDT": 21,
+  "LUNAUSDT": 18,
+  "LINKUSDT": 15,
+  "BCHUSDT": 15,
+  "BNBUSDT": 13,
+  "DOGEUSDT": 11,
+  "LTCUSDT": 10,
+  "XLMUSDT": 10,
+  "MATICUSDT": 9,
+  "ICPUSDT": 9,
+  "UNIUSDT": 8,
+  "THETAUSDT": 7,
+  "ETHUSDT": 7,
+  "BTCUSDT": 6,
+  "ADAUSDT": 4,
+  "FTTUSDT": 2
+ },
+ "weeks": [
+  {
+   "monday": 1624838400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1625443200000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1626048000000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1626652800000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1627257600000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1627862400000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1628467200000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1629072000000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1629676800000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1630281600000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1630886400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1631491200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1632096000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1632700800000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1633305600000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1633910400000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER"
+  },
+  {
+   "monday": 1634515200000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER"
+  },
+  {
+   "monday": 1635120000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1635724800000,
+   "holding": "MATICUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1636329600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1636934400000,
+   "holding": "LTCUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1637539200000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1638144000000,
+   "holding": "BNBUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1638748800000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1639353600000,
+   "holding": "LUNAUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1639958400000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1640563200000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1641168000000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1641772800000,
+   "holding": "LINKUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1642377600000,
+   "holding": "ICPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1642982400000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1643587200000,
+   "holding": "FTTUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1644192000000,
+   "holding": "FTTUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1644796800000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1645401600000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1646006400000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1646611200000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1647216000000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1647820800000,
+   "holding": "LUNAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1648425600000,
+   "holding": "ADAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1649030400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1649635200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1650240000000,
+   "holding": "DOGEUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1650844800000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1651449600000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1652054400000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1652659200000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1653264000000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1653868800000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1654473600000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1655078400000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1655683200000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1656288000000,
+   "holding": "THETAUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1656892800000,
+   "holding": "THETAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1657497600000,
+   "holding": "UNIUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1658102400000,
+   "holding": "MATICUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1658707200000,
+   "holding": "MATICUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1659312000000,
+   "holding": "MATICUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1659916800000,
+   "holding": "MATICUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1660521600000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1661126400000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1661731200000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1662336000000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1662940800000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1663545600000,
+   "holding": "LINKUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1664150400000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1664755200000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1665360000000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1665964800000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1666569600000,
+   "holding": "MATICUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1667174400000,
+   "holding": "DOGEUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1667779200000,
+   "holding": "DOGEUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1668384000000,
+   "holding": "DOGEUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1668988800000,
+   "holding": "DOGEUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1669593600000,
+   "holding": "LTCUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1670198400000,
+   "holding": "LTCUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1670803200000,
+   "holding": "LTCUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1671408000000,
+   "holding": "LTCUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1672012800000,
+   "holding": "BTCUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1672617600000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1673222400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1673827200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1674432000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1675036800000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1675641600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1676246400000,
+   "holding": "MATICUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1676851200000,
+   "holding": "MATICUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1677456000000,
+   "holding": "THETAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1678060800000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1678665600000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1679270400000,
+   "holding": "BTCUSDT",
+   "signal": "BTC STRONGER"
+  },
+  {
+   "monday": 1679875200000,
+   "holding": "BTCUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1680480000000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1681084800000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1681689600000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1682294400000,
+   "holding": "ADAUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1682899200000,
+   "holding": "ICPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1683504000000,
+   "holding": "ICPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1684108800000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1684713600000,
+   "holding": "LTCUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1685318400000,
+   "holding": "LTCUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1685923200000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1686528000000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1687132800000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1687737600000,
+   "holding": "BCHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1688342400000,
+   "holding": "BCHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1688947200000,
+   "holding": "BCHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1689552000000,
+   "holding": "BCHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1690156800000,
+   "holding": "XLMUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1690761600000,
+   "holding": "XLMUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1691366400000,
+   "holding": "XLMUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1691971200000,
+   "holding": "LINKUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1692576000000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1693180800000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1693785600000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1694390400000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1694995200000,
+   "holding": "BCHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1695600000000,
+   "holding": "LINKUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1696204800000,
+   "holding": "LINKUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1696809600000,
+   "holding": "LINKUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1697414400000,
+   "holding": "LINKUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1698019200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1698624000000,
+   "holding": "SOLUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1699228800000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1699833600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1700438400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1701043200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1701648000000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1702252800000,
+   "holding": "ADAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1702857600000,
+   "holding": "ICPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1703462400000,
+   "holding": "ICPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1704067200000,
+   "holding": "ICPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1704672000000,
+   "holding": "ICPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1705276800000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1705881600000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1706486400000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1707091200000,
+   "holding": "LINKUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1707696000000,
+   "holding": "LINKUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1708300800000,
+   "holding": "LINKUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1708905600000,
+   "holding": "UNIUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1709510400000,
+   "holding": "THETAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1710115200000,
+   "holding": "THETAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1710720000000,
+   "holding": "THETAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1711324800000,
+   "holding": "THETAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1711929600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1712534400000,
+   "holding": "BCHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1713139200000,
+   "holding": "BCHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1713744000000,
+   "holding": "BCHUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1714348800000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1714953600000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1715558400000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1716163200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1716768000000,
+   "holding": "UNIUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1717372800000,
+   "holding": "LINKUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1717977600000,
+   "holding": "UNIUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1718582400000,
+   "holding": "UNIUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1719187200000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1719792000000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1720396800000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1721001600000,
+   "holding": "XRPUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1721606400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1722211200000,
+   "holding": "SOLUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1722816000000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1723420800000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1724025600000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1724630400000,
+   "holding": "MATICUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1725235200000,
+   "holding": "XRPUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1725840000000,
+   "holding": "ICPUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1726444800000,
+   "holding": "ICPUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1727049600000,
+   "holding": "LTCUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1727654400000,
+   "holding": "UNIUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1728259200000,
+   "holding": "DOGEUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1728864000000,
+   "holding": "UNIUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1729468800000,
+   "holding": "DOGEUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1730073600000,
+   "holding": "DOGEUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1730678400000,
+   "holding": "DOGEUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1731283200000,
+   "holding": "DOGEUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1731888000000,
+   "holding": "DOGEUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1732492800000,
+   "holding": "XLMUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1733097600000,
+   "holding": "XLMUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1733702400000,
+   "holding": "XLMUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1734307200000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1734912000000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1735516800000,
+   "holding": "LINKUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1736121600000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1736726400000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1737331200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1737936000000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1738540800000,
+   "holding": "XRPUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1739145600000,
+   "holding": "SOLUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1739750400000,
+   "holding": "LTCUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1740355200000,
+   "holding": "LTCUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1740960000000,
+   "holding": "ADAUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1741564800000,
+   "holding": "BCHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1742169600000,
+   "holding": "BCHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1742774400000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1743379200000,
+   "holding": null,
+   "signal": "NO TRADE"
+  },
+  {
+   "monday": 1743984000000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1744588800000,
+   "holding": "BCHUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1745193600000,
+   "holding": "BCHUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1745798400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1746403200000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1747008000000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1747612800000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1748217600000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1748822400000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1749427200000,
+   "holding": "BTCUSDT",
+   "signal": "NEUTRAL"
+  },
+  {
+   "monday": 1750032000000,
+   "holding": "UNIUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1750636800000,
+   "holding": "BCHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1751241600000,
+   "holding": "BCHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1751846400000,
+   "holding": "BCHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1752451200000,
+   "holding": "XLMUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1753056000000,
+   "holding": "XLMUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1753660800000,
+   "holding": "XLMUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1754265600000,
+   "holding": "XLMUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1754870400000,
+   "holding": "ETHUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1755475200000,
+   "holding": "LINKUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1756080000000,
+   "holding": "LINKUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1756684800000,
+   "holding": "LINKUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1757289600000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1757894400000,
+   "holding": "SOLUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1758499200000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1759104000000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1759708800000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1760313600000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1760918400000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  },
+  {
+   "monday": 1761523200000,
+   "holding": "BNBUSDT",
+   "signal": "ALTCOIN STRENGTH"
+  }
+ ],
+ "switch_list": [
+  {
+   "kind": "switch",
+   "time": 1624838400000,
+   "from": null,
+   "to": "SOLUSDT",
+   "fill": 31.898941499999996
+  },
+  {
+   "kind": "switch",
+   "time": 1625443200000,
+   "from": "SOLUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1626048000000,
+   "from": null,
+   "to": "LUNAUSDT",
+   "fill": 8.4492225
+  },
+  {
+   "kind": "switch",
+   "time": 1630886400000,
+   "from": "LUNAUSDT",
+   "to": "SOLUSDT",
+   "fill": 142.05098999999998
+  },
+  {
+   "kind": "switch",
+   "time": 1633305600000,
+   "from": "SOLUSDT",
+   "to": "LUNAUSDT",
+   "fill": 42.791385
+  },
+  {
+   "kind": "switch",
+   "time": 1633910400000,
+   "from": "LUNAUSDT",
+   "to": "BTCUSDT",
+   "fill": 54686.339504999996
+  },
+  {
+   "kind": "switch",
+   "time": 1635120000000,
+   "from": "BTCUSDT",
+   "to": "SOLUSDT",
+   "fill": 202.251075
+  },
+  {
+   "kind": "switch",
+   "time": 1635724800000,
+   "from": "SOLUSDT",
+   "to": "MATICUSDT",
+   "fill": 1.9399695
+  },
+  {
+   "kind": "switch",
+   "time": 1636329600000,
+   "from": "MATICUSDT",
+   "to": "SOLUSDT",
+   "fill": 249.74481
+  },
+  {
+   "kind": "switch",
+   "time": 1636934400000,
+   "from": "SOLUSDT",
+   "to": "LTCUSDT",
+   "fill": 279.43965
+  },
+  {
+   "kind": "switch",
+   "time": 1637539200000,
+   "from": "LTCUSDT",
+   "to": "BNBUSDT",
+   "fill": 584.2919999999999
+  },
+  {
+   "kind": "switch",
+   "time": 1638748800000,
+   "from": "BNBUSDT",
+   "to": "LUNAUSDT",
+   "fill": 68.15406
+  },
+  {
+   "kind": "switch",
+   "time": 1641772800000,
+   "from": "LUNAUSDT",
+   "to": "LINKUSDT",
+   "fill": 27.553769999999997
+  },
+  {
+   "kind": "switch",
+   "time": 1642377600000,
+   "from": "LINKUSDT",
+   "to": "ICPUSDT",
+   "fill": 31.165574999999997
+  },
+  {
+   "kind": "switch",
+   "time": 1642982400000,
+   "from": "ICPUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1643587200000,
+   "from": null,
+   "to": "FTTUSDT",
+   "fill": 41.070524999999996
+  },
+  {
+   "kind": "switch",
+   "time": 1644796800000,
+   "from": "FTTUSDT",
+   "to": "XRPUSDT",
+   "fill": 0.8061028499999999
+  },
+  {
+   "kind": "switch",
+   "time": 1646006400000,
+   "from": "XRPUSDT",
+   "to": "LUNAUSDT",
+   "fill": 72.60628499999999
+  },
+  {
+   "kind": "switch",
+   "time": 1648425600000,
+   "from": "LUNAUSDT",
+   "to": "ADAUSDT",
+   "fill": 1.1845919999999999
+  },
+  {
+   "kind": "switch",
+   "time": 1649030400000,
+   "from": "ADAUSDT",
+   "to": "SOLUSDT",
+   "fill": 136.96845
+  },
+  {
+   "kind": "switch",
+   "time": 1650240000000,
+   "from": "SOLUSDT",
+   "to": "DOGEUSDT",
+   "fill": 0.1392696
+  },
+  {
+   "kind": "switch",
+   "time": 1650844800000,
+   "from": "DOGEUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1656288000000,
+   "from": null,
+   "to": "THETAUSDT",
+   "fill": 1.336668
+  },
+  {
+   "kind": "switch",
+   "time": 1657497600000,
+   "from": "THETAUSDT",
+   "to": "UNIUSDT",
+   "fill": 6.24312
+  },
+  {
+   "kind": "switch",
+   "time": 1658102400000,
+   "from": "UNIUSDT",
+   "to": "MATICUSDT",
+   "fill": 0.75327645
+  },
+  {
+   "kind": "switch",
+   "time": 1660521600000,
+   "from": "MATICUSDT",
+   "to": "ETHUSDT",
+   "fill": 1936.2876599999997
+  },
+  {
+   "kind": "switch",
+   "time": 1661126400000,
+   "from": "ETHUSDT",
+   "to": "BNBUSDT",
+   "fill": 302.05094999999994
+  },
+  {
+   "kind": "switch",
+   "time": 1661731200000,
+   "from": "BNBUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1663545600000,
+   "from": null,
+   "to": "LINKUSDT",
+   "fill": 7.527761999999999
+  },
+  {
+   "kind": "switch",
+   "time": 1664150400000,
+   "from": "LINKUSDT",
+   "to": "XRPUSDT",
+   "fill": 0.49184579999999994
+  },
+  {
+   "kind": "switch",
+   "time": 1666569600000,
+   "from": "XRPUSDT",
+   "to": "MATICUSDT",
+   "fill": 0.8990492999999999
+  },
+  {
+   "kind": "switch",
+   "time": 1667174400000,
+   "from": "MATICUSDT",
+   "to": "DOGEUSDT",
+   "fill": 0.11779886999999999
+  },
+  {
+   "kind": "switch",
+   "time": 1669593600000,
+   "from": "DOGEUSDT",
+   "to": "LTCUSDT",
+   "fill": 74.95746
+  },
+  {
+   "kind": "switch",
+   "time": 1672012800000,
+   "from": "LTCUSDT",
+   "to": "BTCUSDT",
+   "fill": 16840.526055
+  },
+  {
+   "kind": "switch",
+   "time": 1672617600000,
+   "from": "BTCUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1673222400000,
+   "from": null,
+   "to": "SOLUSDT",
+   "fill": 14.46723
+  },
+  {
+   "kind": "switch",
+   "time": 1676246400000,
+   "from": "SOLUSDT",
+   "to": "MATICUSDT",
+   "fill": 1.236618
+  },
+  {
+   "kind": "switch",
+   "time": 1677456000000,
+   "from": "MATICUSDT",
+   "to": "THETAUSDT",
+   "fill": 1.2296145
+  },
+  {
+   "kind": "switch",
+   "time": 1678060800000,
+   "from": "THETAUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1678665600000,
+   "from": null,
+   "to": "ETHUSDT",
+   "fill": 1581.1201649999998
+  },
+  {
+   "kind": "switch",
+   "time": 1679270400000,
+   "from": "ETHUSDT",
+   "to": "BTCUSDT",
+   "fill": 27986.856434999998
+  },
+  {
+   "kind": "switch",
+   "time": 1680480000000,
+   "from": "BTCUSDT",
+   "to": "XRPUSDT",
+   "fill": 0.51815895
+  },
+  {
+   "kind": "switch",
+   "time": 1682294400000,
+   "from": "XRPUSDT",
+   "to": "ADAUSDT",
+   "fill": 0.38889434999999994
+  },
+  {
+   "kind": "switch",
+   "time": 1682899200000,
+   "from": "ADAUSDT",
+   "to": "ICPUSDT",
+   "fill": 6.4082025
+  },
+  {
+   "kind": "switch",
+   "time": 1684108800000,
+   "from": "ICPUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1684713600000,
+   "from": null,
+   "to": "LTCUSDT",
+   "fill": 92.21608499999999
+  },
+  {
+   "kind": "switch",
+   "time": 1685923200000,
+   "from": "LTCUSDT",
+   "to": "XRPUSDT",
+   "fill": 0.5361679500000001
+  },
+  {
+   "kind": "switch",
+   "time": 1687737600000,
+   "from": "XRPUSDT",
+   "to": "BCHUSDT",
+   "fill": 194.29709999999997
+  },
+  {
+   "kind": "switch",
+   "time": 1690156800000,
+   "from": "BCHUSDT",
+   "to": "XLMUSDT",
+   "fill": 0.15597795
+  },
+  {
+   "kind": "switch",
+   "time": 1691971200000,
+   "from": "XLMUSDT",
+   "to": "LINKUSDT",
+   "fill": 7.371684
+  },
+  {
+   "kind": "switch",
+   "time": 1692576000000,
+   "from": "LINKUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1694995200000,
+   "from": null,
+   "to": "BCHUSDT",
+   "fill": 210.105
+  },
+  {
+   "kind": "switch",
+   "time": 1695600000000,
+   "from": "BCHUSDT",
+   "to": "LINKUSDT",
+   "fill": 6.975486
+  },
+  {
+   "kind": "switch",
+   "time": 1698019200000,
+   "from": "LINKUSDT",
+   "to": "SOLUSDT",
+   "fill": 29.074529999999996
+  },
+  {
+   "kind": "switch",
+   "time": 1702252800000,
+   "from": "SOLUSDT",
+   "to": "ADAUSDT",
+   "fill": 0.59499735
+  },
+  {
+   "kind": "switch",
+   "time": 1702857600000,
+   "from": "ADAUSDT",
+   "to": "ICPUSDT",
+   "fill": 10.516255499999998
+  },
+  {
+   "kind": "switch",
+   "time": 1705276800000,
+   "from": "ICPUSDT",
+   "to": "SOLUSDT",
+   "fill": 93.856905
+  },
+  {
+   "kind": "switch",
+   "time": 1705881600000,
+   "from": "SOLUSDT",
+   "to": "BNBUSDT",
+   "fill": 318.85934999999995
+  },
+  {
+   "kind": "switch",
+   "time": 1706486400000,
+   "from": "BNBUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1707091200000,
+   "from": null,
+   "to": "LINKUSDT",
+   "fill": 18.163076999999998
+  },
+  {
+   "kind": "switch",
+   "time": 1708905600000,
+   "from": "LINKUSDT",
+   "to": "UNIUSDT",
+   "fill": 11.14557
+  },
+  {
+   "kind": "switch",
+   "time": 1709510400000,
+   "from": "UNIUSDT",
+   "to": "THETAUSDT",
+   "fill": 2.389194
+  },
+  {
+   "kind": "switch",
+   "time": 1711929600000,
+   "from": "THETAUSDT",
+   "to": "SOLUSDT",
+   "fill": 202.551225
+  },
+  {
+   "kind": "switch",
+   "time": 1712534400000,
+   "from": "SOLUSDT",
+   "to": "BCHUSDT",
+   "fill": 685.24245
+  },
+  {
+   "kind": "switch",
+   "time": 1714348800000,
+   "from": "BCHUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1714953600000,
+   "from": null,
+   "to": "BNBUSDT",
+   "fill": 592.2959999999999
+  },
+  {
+   "kind": "switch",
+   "time": 1716163200000,
+   "from": "BNBUSDT",
+   "to": "SOLUSDT",
+   "fill": 170.014965
+  },
+  {
+   "kind": "switch",
+   "time": 1716768000000,
+   "from": "SOLUSDT",
+   "to": "UNIUSDT",
+   "fill": 11.1745845
+  },
+  {
+   "kind": "switch",
+   "time": 1717372800000,
+   "from": "UNIUSDT",
+   "to": "LINKUSDT",
+   "fill": 18.151070999999998
+  },
+  {
+   "kind": "switch",
+   "time": 1717977600000,
+   "from": "LINKUSDT",
+   "to": "UNIUSDT",
+   "fill": 9.828911999999999
+  },
+  {
+   "kind": "switch",
+   "time": 1719187200000,
+   "from": "UNIUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1721001600000,
+   "from": null,
+   "to": "XRPUSDT",
+   "fill": 0.5207602499999999
+  },
+  {
+   "kind": "switch",
+   "time": 1721606400000,
+   "from": "XRPUSDT",
+   "to": "SOLUSDT",
+   "fill": 184.582245
+  },
+  {
+   "kind": "switch",
+   "time": 1722816000000,
+   "from": "SOLUSDT",
+   "to": "XRPUSDT",
+   "fill": 0.52316145
+  },
+  {
+   "kind": "switch",
+   "time": 1724025600000,
+   "from": "XRPUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1724630400000,
+   "from": null,
+   "to": "MATICUSDT",
+   "fill": 0.52476225
+  },
+  {
+   "kind": "switch",
+   "time": 1725235200000,
+   "from": "MATICUSDT",
+   "to": "XRPUSDT",
+   "fill": 0.54737355
+  },
+  {
+   "kind": "switch",
+   "time": 1725840000000,
+   "from": "XRPUSDT",
+   "to": "ICPUSDT",
+   "fill": 7.419708
+  },
+  {
+   "kind": "switch",
+   "time": 1727049600000,
+   "from": "ICPUSDT",
+   "to": "LTCUSDT",
+   "fill": 68.724345
+  },
+  {
+   "kind": "switch",
+   "time": 1727654400000,
+   "from": "LTCUSDT",
+   "to": "UNIUSDT",
+   "fill": 7.457726999999999
+  },
+  {
+   "kind": "switch",
+   "time": 1728259200000,
+   "from": "UNIUSDT",
+   "to": "DOGEUSDT",
+   "fill": 0.11164579499999999
+  },
+  {
+   "kind": "switch",
+   "time": 1728864000000,
+   "from": "DOGEUSDT",
+   "to": "UNIUSDT",
+   "fill": 7.688842499999999
+  },
+  {
+   "kind": "switch",
+   "time": 1729468800000,
+   "from": "UNIUSDT",
+   "to": "DOGEUSDT",
+   "fill": 0.14221106999999997
+  },
+  {
+   "kind": "switch",
+   "time": 1732492800000,
+   "from": "DOGEUSDT",
+   "to": "XLMUSDT",
+   "fill": 0.53636805
+  },
+  {
+   "kind": "switch",
+   "time": 1734307200000,
+   "from": "XLMUSDT",
+   "to": "XRPUSDT",
+   "fill": 2.4482235
+  },
+  {
+   "kind": "switch",
+   "time": 1735516800000,
+   "from": "XRPUSDT",
+   "to": "LINKUSDT",
+   "fill": 20.97048
+  },
+  {
+   "kind": "switch",
+   "time": 1736121600000,
+   "from": "LINKUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1736726400000,
+   "from": null,
+   "to": "XRPUSDT",
+   "fill": 2.50575225
+  },
+  {
+   "kind": "switch",
+   "time": 1737331200000,
+   "from": "XRPUSDT",
+   "to": "SOLUSDT",
+   "fill": 252.5262
+  },
+  {
+   "kind": "switch",
+   "time": 1737936000000,
+   "from": "SOLUSDT",
+   "to": "XRPUSDT",
+   "fill": 3.0237111
+  },
+  {
+   "kind": "switch",
+   "time": 1739145600000,
+   "from": "XRPUSDT",
+   "to": "SOLUSDT",
+   "fill": 200.570235
+  },
+  {
+   "kind": "switch",
+   "time": 1739750400000,
+   "from": "SOLUSDT",
+   "to": "LTCUSDT",
+   "fill": 125.78285999999999
+  },
+  {
+   "kind": "switch",
+   "time": 1740960000000,
+   "from": "LTCUSDT",
+   "to": "ADAUSDT",
+   "fill": 1.13546745
+  },
+  {
+   "kind": "switch",
+   "time": 1741564800000,
+   "from": "ADAUSDT",
+   "to": "BCHUSDT",
+   "fill": 357.7788
+  },
+  {
+   "kind": "switch",
+   "time": 1742774400000,
+   "from": "BCHUSDT",
+   "to": null,
+   "fill": null
+  },
+  {
+   "kind": "switch",
+   "time": 1743984000000,
+   "from": null,
+   "to": "BNBUSDT",
+   "fill": 555.827775
+  },
+  {
+   "kind": "switch",
+   "time": 1744588800000,
+   "from": "BNBUSDT",
+   "to": "BCHUSDT",
+   "fill": 342.9714
+  },
+  {
+   "kind": "switch",
+   "time": 1745798400000,
+   "from": "BCHUSDT",
+   "to": "SOLUSDT",
+   "fill": 148.043985
+  },
+  {
+   "kind": "switch",
+   "time": 1747008000000,
+   "from": "SOLUSDT",
+   "to": "ETHUSDT",
+   "fill": 2515.83729
+  },
+  {
+   "kind": "switch",
+   "time": 1749427200000,
+   "from": "ETHUSDT",
+   "to": "BTCUSDT",
+   "fill": 105786.87700499999
+  },
+  {
+   "kind": "switch",
+   "time": 1750032000000,
+   "from": "BTCUSDT",
+   "to": "UNIUSDT",
+   "fill": 7.18359
+  },
+  {
+   "kind": "switch",
+   "time": 1750636800000,
+   "from": "UNIUSDT",
+   "to": "BCHUSDT",
+   "fill": 455.12744999999995
+  },
+  {
+   "kind": "switch",
+   "time": 1752451200000,
+   "from": "BCHUSDT",
+   "to": "XLMUSDT",
+   "fill": 0.4708353
+  },
+  {
+   "kind": "switch",
+   "time": 1754870400000,
+   "from": "XLMUSDT",
+   "to": "ETHUSDT",
+   "fill": 4252.70529
+  },
+  {
+   "kind": "switch",
+   "time": 1755475200000,
+   "from": "ETHUSDT",
+   "to": "LINKUSDT",
+   "fill": 25.65282
+  },
+  {
+   "kind": "switch",
+   "time": 1757289600000,
+   "from": "LINKUSDT",
+   "to": "SOLUSDT",
+   "fill": 206.453175
+  },
+  {
+   "kind": "switch",
+   "time": 1758499200000,
+   "from": "SOLUSDT",
+   "to": "BNBUSDT",
+   "fill": 1048.3238999999999
+  }
+ ]
+}

@@ -156,7 +156,8 @@ rotation) plus one forward-only variant (Breakout-0.5R), each with its own rules
 design backtest run once (`python scripts\research_strategy.py <id>`) and its own forward test. Rotation needs the
 ETH/SOL/BNB daily candles (`python scripts\download_assets.py`; the app then refreshes them daily). Design results:
 DCA PASS, trend FAIL, range INCONCLUSIVE (4 trades), breakout FAIL (max drawdown 23.7% > 15%), rotation PASS (with a
-strong survivorship bias: SOL and BNB were picked knowing they survived) — design-data evidence only. Separate from signal-1.8 and never trades.
+strong survivorship bias: SOL and BNB were picked knowing they survived; over a point-in-time top-20 universe with
+LUNA and FTT the same rule made +259% instead of +3,193%, reported only) — design-data evidence only. Separate from signal-1.8 and never trades.
 Method, rules against data snooping and results: [STRATEGY_LAB.md](STRATEGY_LAB.md).
 
 ## Paper trading and risk

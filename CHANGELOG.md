@@ -2,6 +2,17 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## Rotation survivorship stress test (reported only) — 2026-11-02
+
+- `PREREGISTRATION_ROTATION_STRESS.md` committed before the run; `services/rotation_stress.py` runs Rotation's rule
+  over any asset list (identical to `rotation.simulate` with the original four, tested);
+  `scripts/research_rotation_stress.py` runs once (DB backed up; missing candles downloaded from Binance's public
+  klines). Universe: top 20 on 2021-06-27 without stablecoins and WBTC, plus LUNA and FTT: all 18 available; LUNA,
+  FTT and MATIC histories end inside the window (first gap > 7 days).
+- Result next to the original: **+259.02%** (max drawdown 76.49%, beat 84.1% of random rotations) vs the original
+  +3,193.17% and BTC +224.36%. Rotation's strategy, result and PASS verdict unchanged; shown in its details.
+- Rotation charts: the legend sits under the chart on phones (the asset lines were unlabelled).
+
 ## Strategy charts: labels that never overlap — 2026-11-02
 
 - Comparison scatter: labels are annotations placed greedily in pixels (several levels on both sides of each point,

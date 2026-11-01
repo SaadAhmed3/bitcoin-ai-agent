@@ -184,6 +184,29 @@ the budget basis. The locked study and its verdict are unchanged.
   weeks and went from $33.00 to $198.70 (daily closes, 2021-06-28 to 2025-10-27). A drawdown of 60% is still severe. Design data only: this is
   not validation; the result says the rule worked on these four hand-picked survivors in 2021–2025.
 
+### Rotation survivorship stress test (reported only, 2026-11-02)
+
+`PREREGISTRATION_ROTATION_STRESS.md`, run once (`scripts/research_rotation_stress.py`, `data/rotation_stress_design.md`).
+The same rule and configuration over a point-in-time universe: the top 20 by market cap on 2021-06-27
+(CoinMarketCap) without stablecoins and WBTC, plus LUNA and FTT — 18 assets, **all available** on Binance's public
+daily klines. Histories that end inside the window (first gap > 7 days; later rows under the ticker are a different
+asset): LUNA 2022-05-13 (LUNA 2.0 from 2022-05-31 not used), FTT 2022-11-15 (relisted 2023-09-22, not used), MATIC
+2024-09-10 (migrated to POL).
+
+| | Original (BTC, ETH, SOL, BNB) | Wider universe (18) | BTC buy & hold |
+|---|---|---|---|
+| Net return | +3,193.17% | **+259.02%** | +224.36% |
+| Max drawdown | 59.70% | 76.49% | 76.63% |
+| Return / max drawdown | 53.49 | 3.39 | 2.93 |
+| Switches | 91 | 107 | – |
+| Beats random weekly rotations | 97.7% | 84.1% | – |
+| Verdict | **PASS (stands)** | FAIL on C3 if it were judged (it is not) | – |
+
+Most of the original's return came from holding SOL (72 weeks there, 32 here). The rule held LUNA in its 2021 rally
+and left it after 2022-03-21, before the May collapse; it held FTT two weeks in February 2022; neither collapse hit
+the account. The wider version barely beats BTC on return/drawdown with about the same drawdown. **Rotation's
+strategy, stored result and PASS verdict are unchanged**; this table is shown next to them in the app.
+
 ## Charts (visualisation only, `services/strategy_charts.py`)
 
 - **Live chart** (Chart tab of each strategy): the strategy's own timeframe and closed candles with only the
