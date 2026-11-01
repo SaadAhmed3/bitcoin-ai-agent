@@ -8,7 +8,7 @@ sold, no exchange account, no leverage, futures, margin or shorting. The Lab is 
 |---|---|---|---|
 | 1 | DCA (dollar-cost averaging) | ACCUMULATE / WAIT / PAUSE | implemented, pre-registered, design backtest run once: PASS (design data) |
 | 2 | Trend following (4h pullback continuation; defined differently from H2's EMA 50/200) | BUY SETUP / HOLD / NO TRADE / EXIT / REDUCE EXPOSURE | implemented, pre-registered, design backtest run once: FAIL (design data) |
-| 3 | Range trading | same | planned |
+| 3 | Range trading (4h, only in the SIDEWAYS regime) | same | implemented, pre-registered, design backtest run once: INCONCLUSIVE (4 trades) |
 | 4 | Breakout trading (never from a wick alone) | same | planned |
 | 5 | Narrative / sector rotation (BTC, ETH, SOL, BNB; price, relative strength, volume) | BTC STRONGER / ALTCOIN STRENGTH / NEUTRAL / NO TRADE | planned |
 
@@ -108,6 +108,22 @@ the budget basis. The locked study and its verdict are unchanged.
   hold +217%, H2 rule +230% (max drawdowns 77% and 38%). Two of nine 182-day windows were positive; no sensitivity
   combination had a positive expectancy. Status: BACKTESTED (design data), not validated; its forward test runs
   anyway as pre-registered.
+
+## Range trading (round 3)
+
+- **Rules** (`PREREGISTRATION_RANGE.md`, config hash `3abb2ee3b4292819`): only when the existing 4h regime is
+  SIDEWAYS and ADX(14) < 20; range = highest high / lowest low of the 50 closed 4h bars before the signal bar, valid
+  with ≥ 2 touches per boundary (within 0.25 × ATR; neighbouring touching bars count once) and width ≥ 3 × ATR(14);
+  entry on a reclaim of the range low or a bullish close after a close in the bottom 20%, only below the midpoint;
+  stop = range low − 0.5 × ATR(14); target = midpoint; exit when the regime leaves SIDEWAYS or after 30 × 4h bars;
+  1% risk, long only. `services/regime.py` is pinned by SHA-256 (a change is flagged as a dependency change).
+- **Criteria:** as Trend. Sensitivity: lookback 30/50/80 × ADX 15/20/25 and the range-high target (reported only).
+- **Design result** (`data/strategy_range_design.md`, run once, 4h decisions 2021-06-20 … 2025-10-28):
+  **INCONCLUSIVE — only 4 trades** (fewer than 30). The regime was SIDEWAYS on 15.3% of the bars, but every filter
+  held on only 1.6%. The four trades: +1.88%, expectancy +0.47R, profit factor 16.35, max drawdown 0.55%, beat 97.6%
+  of random runs; average planned reward/risk 0.99 (the midpoint is close to the entry). Four trades say nothing.
+  As noted in advance, ADX 25 gave the same trades as ADX 20. Status: BACKTESTED (design data), not validated; the
+  forward test runs as pre-registered (at this frequency it will likely end INCONCLUSIVE too).
 
 ## API
 
