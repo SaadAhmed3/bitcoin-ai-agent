@@ -48,7 +48,7 @@ METRICS = [("Net return", "net_return_pct", "signed_pct"), ("Win rate", "win_rat
            ("Fees and slippage", "costs_usd", "usd"), ("Buy-and-hold comparison", "buy_hold_return_pct", "signed_pct")]
 # What "buy-and-hold" means for each strategy's backtest (the comparison row says it in every cell).
 BUY_HOLD_BASIS = {"dca": "lump sum, same budget", "trend": "buy & hold, same window", "range": "buy & hold, same window",
-                  "breakout": "buy & hold, same window", "rotation": "buy & hold, same window"}
+                  "breakout": "buy & hold, same window", "rotation": "BTC buy & hold, same window"}
 FAILED_NOTE = "Failed on design data: research only"
 COMPARE_NOTE = ("Strategies are not ranked: each column shows that strategy's own pre-registered design backtest "
                 "(design data before 2025-10-29, hypothetical) or N/A. A higher return with a deeper drawdown is not "
@@ -130,8 +130,14 @@ class StrategyLab:
         return self.forward.status(sid, config_hash(eng.validate_config({})))
 
     def validation(self, sid: str, cfg: dict) -> dict:
-        bt = self.backtest_for(sid, cfg["hash"])
+        eng = self._engine(sid)
         fwd = self.forward_status(sid) if not cfg["settings_changed"] else None
+        if getattr(eng, "FORWARD_ONLY", False):         # chosen after design results: never a design verdict
+            out = validation_status(cfg["preregistered_hash"], cfg["hash"], None, fwd)
+            label = eng.LABEL[0].upper() + eng.LABEL[1:]
+            return {**out, "label": f"{label} · {out['label'][0].lower() + out['label'][1:]}",
+                    "design_verdict": None, "forward_only": True}
+        bt = self.backtest_for(sid, cfg["hash"])
         return validation_status(cfg["preregistered_hash"], cfg["hash"], bt, fwd)
 
     def evaluate(self, sid: str) -> dict:
@@ -151,7 +157,8 @@ class StrategyLab:
         if status["status"] != FORWARD_PASS:
             r["labels"] = r["labels"] + ["NOT VALIDATED"]
         # every live result of a strategy that failed its pre-registered design criteria says so
-        r["design_warning"] = FAILED_NOTE if status.get("design_verdict") == "FAIL" else None
+        r["design_warning"] = (FAILED_NOTE if status.get("design_verdict") == "FAIL" else
+                               eng.LABEL[0].upper() + eng.LABEL[1:] if getattr(eng, "FORWARD_ONLY", False) else None)
         return r
 
     def card(self, meta: dict) -> dict:
@@ -166,7 +173,7 @@ class StrategyLab:
         except Exception as exc:               # a bug or bad data must never break the whole page
             log.exception("Strategy %s failed", sid)
             result, error = None, str(exc)
-        bt = self.backtest_for(sid, cfg["hash"])
+        bt = None if getattr(self._engine(sid), "FORWARD_ONLY", False) else self.backtest_for(sid, cfg["hash"])
         return {**base, "result": result, "error": error, "config": {k: cfg[k] for k in ("version", "hash", "settings_changed")},
                 "backtest": None if bt is None else {"verdict": bt.get("verdict"), "metrics": bt.get("metrics")},
                 "validation": self.validation(sid, cfg)}
@@ -199,7 +206,7 @@ class StrategyLab:
         if not card["implemented"]:
             return card
         cfg = self.config(sid)
-        bt = self.backtest_for(sid, cfg["hash"])
+        bt = card["backtest"] and self.backtest_for(sid, cfg["hash"])
         extra = {}
         if sid == "dca":
             extra = {"backtest_supplement": self._dca_supplement(bt), "forward_deposit_neutral": self._dca_forward_extra()}

@@ -41,7 +41,7 @@ def test_preregistration_file_holds_the_default_config_hash():
 def test_api_lists_five_strategies_dca_live_the_rest_planned(config, db):
     c = make_client(config, db, [FakeProvider("fake1")])
     d = c.get("/api/strategies").get_json()
-    assert [s["id"] for s in d["strategies"]] == ["dca", "trend", "range", "breakout", "rotation"]
+    assert [s["id"] for s in d["strategies"]] == ["dca", "trend", "range", "breakout", "breakout_05r", "rotation"]
     dca = d["strategies"][0]
     assert dca["implemented"] is True and dca["result"]["signal"] in ("ACCUMULATE", "WAIT", "PAUSE")
     assert dca["result"]["schema"] == "strategy-result-1" and dca["config"]["version"] == 1
@@ -53,11 +53,17 @@ def test_api_lists_five_strategies_dca_live_the_rest_planned(config, db):
     assert rng["implemented"] is True and rng["result"]["timeframe"] == "4h" and rng["result"]["regime"]
     bo = d["strategies"][3]                                              # round 4
     assert bo["implemented"] is True and bo["result"]["timeframe"] == "4h" and bo["result"]["targets"] == []
-    rot = d["strategies"][4]
+    var = d["strategies"][4]                                             # forward-only variant
+    assert var["implemented"] is True and var["backtest"] is None and var["forward_only"] is True
+    assert "chosen after design results: forward test only, no design verdict" in var["validation"]["label"].lower()
+    assert var["result"]["design_warning"].lower() == "chosen after design results: forward test only, no design verdict"
+    rot = d["strategies"][5]
     assert rot["implemented"] is False and rot["result"] is None and rot["planned_round"] == 5
     cmp = d["comparison"]
     assert [r["metric"] for r in cmp["rows"]][:3] == ["Net return", "Win rate", "Profit factor"]
     assert all(r["values"]["rotation"] == "N/A" for r in cmp["rows"])
+    assert all(r["values"]["breakout_05r"] == "N/A" for r in cmp["rows"][:-1])        # no design numbers, ever
+    assert "no design verdict" in cmp["rows"][-1]["values"]["breakout_05r"]
     assert "not ranked" in cmp["note"]
     assert c.get("/api/strategies/nope").status_code == 404
 
@@ -95,7 +101,7 @@ def test_monitor_records_one_signal_per_day_and_starts_the_strategy_forward_trac
     fwd = c.get("/api/strategies/dca").get_json()["forward"]
     assert fwd["state"] in ("waiting", "running") and fwd["fingerprint_now"]
     with db.connect() as conn:                                        # the H1/H2 tracker is separate
-        assert [r[0] for r in conn.execute("SELECT strategy_id FROM strategy_forward_tests ORDER BY id")] == ["dca", "trend", "range", "breakout"]
+        assert [r[0] for r in conn.execute("SELECT strategy_id FROM strategy_forward_tests ORDER BY id")] == ["dca", "trend", "range", "breakout", "breakout_05r"]
 
 
 def test_comparison_shows_backtest_numbers_only_when_they_exist(config, db):

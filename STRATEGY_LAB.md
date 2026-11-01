@@ -10,6 +10,7 @@ sold, no exchange account, no leverage, futures, margin or shorting. The Lab is 
 | 2 | Trend following (4h pullback continuation; defined differently from H2's EMA 50/200) | BUY SETUP / HOLD / NO TRADE / EXIT / REDUCE EXPOSURE | implemented, pre-registered, design backtest run once: FAIL (design data) |
 | 3 | Range trading (4h, only in the SIDEWAYS regime) | same | implemented, pre-registered, design backtest run once: INCONCLUSIVE (4 trades) |
 | 4 | Breakout trading (never from a wick alone) | same | implemented, pre-registered, design backtest run once: FAIL (max drawdown 23.7% > 15%) |
+| 4b | Breakout-0.5R (variant: identical rules, 0.5% risk) | same | **chosen after design results: forward test only, no design verdict** |
 | 5 | Narrative / sector rotation (BTC, ETH, SOL, BNB; price, relative strength, volume) | BTC STRONGER / ALTCOIN STRENGTH / NEUTRAL / NO TRADE | planned |
 
 ## Shared result schema (`strategy-result-1`, `services/strategies/base.py`)
@@ -147,6 +148,17 @@ the budget basis. The locked study and its verdict are unchanged.
   stayed under 15% drawdown. **These are reported only and do not change the verdict or the settings**: picking
   lookback 40 now would be choosing parameters from the design results. Status: BACKTESTED (design data), FAILED,
   not validated; the forward test runs anyway as pre-registered.
+
+## Breakout-0.5R (forward-only variant, 2026-11-02)
+
+- Decided by the owner **after** the Breakout design result. Identical rules (Breakout's own code), only
+  `risk_pct = 0.5`. Labelled everywhere **"chosen after design results: forward test only, no design verdict"**:
+  card, comparison column, live-chart banner, history panel, details.
+- **No design backtest, ever** (it would be data snooping): `scripts/research_strategy.py breakout_05r` refuses.
+- Own forward test (`PREREGISTRATION_BREAKOUT_05R.md`, config hash `337072c89af639f9`), own fingerprint
+  (`breakout_05r.py` + the tracker core). The module pins `breakout.py` by SHA-256: if Breakout's rules change, the
+  variant shows NO TRADE and its forward test pauses ("dependency changed").
+- Breakout itself is unchanged: its FAIL verdict and its 1% forward test stand.
 
 ## Charts (visualisation only, `services/strategy_charts.py`)
 

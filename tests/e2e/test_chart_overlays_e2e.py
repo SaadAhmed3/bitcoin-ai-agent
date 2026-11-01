@@ -110,7 +110,9 @@ def test_volume_profile_visible_range_is_debounced_and_keeps_the_volume_bars(bro
             const gd = document.getElementById('chartBox'), x = gd.data[0].x;
             for (const k of [150, 180, 200]) await Plotly.relayout(gd, {'xaxis.range': [x[k], x[x.length - 1]]});
         }""")
-        page.wait_for_timeout(1200)
+        page.wait_for_function("() => document.getElementById('chartNote').textContent.includes('the visible range 100 closed')",
+                               timeout=60_000)                                # the debounced answer has been drawn
+        p.idle()
         assert len(seen) == 1                                                 # three zooms, one request (300 ms)
         assert "the visible range 100 closed 1h candles" in page.locator("#chartNote").text_content()
         kept = page.evaluate("""() => { const gd = document.getElementById('chartBox');
@@ -128,7 +130,7 @@ def test_fast_timeframe_switches_end_on_the_last_choice_with_its_overlays(browse
         for tf in ("4h", "15m", "1d", "4h"):                                  # quicker than the answers arrive
             page.locator(f"#tfSeg button[data-tf='{tf}']").click()
         page.wait_for_function(f"() => ({TRACES})().includes('Market regime')")     # the 1d labels may come first
-        page.wait_for_timeout(1500)                                            # any late answer would land by now
+        p.idle()                                                               # every answer, late ones too, handled
         step = page.evaluate("() => { const x = document.getElementById('chartBox').data[0].x; "
                              "return Date.parse(x[1]) - Date.parse(x[0]); }")
         assert step == H4                                                      # 4h candles, not a late 1d / 15m answer

@@ -247,6 +247,9 @@ trading** (buying a 4-hour close above the recent high) are active so far; rotat
   higher volume (a wick above it is not enough). It shows an entry and a stop but **no target**: a simulated trade is
   closed when a candle closes below the low of the previous 10 candles, or after 60 candles. On design data it made
   money on average but its worst drawdown (23.7%) was above the 15% limit, so it FAILED and is research only.
+- **Breakout-0.5R** is the same breakout rules with half the risk per trade. It was chosen *after* seeing Breakout's
+  result, so it has no backtest verdict at all ("chosen after design results: forward test only, no design
+  verdict"); only its forward test, which starts fresh, can say anything about it.
 - The **comparison table** does not rank strategies. N/A means there is no valid number yet.
 - **Settings** can be changed in the DCA details. Saving creates a new version; if it differs from the
   pre-registered settings, the strategy shows **NOT VALIDATED (settings changed)** and its earlier results no longer

@@ -51,6 +51,10 @@ def test_unimplemented_strategy_is_refused(rs):
     assert rs.main(["rotation"]) == 2
 
 
+def test_a_forward_only_variant_never_gets_a_design_backtest(rs, db):
+    assert rs.main(["breakout_05r"]) == 2 and db.strategy_backtests("breakout_05r") == []
+
+
 def test_trend_runs_once_on_its_own_timeframes(rs, db, tmp_path, monkeypatch):
     from functools import partial
 

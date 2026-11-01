@@ -16,8 +16,9 @@ def test_market_view_shows_the_three_panels_as_context(browser, live_server, the
     try:
         page = p.goto("/#/market")
         page.evaluate(f"document.documentElement.dataset.theme = '{theme}'")
+        page.wait_for_selector("#advanced[data-state='ready']", timeout=60_000)   # loaded: a state, not a time
         card = page.locator("#advanced")
-        assert card.is_visible() and card.get_attribute("data-state") == "ready"
+        assert card.is_visible()
         assert card.locator("h2").first.text_content() == "Advanced market analysis"
         assert "Context, not part of the score" in card.text_content()
         assert page.locator("#advRegime .adv-label").text_content() in REGIMES

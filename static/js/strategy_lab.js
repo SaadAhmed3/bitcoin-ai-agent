@@ -61,8 +61,8 @@
   }
 
   function renderCompare(cmp) {
-    const ids = ["dca", "trend", "range", "breakout", "rotation"];
-    const heads = ["DCA", "Trend", "Range", "Breakout", "Rotation"];
+    const ids = ["dca", "trend", "range", "breakout", "breakout_05r", "rotation"];
+    const heads = ["DCA", "Trend", "Range", "Breakout", "Breakout-0.5R (forward only)", "Rotation"];
     $("stratCompare").querySelector("tbody").innerHTML = cmp.rows.map((row) => `<tr><td><b>${esc(row.metric)}</b></td>${ids.map((id, k) =>
       `<td data-label="${heads[k]}">${esc(row.values[id])}</td>`).join("")}</tr>`).join("");
     $("stratCompare").querySelectorAll("tbody td:first-child").forEach((td) => td.setAttribute("data-label", "Metric"));
@@ -72,7 +72,12 @@
   const num = (v, d = 2) => (v === null || v === undefined ? "N/A" : Number(v).toFixed(d));
   const runCmd = (sid) => `<code>python scripts\\research_strategy.py ${esc(sid)}</code>`;
 
-  function renderBacktest(sid, bt) {
+  function renderBacktest(sid, bt, det) {
+    if (det && det.forward_only) {                 // a variant chosen after design results: never a design backtest
+      $("stratBacktest").innerHTML = `<p class="set-warn small">${esc(det.validation.label)}</p>
+        <p class="muted small">Same rules as ${esc(det.variant_of)}; its design backtest would be data snooping, so it has none. Its only evidence is its forward test.</p>`;
+      return;
+    }
     if (!bt) {
       $("stratBacktest").innerHTML = `<p class="muted small">No design backtest yet. It runs once, after the pre-registration is committed: ${runCmd(sid)}</p>`;
       return;
@@ -197,7 +202,7 @@
       renderCompare(all.comparison);
       $("stratDetailPick").innerHTML = live.map((s) => `<option value="${esc(s.id)}"${s.id === detailId ? " selected" : ""}>${esc(s.name)}</option>`).join("");
       $("stratDetailTitle").textContent = `${det.name} details`;
-      renderBacktest(detailId, det.backtest);
+      renderBacktest(detailId, det.backtest, det);
       if (det.backtest_supplement) $("stratBacktest").insertAdjacentHTML("beforeend",
         depositNeutral(det.backtest_supplement, det.backtest_supplement.budget_basis_max_drawdown_pct));
       renderForward(detailId, det.forward);

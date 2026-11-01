@@ -305,3 +305,21 @@ def test_unverified_series_are_never_cached(db, stored, tmp_path):
     c = StrategyCharts(db, lab, cache_dir=tmp_path / "cache")
     h = c._compute_and_cache("trend", {**res, "id": 99})
     assert h["verified"] is False and not list((tmp_path / "cache").glob("trend-*.json"))
+
+
+# ---------------------------------------------------------------- forward-only variant (Breakout-0.5R)
+def test_the_forward_only_variant_charts_say_so_and_have_no_history(db):
+    from services.strategies import breakout_05r as v
+    from services.strategies.base import DataQuality
+    from services.strategy_charts import LIVE, breakout_live
+    from test_strategy_breakout import stairs
+    assert LIVE["breakout_05r"] is breakout_live                                 # the same rule code, not a copy
+    c = charts(db)
+    h = c.history("breakout_05r", wait=True)
+    assert h["status"] == "forward_only" and v.LABEL in h["note"].lower()
+    assert all(x["id"] != "breakout_05r" for x in c.compare()["scatter"])
+    df4, _ = stairs(n=900)
+    dq = DataQuality("binance", 1, int(df4["close_time"].iloc[-1]), False, 0, [])
+    live = LIVE["breakout_05r"]({"4h": df4}, v.validate_config({}),
+                                v.evaluate_frames({"4h": df4}, v.validate_config({}), now=1, data=dq).to_dict())
+    assert live["names"]["level"] == "20-bar high (level)"

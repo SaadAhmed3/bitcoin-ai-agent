@@ -51,9 +51,11 @@ def test_result_schema_has_every_field_and_strength_is_not_a_probability():
         StrategyResult(**{**r.__dict__, "strength": 101})
 
 
-def test_five_strategies_are_declared_with_their_own_signal_words():
+def test_five_strategies_and_one_forward_only_variant_are_declared_with_their_own_signal_words():
     from services.strategies.base import SIGNALS, STRATEGIES
-    assert [s["id"] for s in STRATEGIES] == ["dca", "trend", "range", "breakout", "rotation"]
+    assert [s["id"] for s in STRATEGIES] == ["dca", "trend", "range", "breakout", "breakout_05r", "rotation"]
+    assert [s["id"] for s in STRATEGIES if s.get("forward_only")] == ["breakout_05r"]
+    assert SIGNALS["breakout_05r"] == SIGNALS["breakout"]
     assert SIGNALS["dca"] == ("ACCUMULATE", "WAIT", "PAUSE")
     assert SIGNALS["trend"] == SIGNALS["range"] == SIGNALS["breakout"] == ("BUY SETUP", "HOLD", "NO TRADE",
                                                                             "EXIT / REDUCE EXPOSURE")

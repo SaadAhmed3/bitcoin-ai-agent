@@ -1,7 +1,8 @@
 """Strategy Lab: the pre-registered DESIGN backtest of one strategy, run once per strategy and configuration.
 
 Refuses to run when:
-  * the strategy is not implemented, or its PREREGISTRATION_<STRATEGY>.md is missing or not committed in git;
+  * the strategy is not implemented, is forward-only (a variant chosen after design results), or its
+    PREREGISTRATION_<STRATEGY>.md is missing or not committed in git;
   * the strategy's defaults no longer produce the config hash written in that pre-registration;
   * a design backtest of this configuration is already stored (strategy_backtests is append-only and unique), or the
     output files already exist (they are created, never overwritten).
@@ -59,6 +60,9 @@ def main(argv: list[str] | None = None) -> int:
     eng = ENGINES.get(sid)
     if eng is None:
         print(f"Strategy '{sid}' is not implemented (available: {', '.join(ENGINES)}). Nothing was run.")
+        return 2
+    if getattr(eng, "FORWARD_ONLY", False):
+        print(f"'{sid}' is forward-only ({eng.LABEL}): it never gets a design backtest. Nothing was run.")
         return 2
     prereg = ROOT / eng.PREREGISTRATION
     if not prereg.exists() or not prereg_committed(prereg):
