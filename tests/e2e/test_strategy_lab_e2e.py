@@ -21,7 +21,7 @@ def test_strategy_lab_shows_five_cards_and_an_honest_comparison(browser, live_se
         assert len(badges) == 1 and (badges[0] == "Not validated" or badges[0].endswith(" on design data · not validated"))
         assert "Live data · calculated · simulated" in dca.locator(".strat-kinds").text_content()
         assert "not a prediction" in dca.text_content()
-        for sid, rnd in (("range", 3), ("breakout", 4), ("rotation", 5)):                 # trend: live since round 2
+        for sid, rnd in (("breakout", 4), ("rotation", 5)):              # trend: live since round 2, range since 3
             assert f"round {rnd}" in page.locator(f"#strat-{sid}").text_content()
         table = page.locator("#stratCompare")
         assert table.locator("thead th").all_text_contents() == ["Metric", "DCA", "Trend", "Range", "Breakout", "Rotation"]
@@ -127,6 +127,42 @@ def test_a_failed_strategy_says_so_on_its_card_and_in_the_comparison(browser, fr
         assert "FAILED on design data · not validated" in row.text_content()
         bh = page.locator("#stratCompare tbody tr", has_text="Buy-and-hold comparison").text_content()
         assert "(buy & hold, same window)" in bh
+        assert p.errors == []
+    finally:
+        p.context.close()
+
+
+def test_range_card_and_details_round_3(browser, fresh_server):
+    from services.strategies import range as rng
+    lab = fresh_server.app.config["BTC_STRATEGY_LAB"]
+    fresh_server.db.strategy_backtest_add("range", 1, lab.config("range")["hash"], "design", "x", {
+        "verdict": "FAIL", "sample_warning": None,
+        "period": {"first_day": 1_700_000_000_000, "last_day": 1_760_000_000_000, "holdout_start": 1_761_696_000_000},
+        "config": rng.validate_config({}), "regime_share_pct": 21.5, "valid_range_share_pct": 3.2,
+        "metrics": {"net_return_pct": -2.0, "win_rate_pct": 50.0, "profit_factor": 0.9, "max_drawdown_pct": 4.0,
+                    "trades": 40, "expectancy_r": -0.02, "avg_reward_risk": 1.4, "costs_usd": None, "costs_pct": 2.0,
+                    "buy_hold_return_pct": 200.0},
+        "criteria": [{"id": "C1", "rule": "expectancy >= +0.15R", "value": -0.02, "passed": False}],
+        "buy_and_hold": {"net_return_pct": 200.0, "max_drawdown_pct": 77.0},
+        "random_entries": {"runs": 1000, "beaten_pct": 60.0, "median_return_pct": -1.0},
+        "walk_forward": [{"start": 1_700_000_000_000, "end": 1_715_000_000_000, "trades": 5, "return_pct": 0.5, "sum_r": 0.4}],
+        "sensitivity": [{"lookback": 50, "adx_max": 20.0, "target": "mid", "trades": 40, "expectancy_r": -0.02,
+                         "profit_factor": 0.9, "max_drawdown_pct": 4.0, "net_return_pct": -2.0, "is_default": True},
+                        {"lookback": 50, "adx_max": 20.0, "target": "top", "trades": 38, "expectancy_r": 0.01,
+                         "profit_factor": 1.0, "max_drawdown_pct": 5.0, "net_return_pct": -1.0, "is_default": False}]}, now=1)
+    p = Page(browser, fresh_server.url, viewport={"width": 1280, "height": 900})
+    try:
+        page = p.goto("/#/strategies")
+        page.wait_for_selector("#stratLab[data-state='ready']")
+        card = page.locator("#strat-range")
+        assert card.locator(".tag").all_text_contents() == ["FAILED on design data · not validated"]
+        assert card.locator(".strat-design-warning").text_content() == "Failed on design data: research only"
+        page.locator("#stratDetailPick").select_option("range")
+        page.wait_for_function("() => document.getElementById('stratDetailTitle').textContent.startsWith('Range trading')")
+        bt = page.locator("#stratBacktest").text_content()
+        for words in ("FAIL", "Buy & hold", "random", "Walk-forward", "Sensitivity", "Lookback", "top", "SIDEWAYS"):
+            assert words in bt, words
+        assert "H2 rule" not in bt                                         # only trend compares with H2
         assert p.errors == []
     finally:
         p.context.close()

@@ -2,6 +2,18 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## Strategy Lab, round 3: Range trading — 2026-11-01
+
+**Research only, separate from signal-1.8** (unchanged; protected files untouched; forward tests "unchanged").
+
+- **Range trading** (owner's specification), pre-registered in `PREREGISTRATION_RANGE.md` before its first backtest,
+  run once: **INCONCLUSIVE, 4 trades** in 4.4 years of design data (valid ranges on 1.6% of the bars).
+  `data/strategy_range_design.md`. Self-contained module; `services/regime.py` pinned by SHA-256.
+- **Status labels show the design verdict** everywhere ("FAILED on design data · not validated", "PASSED …",
+  "INCONCLUSIVE …"); every live result of a failed strategy says "Failed on design data: research only"; the
+  buy-and-hold comparison names its basis per cell (lump sum for DCA, buy & hold for trend / range).
+- `STRATEGY_LAB.md` documents the DCA forward-fingerprint re-base exactly.
+
 ## Strategy Lab, round 2: Trend following — 2026-11-01
 
 **Research only, separate from signal-1.8** (unchanged; protected files untouched; forward tests "unchanged").

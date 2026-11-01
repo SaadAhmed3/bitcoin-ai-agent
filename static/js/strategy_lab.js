@@ -93,22 +93,27 @@
     const bh = bt.buy_and_hold || {}, h2 = bt.h2_rule || {}, rnd = bt.random_entries || {};
     const wf = (bt.walk_forward || []).map((w) => `<tr><td data-label="Window">${esc(day(w.start))} to ${esc(day(w.end))}</td><td data-label="Trades">${esc(w.trades)}</td>
       <td data-label="Return">${pct(w.return_pct)}</td><td data-label="Sum of R">${num(w.sum_r)}</td></tr>`).join("");
-    const sens = (bt.sensitivity || []).map((x) => `<tr><td data-label="ADX min">${esc(x.adx_min)}${x.is_default ? " (default)" : ""}</td>
-      <td data-label="Target">${esc(x.target_r)}R</td><td data-label="Trades">${esc(x.trades)}</td><td data-label="Expectancy">${num(x.expectancy_r)}R</td>
+    // Sensitivity columns come from the result itself (each strategy varies its own pre-registered parameters).
+    const SENS = { adx_min: "ADX min", adx_max: "ADX max", lookback: "Lookback", target_r: "Target", target: "Target" };
+    const sensKeys = Object.keys(SENS).filter((k) => (bt.sensitivity || []).some((x) => x[k] !== undefined));
+    const sensVal = (k, v) => (k === "target_r" ? `${esc(v)}R` : k === "target" ? (v === "top" ? "range high (top)" : "midpoint") : esc(v));
+    const sens = (bt.sensitivity || []).map((x) => `<tr>${sensKeys.map((k, j) => `<td data-label="${SENS[k]}">${sensVal(k, x[k])}${j === 0 && x.is_default ? " (default)" : ""}</td>`).join("")}
+      <td data-label="Trades">${esc(x.trades)}</td><td data-label="Expectancy">${num(x.expectancy_r)}R</td>
       <td data-label="Profit factor">${num(x.profit_factor)}</td><td data-label="Max DD">${num(x.max_drawdown_pct)}%</td></tr>`).join("");
     $("stratBacktest").innerHTML = `${head}${bt.sample_warning ? `<p class="set-warn small">${esc(bt.sample_warning)}</p>` : ""}
       <dl class="adv-dl"><div><dt>Trades</dt><dd>${esc(m.trades)}</dd></div><div><dt>Expectancy</dt><dd>${num(m.expectancy_r)}R</dd></div>
         <div><dt>Profit factor</dt><dd>${num(m.profit_factor)}</dd></div><div><dt>Win rate</dt><dd>${num(m.win_rate_pct, 1)}%</dd></div>
         <div><dt>Net return</dt><dd>${pct(m.net_return_pct)}</dd></div><div><dt>Max drawdown</dt><dd>${num(m.max_drawdown_pct)}%</dd></div>
         <div><dt>Buy &amp; hold (reported)</dt><dd>${pct(bh.net_return_pct)} · max DD ${num(bh.max_drawdown_pct)}%</dd></div>
-        <div><dt>H2 rule (reported)</dt><dd>${pct(h2.net_return_pct)} · max DD ${num(h2.max_drawdown_pct)}%</dd></div>
+        ${bt.h2_rule ? `<div><dt>H2 rule (reported)</dt><dd>${pct(h2.net_return_pct)} · max DD ${num(h2.max_drawdown_pct)}%</dd></div>` : ""}
+        ${bt.regime_share_pct !== undefined ? `<div><dt>Regime SIDEWAYS / valid range</dt><dd>${num(bt.regime_share_pct, 1)}% / ${num(bt.valid_range_share_pct, 1)}% of the bars</dd></div>` : ""}
         <div><dt>Beats random entries</dt><dd>${num(rnd.beaten_pct, 1)}% of ${esc(rnd.runs)} random runs</dd></div>
         <div><dt>Fees and slippage</dt><dd>${num(m.costs_pct)}% of the account</dd></div></dl>
       ${list((bt.criteria || []).map((c) => `${c.id} ${c.passed ? "passed" : "failed"}: ${c.rule} (value ${num(c.value)})`))}
       <h4>Walk-forward windows (182 days, fixed rules, reported only)</h4>
       <div class="table-wrap"><table class="table stack"><thead><tr><th>Window</th><th>Trades</th><th>Return</th><th>Sum of R</th></tr></thead><tbody>${wf}</tbody></table></div>
       <h4>Sensitivity (reported only, never used to choose parameters)</h4>
-      <div class="table-wrap"><table class="table stack"><thead><tr><th>ADX min</th><th>Target</th><th>Trades</th><th>Expectancy</th><th>Profit factor</th><th>Max DD</th></tr></thead><tbody>${sens}</tbody></table></div>`;
+      <div class="table-wrap"><table class="table stack"><thead><tr>${sensKeys.map((k) => `<th>${SENS[k]}</th>`).join("")}<th>Trades</th><th>Expectancy</th><th>Profit factor</th><th>Max DD</th></tr></thead><tbody>${sens}</tbody></table></div>`;
   }
 
   // Deposit-neutral views (addendum 2026-11-01): reported only, never a criterion.
