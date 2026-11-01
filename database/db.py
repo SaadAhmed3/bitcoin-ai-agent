@@ -12,14 +12,15 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
-SCHEMA_VERSION = 14  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
+SCHEMA_VERSION = 15  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
                      # 7: holdout_runs (0.9.2), 8: holdout_runs.holdout_start (0.9.3),
                      # 9: holdout_runs.verdict + criteria, write-once triggers (0.9.4),
                      # 10: forward_tests + forward_events, append-only (research-1),
                      # 11: holdout_contaminations, append-only (0.9.7),
                      # 12: regime_changes, sweep_events, sweep_updates, shadow_context, append-only (advanced analysis),
                      # 13: sweep_corrections, append-only (0.9.8 follow-up),
-                     # 14: strategy_configs/signals/backtests/forward_tests/forward_events, append-only (Strategy Lab).
+                     # 14: strategy_configs/signals/backtests/forward_tests/forward_events, append-only (Strategy Lab),
+                     # 15: strategy_forward_rebases, append-only, only before a test's first processed day.
                     # Migrations are additive; an upgrade backs the file up first.
 
 SCHEMA = """
@@ -377,6 +378,24 @@ CREATE TRIGGER IF NOT EXISTS strategy_forward_tests_no_delete BEFORE DELETE ON s
 CREATE TRIGGER IF NOT EXISTS strategy_forward_events_no_update BEFORE UPDATE ON strategy_forward_events
     BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
 CREATE TRIGGER IF NOT EXISTS strategy_forward_events_no_delete BEFORE DELETE ON strategy_forward_events
+    BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
+
+-- A forward test's fingerprint may be re-based ONCE the tracking code is restructured, and only while the test has not
+-- processed any day yet (the trigger refuses it afterwards). The test row itself is never changed.
+CREATE TABLE IF NOT EXISTS strategy_forward_rebases (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    test_id          INTEGER NOT NULL REFERENCES strategy_forward_tests (id),
+    old_fingerprint  TEXT    NOT NULL,
+    new_fingerprint  TEXT    NOT NULL,
+    reason           TEXT    NOT NULL,
+    created_at       INTEGER NOT NULL
+);
+CREATE TRIGGER IF NOT EXISTS strategy_forward_rebases_only_before_start BEFORE INSERT ON strategy_forward_rebases
+    WHEN EXISTS (SELECT 1 FROM strategy_forward_events WHERE test_id = NEW.test_id)
+    BEGIN SELECT RAISE(ABORT, 'a forward test can only be re-based before its first processed day'); END;
+CREATE TRIGGER IF NOT EXISTS strategy_forward_rebases_no_update BEFORE UPDATE ON strategy_forward_rebases
+    BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS strategy_forward_rebases_no_delete BEFORE DELETE ON strategy_forward_rebases
     BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
 
 -- A stored sweep event is never changed or deleted; a later finding (e.g. a duplicate of the same move) is recorded
@@ -866,6 +885,19 @@ class Database:
         with self.connect() as conn:
             rows = conn.execute("SELECT * FROM strategy_forward_tests ORDER BY id").fetchall()
         return [{**dict(r), "config": json.loads(r["config"])} for r in rows]
+
+    def strategy_forward_rebase(self, test_id: int, old_fingerprint: str, new_fingerprint: str, reason: str,
+                                now: int) -> int:
+        """Record a fingerprint re-base (refused by the database once the test processed a day)."""
+        with self.connect() as conn:
+            cur = conn.execute("INSERT INTO strategy_forward_rebases (test_id, old_fingerprint, new_fingerprint, reason, "
+                               "created_at) VALUES (?,?,?,?,?)", (test_id, old_fingerprint, new_fingerprint, reason, now))
+        return int(cur.lastrowid)
+
+    def strategy_forward_rebases(self, test_id: int) -> list[dict]:
+        with self.connect() as conn:
+            rows = conn.execute("SELECT * FROM strategy_forward_rebases WHERE test_id=? ORDER BY id", (test_id,)).fetchall()
+        return [dict(r) for r in rows]
 
     def strategy_forward_add_events(self, rows: list[dict], now: int) -> int:
         added = 0

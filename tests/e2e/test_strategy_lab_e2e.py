@@ -21,7 +21,7 @@ def test_strategy_lab_shows_five_cards_and_an_honest_comparison(browser, live_se
         assert badges == ["Not validated"] or badges == ["Backtested on design data · not validated"]
         assert "Live data · calculated · simulated" in dca.locator(".strat-kinds").text_content()
         assert "not a prediction" in dca.text_content()
-        for sid, rnd in (("trend", 2), ("range", 3), ("breakout", 4), ("rotation", 5)):
+        for sid, rnd in (("range", 3), ("breakout", 4), ("rotation", 5)):                 # trend: live since round 2
             assert f"round {rnd}" in page.locator(f"#strat-{sid}").text_content()
         table = page.locator("#stratCompare")
         assert table.locator("thead th").all_text_contents() == ["Metric", "DCA", "Trend", "Range", "Breakout", "Rotation"]
@@ -71,3 +71,40 @@ def test_card_text_is_never_clipped_and_the_dca_status_is_one_badge(browser, fre
             assert p.errors == []
         finally:
             p.context.close()
+
+
+def test_trend_card_and_details_round_2(browser, fresh_server):
+    from services.strategies import trend
+    lab = fresh_server.app.config["BTC_STRATEGY_LAB"]
+    h = lab.config("trend")["hash"]
+    fresh_server.db.strategy_backtest_add("trend", 1, h, "design", "x", {
+        "verdict": "INCONCLUSIVE", "sample_warning": "Only 12 trades (fewer than 30): too few to judge; the verdict is INCONCLUSIVE.",
+        "period": {"first_day": 1_700_000_000_000, "last_day": 1_760_000_000_000, "holdout_start": 1_761_696_000_000},
+        "config": trend.validate_config({}),
+        "metrics": {"net_return_pct": -3.2, "win_rate_pct": 41.0, "profit_factor": 0.9, "max_drawdown_pct": 6.5,
+                    "trades": 12, "expectancy_r": -0.05, "avg_reward_risk": 2.0, "costs_usd": None, "costs_pct": 1.2,
+                    "buy_hold_return_pct": 80.0},
+        "criteria": [{"id": "C1", "rule": "expectancy >= +0.15R", "value": -0.05, "passed": False}],
+        "buy_and_hold": {"net_return_pct": 80.0, "max_drawdown_pct": 55.0},
+        "h2_rule": {"net_return_pct": 40.0, "max_drawdown_pct": 30.0, "entries": 3},
+        "random_entries": {"runs": 1000, "beaten_pct": 35.0, "median_return_pct": -1.0},
+        "walk_forward": [{"start": 1_700_000_000_000, "end": 1_715_000_000_000, "trades": 3, "return_pct": 1.0, "sum_r": 0.5}],
+        "sensitivity": [{"adx_min": 20.0, "target_r": 2.0, "trades": 12, "expectancy_r": -0.05, "profit_factor": 0.9,
+                         "max_drawdown_pct": 6.5, "net_return_pct": -3.2, "is_default": True}]}, now=1)
+    p = Page(browser, fresh_server.url, viewport={"width": 1280, "height": 900})
+    try:
+        page = p.goto("/#/strategies")
+        page.wait_for_selector("#stratLab[data-state='ready']")
+        card = page.locator("#strat-trend")
+        assert card.locator(".strat-signal").text_content() in ("BUY SETUP", "HOLD", "NO TRADE", "EXIT / REDUCE EXPOSURE")
+        assert card.locator(".tag").all_text_contents() == ["Backtested on design data · not validated"]
+        assert "4h" in card.text_content() and "differently from H2" in card.text_content()
+        page.locator("#stratDetailPick").select_option("trend")
+        page.wait_for_function("() => document.getElementById('stratDetailTitle').textContent.startsWith('Trend following')")
+        bt = page.locator("#stratBacktest").text_content()
+        for words in ("INCONCLUSIVE", "fewer than 30", "Buy & hold", "H2 rule", "random", "Walk-forward", "Sensitivity"):
+            assert words in bt, words
+        assert page.locator("#stratCfg-trend").count() == 1 and page.locator("#stratCfg-dca").count() == 0
+        assert p.errors == []
+    finally:
+        p.context.close()

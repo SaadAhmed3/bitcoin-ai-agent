@@ -6,8 +6,8 @@ sold, no exchange account, no leverage, futures, margin or shorting. The Lab is 
 
 | Round | Strategy | Signals | Status |
 |---|---|---|---|
-| 1 | DCA (dollar-cost averaging) | ACCUMULATE / WAIT / PAUSE | implemented, pre-registered, design backtest run once |
-| 2 | Trend following (defined differently from H2's EMA 50/200) | BUY SETUP / HOLD / NO TRADE / EXIT / REDUCE EXPOSURE | planned |
+| 1 | DCA (dollar-cost averaging) | ACCUMULATE / WAIT / PAUSE | implemented, pre-registered, design backtest run once: PASS (design data) |
+| 2 | Trend following (4h pullback continuation; defined differently from H2's EMA 50/200) | BUY SETUP / HOLD / NO TRADE / EXIT / REDUCE EXPOSURE | implemented, pre-registered, design backtest run once: FAIL (design data) |
 | 3 | Range trading | same | planned |
 | 4 | Breakout trading (never from a wick alone) | same | planned |
 | 5 | Narrative / sector rotation (BTC, ETH, SOL, BNB; price, relative strength, volume) | BTC STRONGER / ALTCOIN STRENGTH / NEUTRAL / NO TRADE | planned |
@@ -33,9 +33,13 @@ missing_candles, warnings), `regime` (4h context), `explanation`, `rejection`, `
    pre-registered one is **NOT VALIDATED (settings changed)** and inherits neither the backtest nor the forward test.
    Resetting to the defaults (same config hash) is the pre-registered configuration again.
 4. **Forward testing** is the only path to "forward tested": a separate tracker (`services/strategy_forward.py`, own
-   append-only tables, own fingerprint over `base.py` + the strategy module + the tracker, own start date = the next
-   UTC midnight after it is first registered, i.e. the day after the merged code runs) processes each new closed
-   daily candle once and gives a fixed verdict after 365 days. It is independent of the H1/H2 tracker.
+   append-only tables, own start date = the next UTC midnight after it is first registered, i.e. the day after the
+   merged code runs) processes each new closed candle of the strategy's timeframe once, with the strategy's own
+   per-bar step (the same as its backtest), and gives a fixed verdict after 365 days. It is independent of the H1/H2
+   tracker. Since round 2 the tracker is a generic core and a strategy's fingerprint covers **its own module + the
+   core** only, so later rounds do not disturb earlier strategies. DCA was registered under the round-1 scheme and had
+   processed no day; its fingerprint was re-based once (append-only `strategy_forward_rebases`; the database refuses a
+   re-base after the first processed day).
 
 Validation statuses: NOT VALIDATED · NOT VALIDATED (settings changed) · NOT VALIDATED (code changed) · BACKTESTED
 (design data) · FORWARD TESTING · FORWARD TESTED: PASS / FAIL. Design results never validate a strategy.
@@ -58,6 +62,30 @@ Validation statuses: NOT VALIDATED · NOT VALIDATED (settings changed) · NOT VA
   29% of windows). Design-data evidence only: status BACKTESTED (design data), not validated.
 - **Limitations:** one asset and one price source (Binance BTCUSDT daily); fixed costs; overlapping windows are not
   independent samples; win rate and profit factor do not apply; walk-forward does not apply (no fitted parameters).
+
+## DCA addendum (2026-11-01): deposit-neutral drawdown, reported only
+
+C1's drawdown is on the whole budget (cash not yet invested + BTC). The time-weighted index of the invested BTC and
+(value − invested) / invested are shown next to it, reported only (`services/strategies/dca_metrics.py`). On the
+design period: time-weighted max drawdown 76.72% and worst return on invested −54.71% (2022-06-18), against 26.59% on
+the budget basis. The locked study and its verdict are unchanged.
+
+## Trend following (round 2)
+
+- **Rules** (`PREREGISTRATION_TREND.md`, config hash `27ce4fee913591af`): 4h EMA 21 > 50 > 200 with EMA 50 rising,
+  ADX(14) ≥ 20 and the last daily close above the daily EMA 50; entry after the previous bar's low touched EMA 21 and
+  this bar closed above the previous high, at the next open; stop = lowest low of the last 5 closed 4h bars −
+  0.25 × ATR(14); target 2R; exit on a 4h close below EMA 50 or after 30 × 4h bars; 1% planned risk, never more than
+  100% of the account; 0.10% fee + 0.05% slippage per side. Differs from H2 in timeframe, filters, entry timing,
+  stops, targets, exits and sizing.
+- **Criteria:** trades ≥ 30 (else INCONCLUSIVE); expectancy ≥ +0.15R; profit factor ≥ 1.3; max drawdown ≤ 15%;
+  beats ≥ 90% of 1,000 random-entry runs with the same holding times and stop/target rules. Buy & hold, the H2 rule,
+  walk-forward windows and an ADX 15/20/25 × target 1.5/2/3R grid are reported only.
+- **Design result** (`data/strategy_trend_design.md`, run once, 4h decisions 2021-06-20 … 2025-10-28): **FAIL**.
+  94 trades, expectancy −0.08R, profit factor 0.82, max drawdown 9.57%, net −7.82%; beat 83% of random runs. Buy &
+  hold +217%, H2 rule +230% (max drawdowns 77% and 38%). Two of nine 182-day windows were positive; no sensitivity
+  combination had a positive expectancy. Status: BACKTESTED (design data), not validated; its forward test runs
+  anyway as pre-registered.
 
 ## API
 

@@ -42,19 +42,21 @@
     const levels = r.entry_zone || r.stop !== null || (r.targets || []).length
       ? `<dl class="adv-dl"><div><dt>Entry zone</dt><dd>${r.entry_zone ? `$${esc(r.entry_zone.low)} to $${esc(r.entry_zone.high)}` : "Not applicable"}</dd></div>
           <div><dt>Invalidation</dt><dd>${r.stop !== null ? "$" + esc(r.stop) : "Not applicable"}</dd></div>
+          <div><dt>Target</dt><dd>${(r.targets || []).length ? r.targets.map((t) => "$" + esc(t)).join(", ") : "Not applicable"}</dd></div>
           <div><dt>Reward/risk</dt><dd>${r.reward_risk !== null ? esc(r.reward_risk) : "Not applicable"}</dd></div></dl>`
       : `<p class="muted small">Entry, invalidation and reward/risk do not apply: ${esc(s.id === "dca" ? "DCA buys on a schedule and never sells." : "no setup.")}</p>`;
     const warn = [...(r.contradictory || []), ...((r.data || {}).warnings || [])];
     const bt = s.backtest ? `Design backtest: ${esc(s.backtest.verdict)} on its pre-registered criteria` : "Design backtest: not run yet";
     return `<article class="strat-card" id="strat-${esc(s.id)}">${head}
       <div class="strat-tags">${badge(s.validation.status)}</div>${kinds(r.labels)}
+      <p class="muted small">${esc(s.purpose)}</p>
       <div class="strat-signal sig-${esc(r.signal.toLowerCase().replace(/[^a-z]+/g, "-"))}">${esc(r.signal)}</div>
       <p class="small muted">${esc(r.asset)} · ${esc(r.timeframe)} · evaluated ${esc(when(r.evaluated_at))} · regime (context) ${esc(r.regime || "not available")}</p>
       <p class="small">${esc(r.explanation)}</p>
-      ${r.rejection ? `<p class="small muted">Why no buy: ${esc(r.rejection)}</p>` : ""}
+      ${r.rejection ? `<p class="small muted">${s.id === "dca" ? "Why no buy" : "Why no trade"}: ${esc(r.rejection)}</p>` : ""}
       <p class="small muted">Strength: ${r.strength === null ? "not applicable" : esc(r.strength) + " / 100"} · ${esc(r.strength_note)}</p>
       ${levels}
-      <p class="small muted">Costs: fee ${esc(r.fees_pct)}% + slippage ${esc(r.slippage_pct)}% per buy · data ${esc(r.data.source || "unknown")}, last close ${esc(when(r.data.last_candle_close))}${r.data.is_stale ? " (stale)" : ""}</p>
+      <p class="small muted">Costs: fee ${esc(r.fees_pct)}% + slippage ${esc(r.slippage_pct)}% per ${s.id === "dca" ? "buy" : "side"} · data ${esc(r.data.source || "unknown")}, last close ${esc(when(r.data.last_candle_close))}${r.data.is_stale ? " (stale)" : ""}</p>
       ${list(r.supporting)}${warn.length ? `<h4>Warnings</h4>${list(warn)}` : ""}
       <p class="small">${bt}. Config version ${esc(s.config.version)}${s.config.settings_changed ? " (changed from the pre-registered settings)" : ""}.</p>
       ${status}</article>`;
@@ -69,41 +71,73 @@
     $("stratCompareNote").textContent = cmp.note;
   }
 
-  function renderBacktest(bt) {
+  const num = (v, d = 2) => (v === null || v === undefined ? "N/A" : Number(v).toFixed(d));
+  const runCmd = (sid) => `<code>python scripts\\research_strategy.py ${esc(sid)}</code>`;
+
+  function renderBacktest(sid, bt) {
     if (!bt) {
-      $("stratBacktest").innerHTML = `<p class="muted small">No design backtest yet. It runs once, after the pre-registration is committed:
-        <code>python scripts\\research_strategy.py dca</code></p>`;
+      $("stratBacktest").innerHTML = `<p class="muted small">No design backtest yet. It runs once, after the pre-registration is committed: ${runCmd(sid)}</p>`;
       return;
     }
-    const m = bt.metrics, rol = bt.rolling || {};
-    $("stratBacktest").innerHTML = `<p><b>${esc(bt.verdict)}</b> on the pre-registered criteria (design data ${esc(day(bt.period.first_day))} to ${esc(day(bt.period.last_day))}: evidence, not validation).</p>
-      <dl class="adv-dl"><div><dt>Return on the budget</dt><dd>${pct(m.net_return_pct)}</dd></div>
-        <div><dt>Lump sum, same budget</dt><dd>${pct(m.buy_hold_return_pct)}</dd></div>
-        <div><dt>Max drawdown</dt><dd>${m.max_drawdown_pct.toFixed(2)}%</dd></div><div><dt>Buys</dt><dd>${esc(m.trades)}</dd></div>
-        <div><dt>Fees and slippage</dt><dd>$${Number(m.costs_usd).toFixed(2)}</dd></div>
-        <div><dt>Rolling ${esc(rol.horizon_days)}-day windows</dt><dd>${esc(rol.windows)}</dd></div></dl>
-      ${list((bt.criteria || []).map((c) => `${c.id} ${c.passed ? "passed" : "failed"}: ${c.rule} (DCA ${Number(c.dca).toFixed(2)}%, lump sum ${Number(c.lump_sum).toFixed(2)}%)`))}`;
+    const m = bt.metrics;
+    const head = `<p><b>${esc(bt.verdict)}</b> on the pre-registered criteria (design data ${esc(day(bt.period.first_day))} to ${esc(day(bt.period.last_day))}: evidence, not validation).</p>`;
+    if (sid === "dca") {
+      const rol = bt.rolling || {};
+      $("stratBacktest").innerHTML = `${head}
+        <dl class="adv-dl"><div><dt>Return on the budget</dt><dd>${pct(m.net_return_pct)}</dd></div>
+          <div><dt>Lump sum, same budget</dt><dd>${pct(m.buy_hold_return_pct)}</dd></div>
+          <div><dt>Max drawdown</dt><dd>${num(m.max_drawdown_pct)}%</dd></div><div><dt>Buys</dt><dd>${esc(m.trades)}</dd></div>
+          <div><dt>Fees and slippage</dt><dd>$${num(m.costs_usd)}</dd></div>
+          <div><dt>Rolling ${esc(rol.horizon_days)}-day windows</dt><dd>${esc(rol.windows)}</dd></div></dl>
+        ${list((bt.criteria || []).map((c) => `${c.id} ${c.passed ? "passed" : "failed"}: ${c.rule} (DCA ${num(c.dca)}%, lump sum ${num(c.lump_sum)}%)`))}`;
+      return;
+    }
+    const bh = bt.buy_and_hold || {}, h2 = bt.h2_rule || {}, rnd = bt.random_entries || {};
+    const wf = (bt.walk_forward || []).map((w) => `<tr><td data-label="Window">${esc(day(w.start))} to ${esc(day(w.end))}</td><td data-label="Trades">${esc(w.trades)}</td>
+      <td data-label="Return">${pct(w.return_pct)}</td><td data-label="Sum of R">${num(w.sum_r)}</td></tr>`).join("");
+    const sens = (bt.sensitivity || []).map((x) => `<tr><td data-label="ADX min">${esc(x.adx_min)}${x.is_default ? " (default)" : ""}</td>
+      <td data-label="Target">${esc(x.target_r)}R</td><td data-label="Trades">${esc(x.trades)}</td><td data-label="Expectancy">${num(x.expectancy_r)}R</td>
+      <td data-label="Profit factor">${num(x.profit_factor)}</td><td data-label="Max DD">${num(x.max_drawdown_pct)}%</td></tr>`).join("");
+    $("stratBacktest").innerHTML = `${head}${bt.sample_warning ? `<p class="set-warn small">${esc(bt.sample_warning)}</p>` : ""}
+      <dl class="adv-dl"><div><dt>Trades</dt><dd>${esc(m.trades)}</dd></div><div><dt>Expectancy</dt><dd>${num(m.expectancy_r)}R</dd></div>
+        <div><dt>Profit factor</dt><dd>${num(m.profit_factor)}</dd></div><div><dt>Win rate</dt><dd>${num(m.win_rate_pct, 1)}%</dd></div>
+        <div><dt>Net return</dt><dd>${pct(m.net_return_pct)}</dd></div><div><dt>Max drawdown</dt><dd>${num(m.max_drawdown_pct)}%</dd></div>
+        <div><dt>Buy &amp; hold (reported)</dt><dd>${pct(bh.net_return_pct)} · max DD ${num(bh.max_drawdown_pct)}%</dd></div>
+        <div><dt>H2 rule (reported)</dt><dd>${pct(h2.net_return_pct)} · max DD ${num(h2.max_drawdown_pct)}%</dd></div>
+        <div><dt>Beats random entries</dt><dd>${num(rnd.beaten_pct, 1)}% of ${esc(rnd.runs)} random runs</dd></div>
+        <div><dt>Fees and slippage</dt><dd>${num(m.costs_pct)}% of the account</dd></div></dl>
+      ${list((bt.criteria || []).map((c) => `${c.id} ${c.passed ? "passed" : "failed"}: ${c.rule} (value ${num(c.value)})`))}
+      <h4>Walk-forward windows (182 days, fixed rules, reported only)</h4>
+      <div class="table-wrap"><table class="table stack"><thead><tr><th>Window</th><th>Trades</th><th>Return</th><th>Sum of R</th></tr></thead><tbody>${wf}</tbody></table></div>
+      <h4>Sensitivity (reported only, never used to choose parameters)</h4>
+      <div class="table-wrap"><table class="table stack"><thead><tr><th>ADX min</th><th>Target</th><th>Trades</th><th>Expectancy</th><th>Profit factor</th><th>Max DD</th></tr></thead><tbody>${sens}</tbody></table></div>`;
   }
 
   // Deposit-neutral views (addendum 2026-11-01): reported only, never a criterion.
   function depositNeutral(m, budgetDd) {
     if (!m || m.twr_max_drawdown_pct === null || m.twr_max_drawdown_pct === undefined) return "";
     return `<div class="strat-supp"><p class="small"><b>Drawdown of the invested money</b> <span class="tag hyp">Reported only</span></p>
-      <dl class="adv-dl"><div><dt>Time-weighted max drawdown</dt><dd>${Number(m.twr_max_drawdown_pct).toFixed(2)}%</dd></div>
-        ${budgetDd !== undefined ? `<div><dt>Budget-basis max drawdown (C1 basis)</dt><dd>${Number(budgetDd).toFixed(2)}%</dd></div>` : ""}
+      <dl class="adv-dl"><div><dt>Time-weighted max drawdown</dt><dd>${num(m.twr_max_drawdown_pct)}%</dd></div>
+        ${budgetDd !== undefined ? `<div><dt>Budget-basis max drawdown (C1 basis)</dt><dd>${num(budgetDd)}%</dd></div>` : ""}
         <div><dt>Time-weighted return</dt><dd>${pct(m.twr_return_pct)}</dd></div>
         <div><dt>Return on invested: worst</dt><dd>${pct(m.roi_worst_pct)} (${esc(day(m.roi_worst_day))})</dd></div>
         <div><dt>Return on invested: last</dt><dd>${pct(m.roi_final_pct)}</dd></div></dl>
       <p class="small muted">${esc(m.note)}</p></div>`;
   }
 
-  function renderForward(f) {
+  function renderForward(sid, f) {
     const state = { not_started: "Not started yet: the background monitor registers it once the app runs.",
-      waiting: `Starts ${f.start_day ? day(f.start_day) : "soon"} (00:00 UTC); no completed day yet.`,
-      running: `Running: day ${f.days_elapsed} of ${f.target_days}.`, done: `Done: ${f.verdict} on the pre-registered forward criterion.` }[f.state];
-    const nums = f.days_elapsed ? `<p class="small">DCA ${pct(f.dca_return_pct)} (max drawdown ${Number(f.dca_max_dd_pct).toFixed(2)}%) vs lump sum ${pct(f.lump_return_pct)} (max drawdown ${Number(f.lump_max_dd_pct).toFixed(2)}%).</p>` : "";
+      waiting: `Starts ${f.start_day ? day(f.start_day) : "soon"} (00:00 UTC); no completed ${f.timeframe === "1d" ? "day" : "bar"} yet.`,
+      running: `Running: day ${f.days_elapsed} of ${f.target_days}.`, done: `Done: ${f.verdict} on the pre-registered forward criteria.` }[f.state];
+    let nums = "";
+    if (f.days_elapsed || f.bars_processed) {
+      nums = sid === "dca"
+        ? `<p class="small">DCA ${pct(f.dca_return_pct)} (max drawdown ${num(f.dca_max_dd_pct)}%) vs lump sum ${pct(f.lump_return_pct)} (max drawdown ${num(f.lump_max_dd_pct)}%).</p>`
+        : `<p class="small">${esc(f.trades)} trades · net return ${pct(f.net_return_pct)} · expectancy ${num(f.expectancy_r)}R · max drawdown ${num(f.max_drawdown_pct)}%.</p>`;
+    }
+    const rebased = f.rebased ? `<p class="small muted">Fingerprint re-based on ${esc(day(f.rebased.created_at))}, before the first processed day: ${esc(f.rebased.reason)}.</p>` : "";
     $("stratForward").innerHTML = `<p class="small">${esc(state)}</p>${nums}
-      <p class="small muted">Own tracker, own fingerprint <code>${esc(String(f.fingerprint_now).slice(0, 12))}</code>: <span class="fp-badge ${f.code_changed ? "bad" : "ok"}">${f.code_changed ? "code changed since the start" : "unchanged since the start"}</span></p>`;
+      <p class="small muted">Own tracker, own fingerprint <code>${esc(String(f.fingerprint_now).slice(0, 12))}</code>: <span class="fp-badge ${f.code_changed ? "bad" : "ok"}">${f.code_changed ? "code changed since the start" : "unchanged since the start"}</span></p>${rebased}`;
   }
 
   function field(key, f, value) {
@@ -114,13 +148,15 @@
     return `<div class="set-row">${label}<div>${input}</div></div>`;
   }
 
-  function renderConfig(cfg) {
-    const box = $("stratCfg-dca");
+  function renderConfig(sid, cfg) {
+    const box = document.querySelector("#stratDetail .strat-cfg");
+    box.id = `stratCfg-${sid}`;
     // in the documented order (JSON objects arrive with sorted keys)
     box.querySelector(".strat-cfg-fields").innerHTML = cfg.order.map((k) => field(k, cfg.fields[k], cfg.config[k])).join("");
     box.querySelector(".strat-cfg-version").textContent = `Configuration version ${cfg.version} (${cfg.settings_changed
       ? "differs from the pre-registered settings: NOT VALIDATED (settings changed)" : "the pre-registered settings"}). Pre-registration: ${cfg.preregistration}.`;
     box.dataset.version = cfg.version;
+    box.dataset.sid = sid;
   }
 
   function renderHistory(rows) {
@@ -129,19 +165,27 @@
       : '<tr><td colspan="4" class="empty">No stored records yet: the background monitor stores one per UTC day.</td></tr>';
   }
 
+  const store = { get(k, d) { try { return localStorage.getItem(k) || d; } catch (_) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (_) { /* private mode */ } } };
+  let detailId = store.get("btc-strategy-detail", "dca");
+
   async function load() {
     try {
-      const [all, dca, cfg] = await Promise.all([call("GET", "/api/strategies"), call("GET", "/api/strategies/dca"),
-        call("GET", "/api/strategies/dca/config")]);
+      const all = await call("GET", "/api/strategies");
+      const live = all.strategies.filter((s) => s.implemented);
+      if (!live.some((s) => s.id === detailId)) detailId = live[0].id;
+      const [det, cfg] = await Promise.all([call("GET", `/api/strategies/${detailId}`), call("GET", `/api/strategies/${detailId}/config`)]);
       $("stratCards").innerHTML = all.strategies.map(card).join("");
       renderCompare(all.comparison);
-      renderBacktest(dca.backtest);
-      if (dca.backtest_supplement) $("stratBacktest").insertAdjacentHTML("beforeend",
-        depositNeutral(dca.backtest_supplement, dca.backtest_supplement.budget_basis_max_drawdown_pct));
-      renderForward(dca.forward);
-      if (dca.forward_deposit_neutral) $("stratForward").insertAdjacentHTML("beforeend", depositNeutral(dca.forward_deposit_neutral));
-      renderConfig(cfg);
-      renderHistory(dca.history || []);
+      $("stratDetailPick").innerHTML = live.map((s) => `<option value="${esc(s.id)}"${s.id === detailId ? " selected" : ""}>${esc(s.name)}</option>`).join("");
+      $("stratDetailTitle").textContent = `${det.name} details`;
+      renderBacktest(detailId, det.backtest);
+      if (det.backtest_supplement) $("stratBacktest").insertAdjacentHTML("beforeend",
+        depositNeutral(det.backtest_supplement, det.backtest_supplement.budget_basis_max_drawdown_pct));
+      renderForward(detailId, det.forward);
+      if (det.forward_deposit_neutral) $("stratForward").insertAdjacentHTML("beforeend", depositNeutral(det.forward_deposit_neutral));
+      renderConfig(detailId, cfg);
+      renderHistory(det.history || []);
       $("stratLab").dataset.state = "ready";
     } catch (err) {
       $("stratCards").innerHTML = `<p class="empty">Strategy Lab could not load: ${esc(err.message)}</p>`;
@@ -150,9 +194,16 @@
   }
 
   function initForm() {
-    const box = $("stratCfg-dca");
-    if (!box) return;
+    const box = document.querySelector("#stratDetail .strat-cfg");
+    if (!box || box.dataset.ready) return;
+    box.dataset.ready = "1";
     const form = box.querySelector("form"), msg = box.querySelector(".set-msg");
+    $("stratDetailPick").addEventListener("change", (e) => {
+      detailId = e.target.value;
+      store.set("btc-strategy-detail", detailId);
+      msg.textContent = "";
+      load();
+    });
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const body = {};
@@ -160,11 +211,11 @@
       const next = Number(box.dataset.version || 0) + 1;
       if (!window.confirm(`Saving creates configuration version ${next}. Settings that differ from the pre-registered ones are `
         + "NOT VALIDATED (settings changed) and inherit no backtest or forward result. Continue?")) return;
-      try { await call("PUT", "/api/strategies/dca/config", body); msg.textContent = "Saved."; await load(); }
+      try { await call("PUT", `/api/strategies/${box.dataset.sid}/config`, body); msg.textContent = "Saved."; await load(); }
       catch (err) { msg.textContent = "Not saved: " + err.message; }
     });
     box.querySelector("[data-reset]").addEventListener("click", async () => {
-      try { await call("POST", "/api/strategies/dca/config/reset"); msg.textContent = "Reset to the pre-registered defaults."; await load(); }
+      try { await call("POST", `/api/strategies/${box.dataset.sid}/config/reset`); msg.textContent = "Reset to the pre-registered defaults."; await load(); }
       catch (err) { msg.textContent = "Reset failed: " + err.message; }
     });
   }

@@ -5,11 +5,11 @@ Refuses to run when:
   * the strategy's defaults no longer produce the config hash written in that pre-registration;
   * a design backtest of this configuration is already stored (strategy_backtests is append-only and unique), or the
     output files already exist (they are created, never overwritten).
-Design data only: daily candles closed before the 2025-10-29 holdout start. Writes data\\strategy_<id>_design.json/.md
+Design data only: candles (the strategy's BACKTEST_TIMEFRAMES) closed before the 2025-10-29 holdout start. Writes data\\strategy_<id>_design.json/.md
 and the stored result shown in Strategy Lab.
 
 Usage (from the project folder, .venv active):
-    python scripts\\research_strategy.py dca
+    python scripts\\research_strategy.py dca   (or trend)
 """
 from __future__ import annotations
 
@@ -37,8 +37,8 @@ def open_db() -> Database:
     return db
 
 
-def load_daily(db: Database) -> list[dict]:
-    return db.get_candles_range("binance", "BTCUSDT", "1d")
+def load_rows(db: Database, timeframe: str) -> list[dict]:
+    return db.get_candles_range("binance", "BTCUSDT", timeframe)
 
 
 def prereg_committed(path: Path) -> bool:
@@ -79,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{out_json.name} already exists. Nothing was run.")
         return 2
     versions = [v["version"] for v in db.strategy_configs(sid) if v["config_hash"] == h]
-    result = eng.backtest(load_daily(db), cfg)
+    result = eng.backtest(*[load_rows(db, tf) for tf in eng.BACKTEST_TIMEFRAMES], cfg)
     prereg_sha = hashlib.sha256(text.replace("\r\n", "\n").encode()).hexdigest()
     db.strategy_backtest_add(sid, min(versions) if versions else 1, h, "design", prereg_sha,
                              {**result, "preregistration_sha256": prereg_sha}, now_ms())

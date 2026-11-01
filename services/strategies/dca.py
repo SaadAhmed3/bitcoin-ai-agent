@@ -26,6 +26,9 @@ from services.strategies.base import DataQuality, StrategyResult, config_hash
 STRATEGY_ID = "dca"
 VERSION = "dca-1"
 PREREGISTRATION = "PREREGISTRATION_DCA.md"
+EVAL_TIMEFRAMES = ("1d",)
+BACKTEST_TIMEFRAMES = ("1d",)
+FORWARD_TIMEFRAME = "1d"
 DAY = 86_400_000
 WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 
@@ -308,3 +311,57 @@ def markdown(r: dict) -> str:
                      f"{p(y['lump_return_pct'])} | {y['lump_max_dd_pct']:.2f}% |")
     lines += ["", "## Limitations", ""] + [f"- {x}" for x in r["limitations"]] + [f"- Walk-forward: {r['walk_forward']}.", ""]
     return "\n".join(lines)
+
+
+def evaluate_frames(frames: dict, cfg: dict, now: int, data: DataQuality, regime: str | None = None,
+                    config_version: int = 1) -> StrategyResult:
+    return evaluate(frames.get("1d"), cfg, now, data, regime, config_version)
+
+
+# --------------------------------------------------------------------------- forward test (strategy_forward.py)
+def forward_state(events: list[dict]) -> dict | None:
+    marks = [e for e in events if e["kind"] == "mark"]
+    return dict(marks[-1]["detail"]) if marks else None
+
+
+def forward_step(cfg: dict, ctx: dict) -> tuple[list[dict], dict]:
+    """One closed day: a scheduled buy at its open, then the mark at its close (budget = the 365-day schedule)."""
+    r, t = ctx["rows"][ctx["k"]], ctx["test"]
+    start, day = t["start_day"], int(r["open_time"])
+    f, s = cfg["fee_pct"] / 100, cfg["slippage_pct"] / 100
+    st = ctx["state"] or {"btc": 0.0, "invested": 0.0, "lump_btc": None,
+                          "budget": cfg["amount_usd"] * len(scheduled_days(start, start + 364 * DAY, cfg))}
+    btc, invested, budget, lump_btc = st["btc"], st["invested"], st["budget"], st["lump_btc"]
+    if lump_btc is None:
+        lump_btc = budget * (1 - f) / (float(r["open"]) * (1 + s))
+    out = []
+    if is_buy_day(day, cfg):
+        usd = cfg["amount_usd"]
+        fill = float(r["open"]) * (1 + s)
+        got = (usd - usd * f) / fill
+        btc, invested = btc + got, invested + usd
+        out.append({"kind": "buy", "detail": {"open": float(r["open"]), "fill_price": fill, "usd": usd,
+                                              "fee_usd": usd * f, "btc": got}})
+    close = float(r["close"])
+    mark = {"close": close, "btc": btc, "invested": invested, "budget": budget, "lump_btc": lump_btc,
+            "dca_equity": (budget - invested) + btc * close * (1 - f - s), "lump_equity": lump_btc * close * (1 - f - s)}
+    out.append({"kind": "mark", "detail": mark})
+    return out, mark
+
+
+def forward_summary(events: list[dict], cfg: dict, done: bool) -> dict:
+    marks = [e for e in events if e["kind"] == "mark"]
+    out = {"buys": sum(1 for e in events if e["kind"] == "buy"), "verdict": None, "criteria": [],
+           "dca_return_pct": None, "lump_return_pct": None, "dca_max_dd_pct": None, "lump_max_dd_pct": None}
+    if marks:
+        budget = marks[-1]["detail"]["budget"]
+        dca_eq = [m["detail"]["dca_equity"] for m in marks]
+        lump_eq = [m["detail"]["lump_equity"] for m in marks]
+        out.update(dca_return_pct=(dca_eq[-1] / budget - 1) * 100, lump_return_pct=(lump_eq[-1] / budget - 1) * 100,
+                   dca_max_dd_pct=_max_dd(dca_eq), lump_max_dd_pct=_max_dd(lump_eq))
+    if done and marks:
+        passed = out["dca_max_dd_pct"] < out["lump_max_dd_pct"]
+        out["criteria"] = [{"id": "F1", "rule": "max drawdown over the 365 forward days: DCA < lump sum",
+                            "passed": passed, "dca": out["dca_max_dd_pct"], "lump_sum": out["lump_max_dd_pct"]}]
+        out["verdict"] = "PASS" if passed else "FAIL"
+    return out
