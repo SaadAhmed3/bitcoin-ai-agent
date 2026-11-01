@@ -606,3 +606,5 @@ nav a .label { flex: 1; min-width: 0; }
 .strat-planned { font-size: 13px; color: var(--muted); }
 .strat-card p, .strat-card dd { overflow-wrap: anywhere; }
 .strat-cfg .strat-cfg-fields { margin-top: 8px; }
+.strat-kinds { margin: -4px 0 6px; }
+.strat-supp { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }

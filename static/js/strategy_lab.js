@@ -15,8 +15,16 @@
   const when = (ms) => (ms ? new Date(ms).toLocaleString(undefined, { timeZone: tz(), dateStyle: "medium", timeStyle: "short" }) : "Unknown time");
   const day = (ms) => new Date(ms).toISOString().slice(0, 10);
   const pct = (v) => (v === null || v === undefined ? "N/A" : `${v >= 0 ? "+" : ""}${Number(v).toFixed(2)}%`);
-  const TAG = { "LIVE DATA": "live", CALCULATED: "calc", "MODEL ESTIMATE": "model", HYPOTHETICAL: "hyp", SIMULATED: "sim", "NOT VALIDATED": "nv" };
-  const tags = (labels) => labels.map((l) => `<span class="tag ${TAG[l] || "calc"}">${esc(l)}</span>`).join(" ");
+  // One status badge per card (validation + what kind of number it is), the data kinds as plain text below it.
+  const BADGE = { "NOT VALIDATED": "Not validated", "BACKTESTED (design data)": "Backtested on design data · not validated",
+    "NOT VALIDATED (settings changed)": "Settings changed · not validated", "NOT VALIDATED (code changed)": "Code changed · not validated",
+    "FORWARD TESTING": "Forward testing · not validated", "FORWARD TESTED: PASS": "Forward tested: pass",
+    "FORWARD TESTED: FAIL": "Forward tested: fail · not validated" };
+  const badge = (status) => `<span class="tag ${status === "FORWARD TESTED: PASS" ? "live" : "nv"}" title="${esc(status)}">${esc(BADGE[status] || status)}</span>`;
+  const kinds = (labels) => {
+    const k = labels.filter((l) => l !== "NOT VALIDATED").map((l) => l.toLowerCase()).join(" · ");
+    return k ? `<p class="strat-kinds small muted">${esc(k.charAt(0).toUpperCase() + k.slice(1))}</p>` : "";
+  };
   const list = (items, cls = "") => (items && items.length ? `<ul class="ev ${cls}">${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "");
 
   function card(s) {
@@ -24,7 +32,7 @@
     const status = `<p class="strat-status"><b>${esc(s.validation.status)}</b><br><span class="muted small">${esc(s.validation.detail)}</span></p>`;
     if (!s.implemented) {
       return `<article class="strat-card planned" id="strat-${esc(s.id)}">${head}
-        <div class="strat-tags">${tags(["NOT VALIDATED"])}</div>
+        <div class="strat-tags">${badge(s.validation.status)}</div>
         <p class="muted small">${esc(s.purpose)}</p><p class="strat-planned">Planned for round ${s.planned_round}: not implemented yet, so no signal.</p>${status}</article>`;
     }
     if (!s.result) {
@@ -39,7 +47,7 @@
     const warn = [...(r.contradictory || []), ...((r.data || {}).warnings || [])];
     const bt = s.backtest ? `Design backtest: ${esc(s.backtest.verdict)} on its pre-registered criteria` : "Design backtest: not run yet";
     return `<article class="strat-card" id="strat-${esc(s.id)}">${head}
-      <div class="strat-tags">${tags(r.labels)}</div>
+      <div class="strat-tags">${badge(s.validation.status)}</div>${kinds(r.labels)}
       <div class="strat-signal sig-${esc(r.signal.toLowerCase().replace(/[^a-z]+/g, "-"))}">${esc(r.signal)}</div>
       <p class="small muted">${esc(r.asset)} · ${esc(r.timeframe)} · evaluated ${esc(when(r.evaluated_at))} · regime (context) ${esc(r.regime || "not available")}</p>
       <p class="small">${esc(r.explanation)}</p>
@@ -75,6 +83,18 @@
         <div><dt>Fees and slippage</dt><dd>$${Number(m.costs_usd).toFixed(2)}</dd></div>
         <div><dt>Rolling ${esc(rol.horizon_days)}-day windows</dt><dd>${esc(rol.windows)}</dd></div></dl>
       ${list((bt.criteria || []).map((c) => `${c.id} ${c.passed ? "passed" : "failed"}: ${c.rule} (DCA ${Number(c.dca).toFixed(2)}%, lump sum ${Number(c.lump_sum).toFixed(2)}%)`))}`;
+  }
+
+  // Deposit-neutral views (addendum 2026-11-01): reported only, never a criterion.
+  function depositNeutral(m, budgetDd) {
+    if (!m || m.twr_max_drawdown_pct === null || m.twr_max_drawdown_pct === undefined) return "";
+    return `<div class="strat-supp"><p class="small"><b>Drawdown of the invested money</b> <span class="tag hyp">Reported only</span></p>
+      <dl class="adv-dl"><div><dt>Time-weighted max drawdown</dt><dd>${Number(m.twr_max_drawdown_pct).toFixed(2)}%</dd></div>
+        ${budgetDd !== undefined ? `<div><dt>Budget-basis max drawdown (C1 basis)</dt><dd>${Number(budgetDd).toFixed(2)}%</dd></div>` : ""}
+        <div><dt>Time-weighted return</dt><dd>${pct(m.twr_return_pct)}</dd></div>
+        <div><dt>Return on invested: worst</dt><dd>${pct(m.roi_worst_pct)} (${esc(day(m.roi_worst_day))})</dd></div>
+        <div><dt>Return on invested: last</dt><dd>${pct(m.roi_final_pct)}</dd></div></dl>
+      <p class="small muted">${esc(m.note)}</p></div>`;
   }
 
   function renderForward(f) {
@@ -116,7 +136,10 @@
       $("stratCards").innerHTML = all.strategies.map(card).join("");
       renderCompare(all.comparison);
       renderBacktest(dca.backtest);
+      if (dca.backtest_supplement) $("stratBacktest").insertAdjacentHTML("beforeend",
+        depositNeutral(dca.backtest_supplement, dca.backtest_supplement.budget_basis_max_drawdown_pct));
       renderForward(dca.forward);
+      if (dca.forward_deposit_neutral) $("stratForward").insertAdjacentHTML("beforeend", depositNeutral(dca.forward_deposit_neutral));
       renderConfig(cfg);
       renderHistory(dca.history || []);
       $("stratLab").dataset.state = "ready";
