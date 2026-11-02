@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
-SCHEMA_VERSION = 16  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
+SCHEMA_VERSION = 17  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
                      # 7: holdout_runs (0.9.2), 8: holdout_runs.holdout_start (0.9.3),
                      # 9: holdout_runs.verdict + criteria, write-once triggers (0.9.4),
                      # 10: forward_tests + forward_events, append-only (research-1),
@@ -22,6 +22,7 @@ SCHEMA_VERSION = 16  # 2: news_items, 3: signals, 4: backtests + paper trading, 
                      # 14: strategy_configs/signals/backtests/forward_tests/forward_events, append-only (Strategy Lab),
                      # 15: strategy_forward_rebases, append-only, only before a test's first processed day,
                      # 16: intel_* tables (Global Intelligence, context only); articles and market points append-only.
+                     # 17: reaction study: intel_reaction_* (append-only, keyed to articles), event time columns on intel_events.
                     # Migrations are additive; an upgrade backs the file up first.
 
 SCHEMA = """
@@ -425,7 +426,11 @@ CREATE TABLE IF NOT EXISTS intel_events (
     articles_count      INTEGER NOT NULL,
     sources_count       INTEGER NOT NULL,
     created_at          INTEGER NOT NULL,
-    updated_at          INTEGER NOT NULL
+    updated_at          INTEGER NOT NULL,
+    event_time_at       INTEGER,
+    first_seen_at       INTEGER,
+    anchor_article_id   TEXT,
+    time_flag           TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_intel_events_last ON intel_events (last_published_at DESC);
 CREATE TABLE IF NOT EXISTS intel_event_articles (
@@ -464,6 +469,42 @@ CREATE TRIGGER IF NOT EXISTS intel_market_points_no_update BEFORE UPDATE ON inte
     BEGIN SELECT RAISE(ABORT, 'intel market points are append-only'); END;
 CREATE TRIGGER IF NOT EXISTS intel_market_points_no_delete BEFORE DELETE ON intel_market_points
     BEGIN SELECT RAISE(ABORT, 'intel market points are append-only'); END;
+-- Reaction study: keyed to an article or a macro release, never to an event, because events can be rebuilt. Written once.
+CREATE TABLE IF NOT EXISTS intel_reaction_baselines (
+    subject_type    TEXT    NOT NULL CHECK (subject_type IN ('article', 'macro')),
+    subject_id      TEXT    NOT NULL,
+    event_ms        INTEGER NOT NULL,
+    base_open_time  INTEGER NOT NULL,
+    base_close      REAL    NOT NULL,
+    volume_ratio    REAL,
+    atr_pct         REAL,
+    regime          TEXT,
+    method          TEXT    NOT NULL,
+    computed_at     INTEGER NOT NULL,
+    PRIMARY KEY (subject_type, subject_id)
+);
+CREATE TABLE IF NOT EXISTS intel_reaction_outcomes (
+    subject_type       TEXT    NOT NULL,
+    subject_id         TEXT    NOT NULL,
+    horizon            TEXT    NOT NULL,
+    target_open_time   INTEGER NOT NULL,
+    target_close       REAL    NOT NULL,
+    return_pct         REAL    NOT NULL,
+    window_hours       INTEGER NOT NULL,
+    normal_abs_pct     REAL,
+    normal_median_pct  REAL,
+    normal_samples     INTEGER NOT NULL,
+    computed_at        INTEGER NOT NULL,
+    PRIMARY KEY (subject_type, subject_id, horizon)
+);
+CREATE TRIGGER IF NOT EXISTS intel_reaction_baselines_no_update BEFORE UPDATE ON intel_reaction_baselines
+    BEGIN SELECT RAISE(ABORT, 'intel reactions are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS intel_reaction_baselines_no_delete BEFORE DELETE ON intel_reaction_baselines
+    BEGIN SELECT RAISE(ABORT, 'intel reactions are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS intel_reaction_outcomes_no_update BEFORE UPDATE ON intel_reaction_outcomes
+    BEGIN SELECT RAISE(ABORT, 'intel reactions are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS intel_reaction_outcomes_no_delete BEFORE DELETE ON intel_reaction_outcomes
+    BEGIN SELECT RAISE(ABORT, 'intel reactions are append-only'); END;
 
 -- A stored sweep event is never changed or deleted; a later finding (e.g. a duplicate of the same move) is recorded
 -- here, once per event, and every reader excludes superseded events.
@@ -532,7 +573,11 @@ class Database:
                   ("source_health", "consecutive_failures", "INTEGER NOT NULL DEFAULT 0"),
                   ("holdout_runs", "holdout_start", f"INTEGER NOT NULL DEFAULT {DEFAULT_HOLDOUT_START}"),
                   ("holdout_runs", "verdict", "TEXT CHECK (verdict IN ('PASS', 'FAIL'))"),
-                  ("holdout_runs", "criteria", "TEXT")]
+                  ("holdout_runs", "criteria", "TEXT"),
+                  ("intel_events", "event_time_at", "INTEGER"),
+                  ("intel_events", "first_seen_at", "INTEGER"),
+                  ("intel_events", "anchor_article_id", "TEXT"),
+                  ("intel_events", "time_flag", "TEXT")]
     # Holdout runs are write-once (0.9.4): a stored run - above all its verdict - can never be changed or deleted, so
     # nothing done later (new pass criteria, a re-evaluation) can turn a spent FAIL into a PASS. The only allowed
     # update is linking the stored backtest run once (backtest_run_id NULL -> id).
@@ -1202,16 +1247,19 @@ class Database:
 
     def intel_save_event(self, event_id: int | None, ev: dict, new_article_ids: list[str], now: int) -> int:
         vals = (ev["title"], ev["category"], ev["country"], ev["status"], ev["status_reason"], ev["first_published_at"],
-                ev["last_published_at"], int(ev["date_known"]), ev["articles_count"], ev["sources_count"])
+                ev["last_published_at"], int(ev["date_known"]), ev["articles_count"], ev["sources_count"], ev.get("event_time_at"),
+                ev.get("first_seen_at"), ev.get("anchor_article_id"), ev.get("time_flag"))
         with self.connect() as conn:
             if event_id is None:
                 cur = conn.execute("""INSERT INTO intel_events (title, category, country, status, status_reason, first_published_at,
-                                      last_published_at, date_known, articles_count, sources_count, created_at, updated_at)
-                                      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""", (*vals, now, now))
+                                      last_published_at, date_known, articles_count, sources_count, event_time_at, first_seen_at,
+                                      anchor_article_id, time_flag, created_at, updated_at)
+                                      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (*vals, now, now))
                 event_id = int(cur.lastrowid)
             else:
                 conn.execute("""UPDATE intel_events SET title=?, category=?, country=?, status=?, status_reason=?, first_published_at=?,
-                                last_published_at=?, date_known=?, articles_count=?, sources_count=?, updated_at=? WHERE id=?""",
+                                last_published_at=?, date_known=?, articles_count=?, sources_count=?, event_time_at=?, first_seen_at=?,
+                                anchor_article_id=?, time_flag=?, updated_at=? WHERE id=?""",
                              (*vals, now, event_id))
             conn.executemany("INSERT OR IGNORE INTO intel_event_articles (article_id, event_id, added_at) VALUES (?,?,?)",
                              [(a, event_id, now) for a in new_article_ids])
@@ -1245,6 +1293,63 @@ class Database:
             rows = conn.execute("""SELECT category, status, COUNT(*) AS n FROM intel_events WHERE last_published_at >= ?
                                    GROUP BY category, status""", (since_ms,)).fetchall()
         return [dict(r) for r in rows]
+
+    def intel_event(self, event_id: int) -> dict | None:
+        with self.connect() as conn:
+            r = conn.execute("SELECT * FROM intel_events WHERE id = ?", (event_id,)).fetchone()
+        return dict(r) if r else None
+
+    def intel_article(self, article_id: str) -> dict | None:
+        with self.connect() as conn:
+            r = conn.execute("SELECT id, publisher, title, link, published_at, collected_at FROM intel_articles WHERE id = ?", (article_id,)).fetchone()
+        return dict(r) if r else None
+
+    def intel_event_times(self) -> list[dict]:
+        with self.connect() as conn:
+            return [dict(r) for r in conn.execute("SELECT id, category, event_time_at, anchor_article_id, time_flag FROM intel_events")]
+
+    def intel_timed_articles(self) -> list[dict]:
+        with self.connect() as conn:
+            return [dict(r) for r in conn.execute("SELECT id, published_at FROM intel_articles WHERE published_at IS NOT NULL")]
+
+    def intel_closed_candles(self, provider: str, symbol: str, timeframe: str, start_ms: int, now: int) -> list[dict]:
+        """Candles that had closed by `now` and were fetched after closing: a row saved while forming keeps partial values."""
+        with self.connect() as conn:
+            return [dict(r) for r in conn.execute(
+                """SELECT open_time, open, high, low, close, volume, close_time FROM candles
+                   WHERE provider=? AND symbol=? AND timeframe=? AND open_time>=? AND close_time<? AND fetched_at>=close_time
+                   ORDER BY open_time""", (provider, symbol, timeframe, start_ms, now))]
+
+    def intel_reaction_state(self) -> dict:
+        """Every stored reaction: {(subject_type, subject_id): {"baseline": row or None, "outcomes": {horizon: row}}}."""
+        out: dict = {}
+        with self.connect() as conn:
+            for r in conn.execute("SELECT * FROM intel_reaction_baselines"):
+                out[(r["subject_type"], r["subject_id"])] = {"baseline": dict(r), "outcomes": {}}
+            for r in conn.execute("SELECT * FROM intel_reaction_outcomes"):
+                out.setdefault((r["subject_type"], r["subject_id"]), {"baseline": None, "outcomes": {}})["outcomes"][r["horizon"]] = dict(r)
+        return out
+
+    def intel_add_reaction(self, subject_type: str, subject_id: str, baseline: dict | None, outcomes: dict[str, dict], now: int) -> tuple[int, int]:
+        """Insert what is new; a stored row is never changed. Returns (baselines added, outcomes added)."""
+        with self.connect() as conn:
+            before = conn.total_changes
+            if baseline:
+                conn.execute("""INSERT OR IGNORE INTO intel_reaction_baselines (subject_type, subject_id, event_ms, base_open_time, base_close,
+                                volume_ratio, atr_pct, regime, method, computed_at) VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                             (subject_type, subject_id, baseline["event_ms"], baseline["base_open_time"], baseline["base_close"],
+                              baseline["volume_ratio"], baseline["atr_pct"], baseline["regime"], baseline["method"], now))
+            added_base = conn.total_changes - before
+            conn.executemany("""INSERT OR IGNORE INTO intel_reaction_outcomes (subject_type, subject_id, horizon, target_open_time, target_close,
+                                return_pct, window_hours, normal_abs_pct, normal_median_pct, normal_samples, computed_at)
+                                VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                             [(subject_type, subject_id, h, o["target_open_time"], o["target_close"], o["return_pct"], o["window_hours"],
+                               o["normal_abs_pct"], o["normal_median_pct"], o["normal_samples"], now) for h, o in outcomes.items()])
+            return added_base, conn.total_changes - before - added_base
+
+    def intel_market_range(self, series: str) -> list[dict]:
+        with self.connect() as conn:
+            return [dict(r) for r in conn.execute("SELECT data_date, value FROM intel_market_points WHERE series = ? ORDER BY data_date", (series,))]
 
     def intel_add_market_points(self, series: str, points: list[tuple[str, float]], source: str, now: int) -> int:
         """A stored value is never changed: the first value published for a date stays."""

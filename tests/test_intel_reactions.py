@@ -337,7 +337,8 @@ def test_rebuilt_event_finds_the_reaction_of_its_new_earliest_article(db):
 
 def test_tables_have_no_event_id_column(db):
     for t in ("intel_reaction_baselines", "intel_reaction_outcomes"):
-        cols = [r["name"] for r in db.connect().execute(f"PRAGMA table_info({t})")]
+        with db.connect() as conn:
+            cols = [r["name"] for r in conn.execute(f"PRAGMA table_info({t})")]
         assert "event_id" not in cols and {"subject_type", "subject_id"} <= set(cols)
 
 
@@ -524,17 +525,19 @@ def test_future_release_is_not_measured(db):
     seed(db)
     s = service(db, T, full_calendar(release("CPI", T + 10 * HOUR, "soon")))
     s.update()
-    assert not [r for r in table(db, "intel_reaction_baselines") if r["subject_id"] == "soon"]
+    assert not [r for r in table(db, "intel_reaction_baselines") if r["subject_id"].startswith("soon")]
 
 
-def test_rescheduled_release_does_not_use_its_old_measurement(db):
+def test_rescheduled_release_is_measured_at_its_new_time_and_the_old_row_is_not_counted(db):
     seed(db)
     s = service(db, T + 300 * HOUR, full_calendar(release("CPI", T, "cpi-x")))
     s.update()
     assert next(m for m in s.study()["macro_releases"] if m["kind"] == "CPI")["horizons"]["1h"]["n"] == 1
     s2 = service(db, T + 300 * HOUR, full_calendar(release("CPI", T + 2 * HOUR, "cpi-x")))
     s2.update()
-    assert next(m for m in s2.study()["macro_releases"] if m["kind"] == "CPI")["horizons"]["1h"]["n"] == 0
+    assert next(m for m in s2.study()["macro_releases"] if m["kind"] == "CPI")["horizons"]["1h"]["n"] == 1
+    times = sorted(r["event_ms"] for r in table(db, "intel_reaction_baselines") if r["subject_id"].startswith("cpi-x"))
+    assert times == [T, T + 2 * HOUR]                                # both stored: append-only
 
 
 # ---------------------------------------------------------------- other markets, daily and labelled
@@ -569,6 +572,7 @@ def test_study_says_what_it_is_not(db):
     assert st["label"] == "Context, not part of the signal"
     text = " ".join(st["notes"]).lower()
     assert "correlation" in text and "causation" in text and "overlap" in text and "descriptive" in text
+    assert "by chance" in text                                       # many groups and horizons are compared at once
 
 
 def test_study_payload_has_no_predictive_language(db):
@@ -654,14 +658,16 @@ def test_migration_from_schema_16_adds_only_and_keeps_data(tmp_path):
         for col in ("event_time_at", "first_seen_at", "anchor_article_id", "time_flag"):
             conn.execute(f"ALTER TABLE intel_events DROP COLUMN {col}")
         conn.execute("UPDATE schema_meta SET value='16' WHERE key='schema_version'")
-    before = [dict(r) for r in d.connect().execute("SELECT id, title, category FROM intel_events")]
+    with d.connect() as conn:
+        before = [dict(r) for r in conn.execute("SELECT id, title, category FROM intel_events")]
     Database(str(path)).init()
     assert SCHEMA_VERSION == 17
     assert list(tmp_path.glob("old.sqlite3.backup-*-schema-16"))
-    after = [dict(r) for r in d.connect().execute("SELECT id, title, category FROM intel_events")]
-    assert after == before
-    assert d.connect().execute("SELECT id FROM intel_articles").fetchone()["id"] == "a1"
-    assert {r["name"] for r in d.connect().execute("PRAGMA table_info(intel_events)")} >= {"event_time_at", "first_seen_at", "anchor_article_id", "time_flag"}
+    with d.connect() as conn:
+        assert [dict(r) for r in conn.execute("SELECT id, title, category FROM intel_events")] == before
+        assert conn.execute("SELECT id FROM intel_articles").fetchone()["id"] == "a1"
+        assert {r["name"] for r in conn.execute("PRAGMA table_info(intel_events)")} >= {"event_time_at", "first_seen_at", "anchor_article_id", "time_flag"}
+        assert {"intel_reaction_baselines", "intel_reaction_outcomes"} <= {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
 
 
 def test_grouping_rebuilds_so_old_events_get_the_new_fields(db):

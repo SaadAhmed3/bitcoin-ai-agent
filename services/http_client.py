@@ -57,24 +57,25 @@ class HttpClient:
             raise ProviderError(f"{urlparse(url).netloc}: invalid JSON response") from exc
 
     def get_bytes(self, url: str, params: dict | None = None, headers: dict | None = None,
-                  max_bytes: int = 5_000_000) -> tuple[bytes, float]:
-        """GET a URL and return the raw body (used for RSS/XML). Raises ProviderError."""
+                  max_bytes: int = 5_000_000, follow_redirects: bool = True) -> tuple[bytes, float]:
+        """GET a URL and return the raw body (used for RSS/XML). Raises ProviderError. follow_redirects=False treats a redirect
+        as a failure, for requests whose headers must reach only this host."""
         merged = {"Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5"}
         merged.update(headers or {})
-        resp, latency = self._get(url, params, merged)
+        resp, latency = self._get(url, params, merged, {} if follow_redirects else {"allow_redirects": False})
         body = resp.content
         if len(body) > max_bytes:
             raise ProviderError(f"{urlparse(url).netloc}: response too large ({len(body)} bytes)")
         return body, latency
 
-    def _get(self, url: str, params: dict | None, headers: dict | None):
+    def _get(self, url: str, params: dict | None, headers: dict | None, options: dict | None = None):
         host = urlparse(url).netloc
         last_error = "unknown error"
         for attempt in range(self.retries + 1):
             self.limiter.wait(host)
             started = time.perf_counter()
             try:
-                resp = self.session.get(url, params=params, headers=headers, timeout=self.timeout)
+                resp = self.session.get(url, params=params, headers=headers, timeout=self.timeout, **(options or {}))
             except requests.Timeout:
                 last_error = f"timeout after {self.timeout}s"
             except requests.ConnectionError as exc:

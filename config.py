@@ -85,6 +85,8 @@ class Config:
     coingecko_demo_key: str = field(default_factory=lambda: _env_str("COINGECKO_DEMO_API_KEY", ""))
     # Optional free FRED API key: only enables the S&P 500 in Global Intelligence. Never returned, logged or stored.
     fred_api_key: str = field(default_factory=lambda: _env_str("FRED_API_KEY", ""))
+    # Goes only in the SEC feed's User-Agent. Never logged, stored or returned.
+    calendar_contact_email: str = field(default_factory=lambda: _env_str("CALENDAR_CONTACT_EMAIL", ""), repr=False)
 
     # Caching / freshness
     price_cache_seconds: int = field(default_factory=lambda: _env_int("PRICE_CACHE_SECONDS", 10))

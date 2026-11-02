@@ -186,7 +186,7 @@ class LiveServer:
                               symbols=lambda: ["BTCUSDT", "ETHUSDT"])
         cal = CalendarService(db, FakeHttp({"federalreserve.gov": FOMC_FIXTURE.read_text(encoding="utf-8"), "bea.gov": BEA_FIXTURE}),
                               bea=True, bls_curated_path=CURATED_BLS)
-        intel = IntelService(db, http=FakeHttp(intel_routes()))
+        intel = IntelService(db, http=FakeHttp(intel_routes()), calendar=cal)
         self.app = create_app(cfg, market=market, news=news, ollama=service(FakeOllama(up=False)),
                               watchlist=wl, calendar=cal, notifiers=[], intel=intel)
         self.seed(news_empty, fresh)

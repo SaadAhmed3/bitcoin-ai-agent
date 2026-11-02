@@ -128,9 +128,10 @@ def test_unavailable_series_carry_no_freshness_claim(db):
 # ---------------------------------------------------------------- SEC contact address
 class RecordingHttp(FakeHttp):
     def get_bytes(self, url, params=None, headers=None, max_bytes=5_000_000, follow_redirects=True):
-        out = super().get_bytes(url, params, headers, max_bytes)
-        self.calls[-1] = (url, dict(params or {}), dict(headers or {}), follow_redirects)
-        return out
+        try:
+            return super().get_bytes(url, params, headers, max_bytes)
+        finally:
+            self.calls[-1] = (url, dict(params or {}), dict(headers or {}), follow_redirects)
 
 
 FEED = b'<?xml version="1.0"?><rss version="2.0"><channel><title>T</title><item><title>SEC charges a crypto firm</title><link>https://www.sec.gov/a</link><pubDate>Thu, 09 Oct 2025 08:00:00 GMT</pubDate></item></channel></rss>'
@@ -199,7 +200,7 @@ def test_contact_never_reaches_health_errors_logs_or_any_route(config, db, caplo
     c, app = make_app(config, db)
     intel = app.config["BTC_INTEL"]
     assert intel.contact() == ADDRESS                                  # wired from the setting
-    intel.http = RecordingHttp({"bbci": FEED, "sec.gov": ProviderError("www.sec.gov: HTTP 403")})
+    intel.http = intel.markets.http = RecordingHttp({"bbci": FEED, "sec.gov": ProviderError("www.sec.gov: HTTP 403")})
     intel.sources = [SEC, BBC]
     with caplog.at_level(logging.DEBUG):
         intel.refresh(force=True)

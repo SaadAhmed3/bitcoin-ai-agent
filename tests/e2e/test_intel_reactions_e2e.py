@@ -118,6 +118,9 @@ def test_phone_no_horizontal_scroll_with_the_study_open(browser, live_server, th
         ev.locator("details.intel-reaction summary").click()
         ev.locator(".intel-reaction-body[data-state='ready']").wait_for()
         no_horizontal_scroll(page)
+        for sel in ("#intelStudyTable tbody tr[data-category] td:first-child", "#intelStudyReleases tbody tr[data-kind] td:first-child",
+                    "#intelMarkets tr[data-series='usd_broad'] td:first-child", ".intel-reaction-body tr[data-horizon='1h'] td:first-child"):
+            assert page.locator(sel).first.get_attribute("data-label"), sel
         assert p.errors == []
     finally:
         p.context.close()

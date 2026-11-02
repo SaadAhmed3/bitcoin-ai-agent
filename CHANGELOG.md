@@ -2,6 +2,29 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## Global Intelligence, round 3: market confirmation and event reaction study — 2026-11-02
+
+Context only: nothing here changes the live signal, score, gates, strategies or paper trading. Engine signal-1.8, news
+weight 0%, every forward-test fingerprint unchanged.
+
+- **Reaction study** (`services/intel_reactions.py`, schema 17, backup first): BTC before an event (last closed candle: price,
+  volume vs average, ATR%, regime) and after at +1h, +4h, +24h, +7d and +30d, from closed 1h candles only. Other markets are
+  shown by day and labelled. Reactions are append-only and keyed to articles or macro releases, never to events.
+- **Event time** is the earliest publication among the event's articles; first-seen time is stored too. Events with a publication
+  time missing or later than first seen are flagged and left out of the statistics.
+- **What happened after similar events:** per category and per macro release type: count, median, range, size against a normal
+  move, 95% bootstrap interval, small-sample flags. Events within 2 hours of a macro release are shown separately. Macro releases
+  are by type only: no free consensus source exists.
+- **Other markets:** each series shows its release cadence and is flagged when older than its normal release lag.
+- **Oil checked:** Brent 123.10 and WTI 103.37 (2026-10-27) match the raw EIA files. The wide spread is in the source, not a parsing
+  error. The real files are now test fixtures.
+- **SEC contact:** optional `CALENDAR_CONTACT_EMAIL` goes only in the SEC request's User-Agent, redirects refused. Never logged,
+  stored or shown. Without it SEC stays best-effort.
+- **Fixed:** the page's stacked phone tables had no field labels on Other markets.
+- **Fixed in tests:** two R2 tests replaced only part of the fake HTTP, so their market fetches could reach the network.
+- Tests changed on purpose: schema version 16 to 17; the "no contact to SEC" test now checks no From header; `.env.example` lists
+  `CALENDAR_CONTACT_EMAIL` again; the e2e fake VIX is old so the flag can be seen.
+
 ## Global Intelligence, round 2: macro calendar, other markets, event grouping — 2026-11-02
 
 Context only: nothing here changes the live signal, score, gates, strategies or paper trading. Engine signal-1.8, news
