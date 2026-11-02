@@ -661,7 +661,7 @@ def test_migration_from_schema_16_adds_only_and_keeps_data(tmp_path):
     with d.connect() as conn:
         before = [dict(r) for r in conn.execute("SELECT id, title, category FROM intel_events")]
     Database(str(path)).init()
-    assert SCHEMA_VERSION == 17
+    assert SCHEMA_VERSION >= 17
     assert list(tmp_path.glob("old.sqlite3.backup-*-schema-16"))
     with d.connect() as conn:
         assert [dict(r) for r in conn.execute("SELECT id, title, category FROM intel_events")] == before

@@ -107,6 +107,11 @@ def intel_routes() -> dict:
     }
 
 
+def top_fields():
+    from services.intel_summaries import FIELDS
+    return FIELDS
+
+
 def seeded_backtest(engine_cfg) -> dict:
     """A stored design-period run shaped exactly like services.backtesting.run_backtest output (few trades, so
     passed criteria are shown greyed as 'not meaningful')."""
@@ -223,6 +228,12 @@ class LiveServer:
             {"open_time": hour - i * 3_600_000, "open": 60_000 + i, "high": 60_010 + i, "low": 59_990 + i, "close": 60_000 + i,
              "volume": 10 + i % 5, "close_time": hour - i * 3_600_000 + 3_599_999} for i in range(1, 1000)], now_ms())
         a["BTC_INTEL"].reactions.update()
+        a["BTC_INTEL"].impact.update()
+        top = a["BTC_INTEL"].summaries.overview()["items"][0]           # one stored summary; Ollama is off, so the rest say unavailable
+        cited = next(iter(top["articles"]))
+        self.db.intel_add_summary({"article_set_hash": top["article_set_hash"], "anchor_article_id": top["anchor_article_id"], "event_time_at": top["event_time_at"],
+                                   "article_ids": list(top["articles"]), "model": "fake", "prompt_version": 1, "dropped_count": 0, "duration_ms": 1,
+                                   "summary": {**{f: [] for f in top_fields()}, "what_happened": [{"text": "seeded summary point <script>window.__hacked=1</script>", "citations": [cited]}]}}, now_ms())
         sig = a["BTC_SIGNALS"].current()                                # stores the first live record
         for hours, score in ((30, -0.05), (20, 0.08)):                  # two older audit-log records
             self.db.save_signal({**sig, "generated_at": now_ms() - hours * 3_600_000, "score": score},
