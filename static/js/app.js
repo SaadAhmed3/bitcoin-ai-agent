@@ -83,7 +83,7 @@
   }
 
   // ---------------------------------------------------------------- views (hash routes)
-  const VIEWS = { overview: "Overview", market: "Market & chart", news: "News & calendar", signal: "Signal details",
+  const VIEWS = { overview: "Overview", market: "Market & chart", news: "News & calendar", intel: "Global intelligence", signal: "Signal details",
     research: "Research (backtest)", strategies: "Strategy Lab", paper: "Risk & paper", alerts: "Alerts", assistant: "Ask the data", system: "System & sources" };
 
   function parseHash() {
@@ -823,6 +823,13 @@
           <td class="muted">${esc(h.last_error || "None")}</td></tr>`).join("")
         : '<tr><td colspan="5" class="empty">No requests yet.</td></tr>';
       labelCells($("srcTable"));
+      const intelRows = d.intel_health || [];
+      $("intelHealthTable").querySelector("tbody").innerHTML = intelRows.length ? intelRows.map((h) => `<tr>
+          <td><b>${esc(h.source)}</b></td><td class="status-${h.status === "ok" ? "ok" : "error"}">● ${esc(h.status_text)}</td>
+          <td title="${esc(utcTime(h.last_success))}">${esc(ago(h.last_success))}</td>
+          <td class="muted">${esc(h.last_error || "None")}</td></tr>`).join("")
+        : '<tr><td colspan="4" class="empty">Not fetched yet.</td></tr>';
+      labelCells($("intelHealthTable"));
       $("docTable").querySelector("tbody").innerHTML =
         "<tr><th>Source</th><th>Provides</th><th>API key</th><th>Limits</th><th>Delay</th><th>On failure</th><th>Notes</th></tr>" +
         d.docs.map((x) => `<tr><td>${esc(x.source)}</td><td>${esc(x.provides)}</td><td>${esc(x.api_key)}</td><td>${esc(x.limits)}</td><td>${esc(x.delay)}</td><td>${esc(x.failure)}</td><td>${esc(x.notes)}</td></tr>`).join("");
@@ -1786,6 +1793,7 @@
     overview: [() => loadPrice(false), loadOverview, loadChart, loadAnalysis, loadSignal, loadAlerts, loadWatchlist, loadCalendar, loadContext],
     market: [loadChart, loadAnalysis, loadMtf, loadAdvanced],
     news: [loadNews, loadCalendar],
+    intel: [() => loadPrice(false), () => window.BTCIntel && window.BTCIntel.load()],
     signal: [loadSignal, loadContext],
     research: [loadBacktest, loadForward],
     strategies: [() => window.BTCStrategyLab && window.BTCStrategyLab.load()],
@@ -1817,6 +1825,7 @@
     every(300000, ["strategies"], () => window.BTCStrategyLab && window.BTCStrategyLab.load());
     every(300000, ["overview", "signal"], loadContext);
     every(sec("refresh_news_s", 300), ["news"], loadNews);
+    every(300000, ["intel"], () => window.BTCIntel && window.BTCIntel.load());
     every(sec("refresh_news_s", 300), ["overview", "signal", "paper"], loadSignal);
     every(30000, ["paper"], loadPaper);
     every(60000, ["overview"], loadWatchlist);

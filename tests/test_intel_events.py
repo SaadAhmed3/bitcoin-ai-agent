@@ -278,3 +278,23 @@ def test_country_comes_from_the_lead_headline_not_any_member():
 ])
 def test_live_category_cases(title, summary, expected):
     assert classify_category(title, summary) == expected
+
+
+def _status_of(*titles):
+    return classify_status([art(t, publisher=f"P{i}", aid=f"w{i}") for i, t in enumerate(titles)])[0]
+
+
+def test_live_status_wording_cases():
+    assert _status_of("Fed holds rates, helps Warsh deny Tehran a say over policy", "Fed holds rates steady") == "confirmed"
+    assert _status_of("Coinbase denies systems breach", "Coinbase systems breach exposes customers") == "disputed"
+    assert classify_status([art("Polymarket pauses trading as prediction market investigates security incident", aid="w1")])[0] == "developing"
+    assert classify_status([art("Intel stock suffers worst crash as weak forecast overshadows demand", aid="w1")])[0] == "developing"
+    assert classify_status([art("Bitcoin fell sharply in May, data shows", aid="w1")])[0] == "developing"
+    assert classify_status([art("Tight conditions may challenge the inflation hedge", aid="w1")])[0] == "speculative"
+    assert classify_status([art("Israel extradites alleged Nomad exploiter to US", aid="w1")])[0] == "developing"
+    assert classify_status([art("Exchange allegedly lost client funds", aid="w1")])[0] == "unverified"
+
+
+def test_a_lawsuit_alone_is_not_financial_regulation():
+    assert classify_category("Judge dismisses Trump's lawsuit against Wall Street Journal over birthday book") != "regulation"
+    assert classify_category("CFTC sues to block state enforcement in Utah") == "regulation"

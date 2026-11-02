@@ -38,7 +38,8 @@ without it. Full instructions, including the "running scripts is disabled" fix: 
 |---|---|
 | Overview | Live price and 24h change (with source and age), the current signal and its main reason, chart, alerts, next US macro event, watchlist |
 | Market & chart | Candles 5m-1d with EMA, Bollinger, VWAP, support/resistance; a multi-timeframe table |
-| News & calendar | Headlines grouped into events, with sentiment, impact, verification and freshness; FOMC/BLS dates |
+| News & calendar | Headlines grouped into events, with sentiment, impact, verification and freshness; FOMC, CPI, PCE, jobs report and GDP dates |
+| Global intelligence | World, macro and crypto events from several sources, macro calendar, other markets. Context, not part of the signal |
 | Signal details | The signal, every NO TRADE reason, evidence for and against, components, the research trade plan, risk |
 | Research (backtest) | Backtests on real Binance history, baselines, validation criteria, holdout status |
 | Risk & paper | Position-size calculator; the SIMULATED paper account |
@@ -149,6 +150,27 @@ no evidence of added value. The engine makes 5 design trades; the regime and swe
 (+0.6%), the volume-profile and combined filters remove none. In the event study (+6 and +18 4h bars) no regime or
 confirmed-sweep group's 95% CI excludes the average of all bars.
 
+## Global intelligence (context, not part of the signal)
+
+Helps you see why Bitcoin might be moving. **Nothing here changes the live signal, score, gates, strategies or paper trading.**
+Data flows one way: this layer reads the news table and its own `intel_*` tables, and nothing existing reads it. New sources
+are not added to the news feeds, because everything in the news table is an input to gate 5. `tests/test_gate5_isolation.py`
+pins this: the same news gives the same gate 5 decision before and after, and the frozen files must not change.
+
+- **Events:** articles about the same event are grouped into one, with category, country, status, freshness, number of sources
+  and links to the originals. War, Elections, Macro and Crypto are filters of the same list.
+- **Status comes from the wording and the kind of sources, not from checking the facts.** Official statement = a government or
+  central-bank source. Confirmed = two or more publishers in their own words (wire copies count once). Developing = one publisher
+  so far, or several running the same wording. Unverified = every report is hedged. Speculative = every report is a forecast.
+  Disputed = one report denies the others.
+- **Macro calendar:** FOMC, CPI, PCE, jobs report and GDP, in UTC and your display time zone, marked released or upcoming.
+- **Other markets:** latest value, change, data date and delay. These are daily and often days old, so never live prices.
+- **Unavailable, never estimated:** gold (no verified free series), ETF flows, exchange flows, whale movements, consensus
+  forecasts; S&P 500 without the optional key.
+- **Known limits of the grouping:** it is rule-based. A big story can split into several events (the Binance hack split into
+  three on 2026-11-02), unrelated wording can still be misfiled, and headlines without a known place show as "Global".
+- Fetching runs in its own background thread: articles every 30-60 min, markets every 6 h, GDELT hourly when it answers.
+
 ## Strategy Lab (research strategies)
 
 A separate view with five independent spot research strategies (DCA, trend following, range, breakout and
@@ -173,7 +195,7 @@ Method, rules against data snooping and results: [STRATEGY_LAB.md](STRATEGY_LAB.
 
 ## Data sources
 
-All free; no account needed. The only optional key is a free CoinGecko Demo key.
+All free; no account needed. The only optional keys are a free CoinGecko Demo key and a free FRED API key (S&P 500 only).
 
 | Source | Provides | Notes |
 |---|---|---|
@@ -181,7 +203,13 @@ All free; no account needed. The only optional key is a free CoinGecko Demo key.
 | Coinbase Exchange | BTC/USD price and candles; the **second price** and the **USDT-USD rate** for the cross-check | USD and USDT series are never mixed in a chart; for the cross-check the USDT price is converted to USD first |
 | CoinGecko | Market cap, volume, BTC dominance | "Data from CoinGecko" attribution shown |
 | RSS (Cointelegraph, CoinDesk, The Block, Decrypt, Bitcoin Magazine, Google News) | Headlines | Headline, a short snippet and the link only |
-| federalreserve.gov, BLS (optional) | FOMC dates; CPI/PPI/jobs dates | BLS needs `CALENDAR_CONTACT_EMAIL` in `.env` |
+| federalreserve.gov | FOMC dates | Fetched once a day |
+| bea.gov release calendar (ICS) | GDP and PCE dates | Fetched once a day |
+| `data/calendars/bls_2026_2027.json` | CPI and jobs-report dates | A curated file, never fetched: BLS blocks automated clients (HTTP 403). Warns when last verified over 12 months ago |
+| BBC, Fed, SEC, CFTC, U.S. Treasury (Global intelligence only) | World news and official press releases | Headline, short summary and link only. SEC is best-effort: no contact address is sent. Treasury's list page has no feed, so a layout change shows as an error |
+| GDELT DOC 2.0 API (Global intelligence only, optional) | World news links | Exponential back-off up to one day. Answered HTTP 429 on every try from this connection on 2026-11-02; the app works without it |
+| U.S. Treasury, Fed H.10, U.S. EIA, Cboe (Global intelligence only) | 10-year yield, broad dollar index, Brent and WTI, VIX | Daily data shown with its date and delay. Cboe data is for personal non-commercial use and is not exported |
+| FRED API (optional free key, `FRED_API_KEY`) | S&P 500 | Without a key the S&P 500 shows as unavailable. Personal use; the key is never shown or stored |
 | Ollama on `127.0.0.1` (optional) | Local AI rewrites of rule-based answers | Data never leaves your PC |
 
 Never mixed or hidden: every price shows its source and age; cached or stale data is labelled; missing candles are
@@ -196,6 +224,8 @@ Writes (POST/PUT/DELETE) from outside the dashboard need the header `X-Requested
 | `GET /api/health`, `/api/price`, `/api/overview`, `/api/sources` | Status, price, market overview, source health |
 | `GET /api/candles?tf=1h`, `/api/analysis?tf=4h`, `/api/mtf` | Candles, indicators, multi-timeframe table |
 | `GET /api/news`, `POST /api/news/refresh` | News events; fetch now |
+| `GET /api/calendar?days=14&past=0` | Macro calendar, each event marked released or upcoming |
+| `GET /api/intel/overview`, `/api/intel/events?group=war\|elections\|macro\|crypto&category=&status=&country=&hours=&limit=`, `/api/intel/markets` | Global intelligence (read-only, context) |
 | `GET /api/signal`, `/api/signal/history`, `/api/signal/<id>` | Current signal; stored history |
 | `GET`/`PUT /api/signal/config` | Engine settings (range-checked; `{"reset": true}`) |
 | `POST /api/backtest/run` `{"years": 4, "period": "design", "entry_mode": "standard"}` | Start a backtest |
@@ -225,6 +255,7 @@ services/paper_trading.py   SIMULATED account (atomic orders)
 services/news_*.py          RSS collection and rule-based news analysis
 services/assistant.py       grounded question answering (+ optional Ollama)
 services/alerts.py          alert rules, cooldowns, background monitor
+services/intel_*.py         Global intelligence: sources, event grouping, other markets, own worker thread (context only)
 services/regime.py, liquidity_sweeps.py, volume_profile.py, advanced_analysis.py   context panels + shadow mode
 services/chart_overlays.py  regime shading / sweep markers as chart coordinates (visualisation only)
 services/strategies/        Strategy Lab engines (base.py schema, dca.py); strategy_lab.py, strategy_forward.py

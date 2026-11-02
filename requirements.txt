@@ -9,6 +9,7 @@ plotly==7.1.0          # also serves plotly.min.js locally, so charts work offli
 
 feedparser==6.0.14     # news ingestion (Phase 4)
 scikit-learn==1.9.1    # optional ML (Phase 6)
+xlrd==2.0.2            # reads EIA's Brent and WTI price files (Global Intelligence)
 
 # Optional (Phase 8): Windows desktop notifications for alerts. The app works without it.
 #   pip install plyer==2.1.0

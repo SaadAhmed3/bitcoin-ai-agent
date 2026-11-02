@@ -207,6 +207,10 @@ class SettingsService:
                                                "source": "env", "read_only": True, "env": "COINGECKO_DEMO_API_KEY",
                                                "restart_required": True, "kind": "secret",
                                                "help": "Optional free CoinGecko Demo key. Set it in .env; it is never shown or stored here."}
+        out["market"]["fred_api_key"] = {"value": "set" if self.secrets().get("fred_api_key") else "not set",
+                                         "source": "env", "read_only": True, "env": "FRED_API_KEY",
+                                         "restart_required": True, "kind": "secret",
+                                         "help": "Optional free FRED API key. Enables the S&P 500 in Global Intelligence. Set it in .env; it is never shown or stored here."}
         return out
 
     # ------------------------------------------------------------------ write

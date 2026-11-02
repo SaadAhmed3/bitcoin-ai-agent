@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
-SCHEMA_VERSION = 15  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
+SCHEMA_VERSION = 16  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
                      # 7: holdout_runs (0.9.2), 8: holdout_runs.holdout_start (0.9.3),
                      # 9: holdout_runs.verdict + criteria, write-once triggers (0.9.4),
                      # 10: forward_tests + forward_events, append-only (research-1),
@@ -20,7 +20,8 @@ SCHEMA_VERSION = 15  # 2: news_items, 3: signals, 4: backtests + paper trading, 
                      # 12: regime_changes, sweep_events, sweep_updates, shadow_context, append-only (advanced analysis),
                      # 13: sweep_corrections, append-only (0.9.8 follow-up),
                      # 14: strategy_configs/signals/backtests/forward_tests/forward_events, append-only (Strategy Lab),
-                     # 15: strategy_forward_rebases, append-only, only before a test's first processed day.
+                     # 15: strategy_forward_rebases, append-only, only before a test's first processed day,
+                     # 16: intel_* tables (Global Intelligence, context only); articles and market points append-only.
                     # Migrations are additive; an upgrade backs the file up first.
 
 SCHEMA = """
@@ -397,6 +398,72 @@ CREATE TRIGGER IF NOT EXISTS strategy_forward_rebases_no_update BEFORE UPDATE ON
     BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
 CREATE TRIGGER IF NOT EXISTS strategy_forward_rebases_no_delete BEFORE DELETE ON strategy_forward_rebases
     BEGIN SELECT RAISE(ABORT, 'strategy lab rows are append-only'); END;
+
+-- Global Intelligence (context only, nothing in the signal reads these). Separate from news_items, the input of gate 5.
+CREATE TABLE IF NOT EXISTS intel_articles (
+    id            TEXT PRIMARY KEY,
+    source_id     TEXT    NOT NULL,
+    source_type   TEXT    NOT NULL,
+    publisher     TEXT    NOT NULL,
+    title         TEXT    NOT NULL,
+    link          TEXT    NOT NULL,
+    summary       TEXT    NOT NULL DEFAULT '',
+    published_at  INTEGER,
+    collected_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_intel_articles_time ON intel_articles (COALESCE(published_at, collected_at));
+CREATE TABLE IF NOT EXISTS intel_events (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    title               TEXT    NOT NULL,
+    category            TEXT    NOT NULL,
+    country             TEXT    NOT NULL,
+    status              TEXT    NOT NULL,
+    status_reason       TEXT    NOT NULL,
+    first_published_at  INTEGER NOT NULL,
+    last_published_at   INTEGER NOT NULL,
+    date_known          INTEGER NOT NULL,
+    articles_count      INTEGER NOT NULL,
+    sources_count       INTEGER NOT NULL,
+    created_at          INTEGER NOT NULL,
+    updated_at          INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_intel_events_last ON intel_events (last_published_at DESC);
+CREATE TABLE IF NOT EXISTS intel_event_articles (
+    article_id  TEXT PRIMARY KEY REFERENCES intel_articles (id),
+    event_id    INTEGER NOT NULL REFERENCES intel_events (id),
+    added_at    INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_intel_event_articles ON intel_event_articles (event_id);
+CREATE TABLE IF NOT EXISTS intel_market_points (
+    series      TEXT    NOT NULL,
+    data_date   TEXT    NOT NULL,
+    value       REAL    NOT NULL,
+    source      TEXT    NOT NULL,
+    fetched_at  INTEGER NOT NULL,
+    PRIMARY KEY (series, data_date)
+);
+CREATE TABLE IF NOT EXISTS intel_source_health (
+    source                TEXT PRIMARY KEY,
+    kind                  TEXT    NOT NULL,
+    status                TEXT    NOT NULL,
+    last_success          INTEGER,
+    last_failure          INTEGER,
+    last_error            TEXT,
+    consecutive_failures  INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at       INTEGER,
+    items_last            INTEGER,
+    updated_at            INTEGER NOT NULL
+);
+CREATE TRIGGER IF NOT EXISTS intel_articles_no_update BEFORE UPDATE ON intel_articles
+    BEGIN SELECT RAISE(ABORT, 'intel articles are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS intel_articles_no_delete BEFORE DELETE ON intel_articles
+    BEGIN SELECT RAISE(ABORT, 'intel articles are append-only'); END;
+DROP TRIGGER IF EXISTS intel_event_articles_no_update;
+DROP TRIGGER IF EXISTS intel_event_articles_no_delete;
+CREATE TRIGGER IF NOT EXISTS intel_market_points_no_update BEFORE UPDATE ON intel_market_points
+    BEGIN SELECT RAISE(ABORT, 'intel market points are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS intel_market_points_no_delete BEFORE DELETE ON intel_market_points
+    BEGIN SELECT RAISE(ABORT, 'intel market points are append-only'); END;
 
 -- A stored sweep event is never changed or deleted; a later finding (e.g. a duplicate of the same move) is recorded
 -- here, once per event, and every reader excludes superseded events.
@@ -1094,3 +1161,133 @@ class Database:
     def clear_chat(self) -> int:
         with self.connect() as conn:
             return conn.execute("DELETE FROM chat_messages").rowcount
+
+    # --------------------------------------------------------------- Global Intelligence (context only)
+    def intel_add_articles(self, rows: list[dict]) -> int:
+        """Insert new articles; a known id (same URL) is ignored. Returns how many were added."""
+        data = [(a["id"], a["source_id"], a["source_type"], a["publisher"], a["title"], a["link"], a.get("summary") or "",
+                 a.get("published_at"), a["collected_at"]) for a in rows]
+        if not data:
+            return 0
+        with self.connect() as conn:
+            before = conn.total_changes
+            conn.executemany("""INSERT OR IGNORE INTO intel_articles (id, source_id, source_type, publisher, title, link,
+                                summary, published_at, collected_at) VALUES (?,?,?,?,?,?,?,?,?)""", data)
+            return conn.total_changes - before
+
+    def intel_unassigned_articles(self, limit: int = 5000) -> list[dict]:
+        with self.connect() as conn:
+            rows = conn.execute("""SELECT a.* FROM intel_articles a LEFT JOIN intel_event_articles l ON l.article_id = a.id
+                                   WHERE l.article_id IS NULL ORDER BY COALESCE(a.published_at, a.collected_at) LIMIT ?""",
+                                (limit,)).fetchall()
+        return [dict(r) for r in rows]
+
+    def _intel_event_articles(self, conn, event_id: int) -> list[dict]:
+        rows = conn.execute("""SELECT a.* FROM intel_event_articles l JOIN intel_articles a ON a.id = l.article_id
+                               WHERE l.event_id = ? ORDER BY COALESCE(a.published_at, a.collected_at), a.id""",
+                            (event_id,)).fetchall()
+        return [dict(r) for r in rows]
+
+    def intel_reset_events(self) -> None:
+        """Forget the derived grouping (events and their links). Articles and market points are never touched."""
+        with self.connect() as conn:
+            conn.execute("DELETE FROM intel_event_articles")
+            conn.execute("DELETE FROM intel_events")
+
+    def intel_open_events(self, since_ms: int) -> list[dict]:
+        """Events that a new article could still join, with their articles."""
+        with self.connect() as conn:
+            ids = [r["id"] for r in conn.execute("SELECT id FROM intel_events WHERE last_published_at >= ? ORDER BY id", (since_ms,))]
+            return [{"id": i, "articles": self._intel_event_articles(conn, i)} for i in ids]
+
+    def intel_save_event(self, event_id: int | None, ev: dict, new_article_ids: list[str], now: int) -> int:
+        vals = (ev["title"], ev["category"], ev["country"], ev["status"], ev["status_reason"], ev["first_published_at"],
+                ev["last_published_at"], int(ev["date_known"]), ev["articles_count"], ev["sources_count"])
+        with self.connect() as conn:
+            if event_id is None:
+                cur = conn.execute("""INSERT INTO intel_events (title, category, country, status, status_reason, first_published_at,
+                                      last_published_at, date_known, articles_count, sources_count, created_at, updated_at)
+                                      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""", (*vals, now, now))
+                event_id = int(cur.lastrowid)
+            else:
+                conn.execute("""UPDATE intel_events SET title=?, category=?, country=?, status=?, status_reason=?, first_published_at=?,
+                                last_published_at=?, date_known=?, articles_count=?, sources_count=?, updated_at=? WHERE id=?""",
+                             (*vals, now, event_id))
+            conn.executemany("INSERT OR IGNORE INTO intel_event_articles (article_id, event_id, added_at) VALUES (?,?,?)",
+                             [(a, event_id, now) for a in new_article_ids])
+        return event_id
+
+    def intel_events(self, since_ms: int, categories: tuple | None = None, status: str | None = None,
+                     country: str | None = None, limit: int = 100) -> list[dict]:
+        q, args = "SELECT * FROM intel_events WHERE last_published_at >= ?", [since_ms]
+        if categories:
+            q += " AND category IN (" + ",".join("?" * len(categories)) + ")"
+            args += list(categories)
+        if status:
+            q += " AND status = ?"
+            args.append(status)
+        if country:
+            q += " AND country = ?"
+            args.append(country)
+        q += " ORDER BY last_published_at DESC, id DESC LIMIT ?"
+        args.append(limit)
+        with self.connect() as conn:
+            out = [dict(r) for r in conn.execute(q, args).fetchall()]
+            for e in out:
+                e["date_known"] = bool(e["date_known"])
+                arts = self._intel_event_articles(conn, e["id"])
+                arts.sort(key=lambda a: a["source_type"] != "official")      # the original statement first; stable otherwise
+                e["articles"] = [{k: a[k] for k in ("id", "publisher", "title", "link", "published_at", "source_type")} for a in arts[:20]]
+        return out
+
+    def intel_event_counts(self, since_ms: int) -> list[dict]:
+        with self.connect() as conn:
+            rows = conn.execute("""SELECT category, status, COUNT(*) AS n FROM intel_events WHERE last_published_at >= ?
+                                   GROUP BY category, status""", (since_ms,)).fetchall()
+        return [dict(r) for r in rows]
+
+    def intel_add_market_points(self, series: str, points: list[tuple[str, float]], source: str, now: int) -> int:
+        """A stored value is never changed: the first value published for a date stays."""
+        with self.connect() as conn:
+            before = conn.total_changes
+            conn.executemany("INSERT OR IGNORE INTO intel_market_points (series, data_date, value, source, fetched_at) VALUES (?,?,?,?,?)",
+                             [(series, d, v, source, now) for d, v in points])
+            return conn.total_changes - before
+
+    def intel_market_points(self, series: str, limit: int = 2) -> list[dict]:
+        with self.connect() as conn:
+            rows = conn.execute("SELECT * FROM intel_market_points WHERE series = ? ORDER BY data_date DESC LIMIT ?", (series, limit)).fetchall()
+        return [dict(r) for r in rows]
+
+    def intel_market_state(self, series: str) -> dict | None:
+        hit = self.cache_get(f"intel:market_state:{series}")
+        return hit[0] if hit else None
+
+    def intel_set_market_state(self, series: str, next_attempt_at: int, last_error: str | None, now: int) -> None:
+        self.cache_set(f"intel:market_state:{series}", {"next_attempt_at": next_attempt_at, "last_error": last_error}, now)
+
+    def intel_record_health(self, source: str, ok: bool, error: str | None, now: int, next_attempt_at: int | None,
+                            kind: str = "article", items: int | None = None) -> None:
+        """Own health table: the source_failure alert rule reads source_health, and this layer raises no alerts."""
+        with self.connect() as conn:
+            row = conn.execute("SELECT consecutive_failures FROM intel_source_health WHERE source = ?", (source,)).fetchone()
+            fails = 0 if ok else (row["consecutive_failures"] if row else 0) + 1
+            text = (error or "unknown error")[:300]
+            status = "ok" if ok else ("backing_off" if fails >= 2 or "429" in text else "error")
+            if row is None:
+                conn.execute("""INSERT INTO intel_source_health (source, kind, status, last_success, last_failure, last_error,
+                                consecutive_failures, next_attempt_at, items_last, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                             (source, kind, status, now if ok else None, None if ok else now, None if ok else text, fails,
+                              next_attempt_at, items, now))
+            elif ok:
+                conn.execute("""UPDATE intel_source_health SET status=?, last_success=?, last_error=NULL, consecutive_failures=0,
+                                next_attempt_at=?, items_last=?, updated_at=? WHERE source=?""",
+                             (status, now, next_attempt_at, items, now, source))
+            else:
+                conn.execute("""UPDATE intel_source_health SET status=?, last_failure=?, last_error=?, consecutive_failures=?,
+                                next_attempt_at=?, updated_at=? WHERE source=?""",
+                             (status, now, text, fails, next_attempt_at, now, source))
+
+    def intel_health(self) -> list[dict]:
+        with self.connect() as conn:
+            return [dict(r) for r in conn.execute("SELECT * FROM intel_source_health ORDER BY kind, source").fetchall()]

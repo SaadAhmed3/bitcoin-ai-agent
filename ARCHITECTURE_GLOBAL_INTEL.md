@@ -59,9 +59,9 @@ Checked live on 2026-11-02 between about 07:00 and 07:17 UTC, with one request p
 | BLS ICS and schedule page | **Blocked for bots** | HTTP 403: "bot activity that doesn't conform to BLS usage policy is prohibited" | This is the only official source for CPI and NFP dates. See decision D2 |
 | BLS latest-numbers RSS | **Works, no schedule** | 1 item with latest CPI, payrolls, PPI | Shows what was released, not when the next release is |
 
-**Correction to my earlier work.** In Phase 8 I wrote that BEA has no machine-readable schedule. That is wrong. The statement is still in `services/calendar_service.py` (lines 11 and 203), `services/market_data.py` (line 571) and possibly other docs. R2 should fix it.
+**Correction to earlier work.** Phase 8 said BEA has no machine-readable schedule. That was wrong: BEA publishes both ICS and JSON. Fixed in R2.
 
-Phase 8 also says setting `CALENDAR_CONTACT_EMAIL` unlocks BLS. That has never been tested live, and the 403 page does not mention it.
+Phase 8 also said setting `CALENDAR_CONTACT_EMAIL` unlocks BLS. That was never tested live, and the 403 page does not mention it. R2 removed the BLS fetch and that setting.
 
 ### Other markets
 
@@ -213,7 +213,26 @@ New code may import helpers from these files, which changes nothing in them.
 | R13 | More write load on SQLite | WAL and a 10 s timeout already exist; small batched writes, tested under the worker |
 | R14 | `news_analyzer` wording could pass as this layer's status | The new status rules are separate and tested on their own, including conflicting reports and old news |
 
-## 7. Decisions needed before R2
+## 7. Decisions
+
+**Your decisions (R1 review, 2026-11-02), built in R2:**
+
+1. Other markets: official sources (Treasury, Fed, EIA with `xlrd`, Cboe). VIX from Cboe accepted for personal non-commercial use, source labelled. S&P 500 unavailable unless an optional free `FRED_API_KEY` is set.
+2. CPI and NFP: curated file `data/calendars/bls_2026_2027.json` with source URL and last-verified date, warning after 12 months. No live BLS fetching.
+3. GDELT DOC API: optional, exponential back-off, own health table, clear status. No raw GKG files.
+4. Google News: unchanged for now, so gate 5 inputs stay identical. See the proposal below.
+5. Extra frozen files approved: `news_collector.py`, `news_analyzer.py`, `news_service.py`, `signal_service.py`, `paper_trading.py`, `alerts.py`, `assistant.py`, `ollama_service.py`.
+6. Contact address: not chosen in your reply (the `[CHOOSE ONE]` was left in). R2 uses the conservative option: no contact address, SEC stays best-effort. Changing this later is a small edit.
+
+**Proposal for later: replace Google News.** `news.google.com/robots.txt` says `Disallow: /` for general agents, and the feed supplies about half of the stored news (296 of 592 items on 2026-11-02). I could not find current official terms for the feed. A replacement could be BBC plus official press releases and, if it starts answering, GDELT.
+
+This is **not** part of R2. Those items are inputs to gate 5, so removing the feed changes which news can block a trade. It therefore needs its own gate 5 proposal and your approval, ideally with a side-by-side comparison of which events each source set would have blocked.
+
+**R2 changes to the plan above:**
+- `intel_event_articles` is not append-only. Membership is derived, so better rules can rebuild it from the append-only articles. R3 must therefore key its stored reactions to articles rather than to event IDs, which change on a rebuild.
+- `intel_market_state` was not needed; retry state uses the existing `kv_cache`.
+
+**Original options considered before R2:**
 
 **D1. Other-markets source.**
 - **Recommended, option A: official sources, no key.** Treasury (10-year), Fed H.10 (dollar), EIA (Brent, WTI), Cboe (VIX). This avoids the FRED terms question and the 10-year and VIX values are a day fresher. It adds one small dependency, `xlrd`, to read EIA's XLS, unless you prefer a free EIA API key. S&P 500 needs either a free FRED API key or stays "unavailable". The Cboe terms for this file were not found, so please accept that risk or drop VIX.
