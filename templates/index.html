@@ -22,6 +22,7 @@
       <a href="#/overview" data-view="overview" data-tip="Overview">{{ icon("overview") }}<span class="label">Overview</span></a>
       <a href="#/market" data-view="market" data-tip="Market &amp; chart">{{ icon("market") }}<span class="label">Market &amp; chart</span></a>
       <a href="#/news" data-view="news" data-tip="News &amp; calendar">{{ icon("news") }}<span class="label">News &amp; calendar</span></a>
+      <a href="#/intel" data-view="intel" data-tip="Global intelligence">{{ icon("intel") }}<span class="label">Global intelligence</span></a>
       <a href="#/signal" data-view="signal" data-tip="Signal details">{{ icon("signal") }}<span class="label">Signal details</span></a>
       <a href="#/research" data-view="research" data-tip="Research (backtest)">{{ icon("research") }}<span class="label">Research (backtest)</span></a>
       <a href="#/strategies" data-view="strategies" data-tip="Strategy Lab">{{ icon("lab") }}<span class="label">Strategy Lab</span></a>
@@ -304,6 +305,45 @@
       </article>
     </section>
 
+    <!-- ============================================================ Global intelligence (context only) -->
+    <section id="intelBanner" class="card intel-banner" data-views="intel">
+      <div class="card-head"><div><h2>Global intelligence</h2>
+        <p class="muted">What is happening in the world, in macro data and in other markets, with links to the original sources.</p></div>
+        <span class="tag calc">Context, not part of the signal</span></div>
+      <p class="small">Nothing on this page changes the live signal, its score, its gates, the strategies or paper trading. Status comes from the wording and the kind of sources, not from checking the facts.</p>
+      <div class="intel-counts" id="intelCounts"><p class="empty">Loading…</p></div>
+      <p class="muted small" id="intelUnavailable"></p>
+    </section>
+
+    <section id="intelEvents" class="card" data-views="intel" data-state="loading">
+      <div class="card-head"><div><h2>Events</h2><p class="muted" id="intelEventsMeta">Articles about the same event are grouped into one</p></div>
+        <span class="tag calc">Context</span></div>
+      <div class="chat-chips" id="intelFilters" role="group" aria-label="Filter events">
+        <button type="button" class="chip-btn" data-group="" aria-pressed="true">All</button>
+        <button type="button" class="chip-btn" data-group="war" aria-pressed="false">War</button>
+        <button type="button" class="chip-btn" data-group="elections" aria-pressed="false">Elections</button>
+        <button type="button" class="chip-btn" data-group="macro" aria-pressed="false">Macro</button>
+        <button type="button" class="chip-btn" data-group="crypto" aria-pressed="false">Crypto</button>
+      </div>
+      <ul class="news-list intel-list" id="intelEventList"><li class="empty">Loading…</li></ul>
+    </section>
+
+    <section class="grid-2" data-views="intel">
+      <article class="card" id="intelCalendar" data-state="loading">
+        <div class="card-head"><div><h2>Macro calendar</h2><p class="muted" id="intelCalMeta">FOMC, CPI, PCE, jobs report, GDP · official schedules</p></div>
+          <span class="tag live">Official</span></div>
+        <ul class="cal-list" id="intelCalList"><li class="empty">Loading…</li></ul>
+        <p class="kpi-warn" id="intelCalWarn"></p>
+      </article>
+      <article class="card" id="intelMarkets" data-state="loading">
+        <div class="card-head"><div><h2>Other markets</h2><p class="muted" id="intelMkMeta">Daily data with its date and delay, not live prices</p></div>
+          <span class="tag calc">Context</span></div>
+        <div class="table-wrap"><table class="table stack" id="intelMkTable">
+          <thead><tr><th>Market</th><th>Latest</th><th>Change</th><th>Data date</th><th>Source and delay</th></tr></thead>
+          <tbody><tr><td colspan="5" class="empty">Loading…</td></tr></tbody></table></div>
+      </article>
+    </section>
+
     <!-- ============================================================ Research -->
     <section id="backtest" class="card" data-views="research" data-state="idle">
       <div class="card-head">
@@ -544,6 +584,13 @@
           <tbody><tr><td colspan="5" class="empty">No requests yet.</td></tr></tbody>
         </table>
       </div>
+      <h3 class="sub">Global intelligence sources <small class="muted">(context only, separate from the alerts above)</small></h3>
+      <div class="table-wrap">
+        <table class="table stack" id="intelHealthTable">
+          <thead><tr><th>Source</th><th>Status</th><th>Last success</th><th>Last error</th></tr></thead>
+          <tbody><tr><td colspan="4" class="empty">Not fetched yet.</td></tr></tbody>
+        </table>
+      </div>
       <details class="docs"><summary>Source documentation (keys, limits, delay, failure behaviour)</summary>
         <div class="table-wrap"><table class="table" id="docTable"><tbody></tbody></table></div>
       </details>
@@ -573,6 +620,7 @@
 <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
 <script src="{{ url_for('static', filename='js/strategy_charts.js') }}"></script>
 <script src="{{ url_for('static', filename='js/strategy_lab.js') }}"></script>
+<script src="{{ url_for('static', filename='js/intel.js') }}"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

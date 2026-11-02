@@ -12,11 +12,11 @@ from e2e.e2e_helpers import contrast, no_horizontal_scroll, placeholder_problems
 pytestmark = pytest.mark.e2e
 smoke = pytest.mark.smoke
 
-VIEW_TITLES = {"overview": "Overview", "market": "Market & chart", "news": "News & calendar", "signal": "Signal details",
+VIEW_TITLES = {"overview": "Overview", "market": "Market & chart", "news": "News & calendar", "intel": "Global intelligence", "signal": "Signal details",
                "research": "Research (backtest)", "strategies": "Strategy Lab", "paper": "Risk & paper", "alerts": "Alerts", "assistant": "Ask the data",
                "system": "System & sources"}
 VIEW_SECTIONS = {"overview": ["#overview", "#sigSummary", "#chart", "#ovExtra", "#watchlist"],
-                 "market": ["#chart", "#analysis", "#mtf"], "news": ["#news", "#calendar"],
+                 "market": ["#chart", "#analysis", "#mtf"], "news": ["#news", "#calendar"], "intel": ["#intelBanner", "#intelEvents", "#intelCalendar", "#intelMarkets"],
                  "signal": ["#signal", "#sighist"], "research": ["#backtest"],
                  "strategies": ["#stratLab", "#stratCompareCard", "#stratDetail"], "paper": ["#risk"],
                  "alerts": ["#alerts"], "assistant": ["#assistant"], "system": ["#sources", "#system"]}

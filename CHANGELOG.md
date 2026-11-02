@@ -2,6 +2,28 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## Global Intelligence, round 2: macro calendar, other markets, event grouping — 2026-11-02
+
+Context only: nothing here changes the live signal, score, gates, strategies or paper trading. Engine signal-1.8, news
+weight 0%, every forward-test fingerprint unchanged.
+
+- **New page "Global intelligence":** counts by category, one event list with War, Elections, Macro and Crypto filters, macro
+  calendar, other markets. Dark and light, phones.
+- **Event store** (`services/intel_*.py`, schema 16, tables `intel_*`, backup first): BBC, Fed, SEC, CFTC and Treasury releases,
+  optional GDELT with back-off, plus the existing news read only. Articles and market points are append-only; events are derived
+  and rebuilt from the articles when the grouping rules change. Own worker thread and own health table, so slow or failing
+  sources never delay or trigger alerts.
+- **Calendar extended:** GDP and PCE from BEA's ICS; CPI and jobs report from a curated file, `data/calendars/bls_2026_2027.json`,
+  with a warning after 12 months. Each event is marked released or upcoming. **Removed:** the BLS fetch and
+  `CALENDAR_CONTACT_EMAIL`; the app no longer contacts bls.gov.
+- **Corrected:** BEA does publish a machine-readable schedule (ICS and JSON); earlier docs said otherwise.
+- **Other markets** from official sources: Treasury, Fed H.10, EIA (new dependency `xlrd`), Cboe. S&P 500 only with an optional
+  free `FRED_API_KEY`; gold shows as unavailable.
+- **Isolation tests** (`tests/test_gate5_isolation.py`): same news gives the same gate 5 decision before and after; hash pins on
+  all frozen files, fingerprints and the feed list.
+- Tests changed on purpose: schema version 15 to 16; the BLS contact-header test now checks that BLS is never fetched; the
+  calendar's "not configured" text; new hosts in the outbound allow-list; the e2e view list gains the new page.
+
 ## Rotation survivorship stress test (reported only) — 2026-11-02
 
 - `PREREGISTRATION_ROTATION_STRESS.md` committed before the run; `services/rotation_stress.py` runs Rotation's rule

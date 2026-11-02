@@ -155,6 +155,20 @@ The menu on the left switches between views. Labels on each card tell you what k
 
 ---
 
+### Global intelligence
+
+This page helps you understand what is happening in the world. It is **context, not part of the signal**: nothing here
+changes the signal, its score, its gates, the strategies or paper trading.
+
+- **Events** groups articles about the same event into one, with links to the originals. Use the War, Elections, Macro and
+  Crypto buttons to filter the list.
+- **Status** comes from the wording and the kind of sources, not from checking the facts. "Confirmed" means two or more
+  publishers reported it in their own words, not that it is proven true. Hover over a status to see why it was given.
+- **Macro calendar** shows the main US releases in UTC and your time zone, marked released or upcoming.
+- **Other markets** shows daily values with their date and delay. They are not live prices.
+
+The grouping uses rules, so a big story can appear as several events and some items can land in the wrong category.
+
 ## 4. Understanding the signal
 
 The signal is a **research summary**, not an instruction. It has five possible values:
@@ -434,8 +448,14 @@ Invoke-RestMethod http://127.0.0.1:5000/api/health
 - **CoinGecko** (market cap, dominance) is aggregated and can lag by a few minutes.
 - **News** comes from public RSS feeds. The app reads headlines only and classifies them with rules, which can be
   wrong. Always read the article before acting on it.
-- **Economic calendar**: FOMC dates come from the Federal Reserve; US CPI/PPI/jobs dates need your e-mail in `.env`
-  (`CALENDAR_CONTACT_EMAIL`) because the BLS blocks anonymous scripts.
+- **Economic calendar**: FOMC dates come from the Federal Reserve and GDP and PCE dates from the BEA. CPI and jobs-report
+  dates come from a file kept in the project (`data/calendars/bls_2026_2027.json`), because the BLS blocks automated
+  access. A warning appears when the file was last checked more than 12 months ago; to update it, compare it with
+  https://www.bls.gov/schedule/ and change `last_verified`.
+- **Global intelligence**: daily market values are often days old, so check the date beside each one. The dollar index
+  can be about a week behind. Gold, ETF flows, exchange flows and whale movements show as unavailable because there is
+  no verified free source. The S&P 500 needs an optional free FRED API key in `.env` (`FRED_API_KEY`). GDELT may show as
+  failing; it retries by itself and everything else works without it.
 - **History for backtests** comes from Binance; a few hourly candles are missing in the record (exchange outages),
   and the app counts them rather than filling them in.
 

@@ -30,6 +30,8 @@ from app import create_app
 from config import Config
 from database import Database, now_ms
 from services.calendar_service import CalendarService
+from services.http_client import ProviderError
+from services.intel_service import IntelService
 from services.market_data import MarketDataService
 from services.http_client import HttpClient
 from services.news_collector import NewsCollector
@@ -77,6 +79,32 @@ def news_items() -> list[tuple[str, str, int]]:
             ("Major crypto exchange hacked, $200 million in bitcoin drained", "https://news.test/hack", n - 3 * 3_600_000),
             ("SEC delays decision on new bitcoin ETF applications", "https://news.test/sec", n - 5 * 3_600_000),
             (XSS_TITLE, "https://news.test/xss", n - 4 * 3_600_000)]
+
+
+BEA_FIXTURE = ("BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nSUMMARY:Personal Income and Outlays\\, October 2026\r\nDTSTART:20261125T133000Z\r\nEND:VEVENT\r\n"
+               "BEGIN:VEVENT\r\nSUMMARY:GDP (Second Estimate) and Corporate Profits\\, 3rd Quarter 2026\r\nDTSTART:20261125T133000Z\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n")
+CURATED_BLS = Path(__file__).resolve().parents[2] / "data" / "calendars" / "bls_2026_2027.json"
+
+
+def intel_routes() -> dict:
+    """Fake Global Intelligence sources in the real formats. Invented headlines and values, test data only."""
+    n = now_ms()
+    day = lambda d: datetime.fromtimestamp((n - d * 86_400_000) / 1000, timezone.utc).strftime("%Y-%m-%d")     # noqa: E731
+    us = lambda d: datetime.fromtimestamp((n - d * 86_400_000) / 1000, timezone.utc).strftime("%m/%d/%Y")      # noqa: E731
+    return {
+        "feeds.bbci": rss([("Russia launches missile strikes on Kyiv", "https://news.test/bbc-war", n - 3_600_000),
+                           ("Voters head to the polls in presidential election", "https://news.test/bbc-vote", n - 7_200_000)]),
+        "federalreserve.gov/feeds": rss([("Federal Reserve issues FOMC statement", "https://news.test/fed", n - 10_800_000)]),
+        "sec.gov": rss([("SEC sues crypto firm over unregistered securities", "https://news.test/sec-suit", n - 14_400_000)]),
+        "cftc.gov": rss([("CFTC to host roundtable on 24/7 trading", "https://news.test/cftc", n - 18_000_000)]),
+        "api.gdeltproject.org": ProviderError("api.gdeltproject.org: HTTP 429"),
+        "home.treasury.gov/news": f'<time datetime={day(1)}T20:00:00Z class=datetime>x</time></span><h3><a href=/news/press-releases/sb1/ hreflang=en>Treasury sanctions network</a></h3>',
+        "home.treasury.gov/resource-center": (f'<feed><entry><d:NEW_DATE>{day(2)}T00:00:00</d:NEW_DATE><d:BC_10YEAR>4.10</d:BC_10YEAR></entry>'
+                                              f'<entry><d:NEW_DATE>{day(1)}T00:00:00</d:NEW_DATE><d:BC_10YEAR>4.20</d:BC_10YEAR></entry></feed>'),
+        "datadownload": f'"Series Description","Nominal Broad Dollar Index"\n"Time Period","X"\n{day(9)},120.0\n{day(8)},121.0\n',
+        "cdn.cboe.com": f"DATE,OPEN,HIGH,LOW,CLOSE\n{us(2)},17,18,16,16.50\n{us(1)},17,18,16,17.50\n",
+        "hist_xls": (Path(__file__).resolve().parents[1] / "fixtures" / "eia_synthetic.xls").read_bytes(),
+    }
 
 
 def seeded_backtest(engine_cfg) -> dict:
@@ -156,9 +184,11 @@ class LiveServer:
         wl = WatchlistService(db, FakeHttp({"/api/v3/ticker/24hr": lambda u, p: [ticker("BTCUSDT", 65_000, 1.2),
                                                                                     ticker("ETHUSDT", 2500.5, -0.4)]}),
                               symbols=lambda: ["BTCUSDT", "ETHUSDT"])
-        cal = CalendarService(db, FakeHttp({"federalreserve.gov": FOMC_FIXTURE.read_text(encoding="utf-8")}))
+        cal = CalendarService(db, FakeHttp({"federalreserve.gov": FOMC_FIXTURE.read_text(encoding="utf-8"), "bea.gov": BEA_FIXTURE}),
+                              bea=True, bls_curated_path=CURATED_BLS)
+        intel = IntelService(db, http=FakeHttp(intel_routes()))
         self.app = create_app(cfg, market=market, news=news, ollama=service(FakeOllama(up=False)),
-                              watchlist=wl, calendar=cal, notifiers=[])
+                              watchlist=wl, calendar=cal, notifiers=[], intel=intel)
         self.seed(news_empty, fresh)
         from werkzeug.serving import make_server
         self.server = make_server("127.0.0.1", self.port, self.app, threaded=True)
@@ -182,6 +212,12 @@ class LiveServer:
                             created_at, acknowledged_at) VALUES (NULL, 'test', 'info', ?, ?, 'seeded fixture', 'app',
                             '["javascript:alert(1)"]', ?, ?)""",
                          ("<b>XSS</b> alert title", XSS_TITLE, now_ms() - 7_200_000, now_ms() - 7_000_000))
+        a["BTC_INTEL"].refresh(force=True)                              # fake sources; GDELT answers 429 as it did live
+        a["BTC_INTEL"].add_articles([{"id": "intel-xss", "source_id": "bbc_world", "source_type": "news", "publisher": "Fake Wire",
+                                      "title": "<script>window.__hacked=1</script> hostile headline about nothing",
+                                      "link": "https://news.test/intel-xss", "summary": "", "published_at": now_ms() - 3_600_000,
+                                      "collected_at": now_ms()}])
+        a["BTC_INTEL"].regroup()
         sig = a["BTC_SIGNALS"].current()                                # stores the first live record
         for hours, score in ((30, -0.05), (20, 0.08)):                  # two older audit-log records
             self.db.save_signal({**sig, "generated_at": now_ms() - hours * 3_600_000, "score": score},
@@ -282,7 +318,7 @@ class Page:
         return self.page
 
 
-VIEWS = ["overview", "market", "news", "signal", "research", "strategies", "paper", "alerts", "assistant", "system"]
+VIEWS = ["overview", "market", "news", "intel", "signal", "research", "strategies", "paper", "alerts", "assistant", "system"]
 
 
 def wait_view_ready(page, view: str, timeout: float = 30_000) -> None:

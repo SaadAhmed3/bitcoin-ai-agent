@@ -110,3 +110,15 @@ by the manual download script; it is network code with no unit tests (unchanged)
 closing before the 2025-10-29 holdout start loaded: 6,566 bars compared, 0 differences in setup, raw setup, tradable,
 unrounded score, stop, target, downgrade or gate keys; the same 5 trades (+9.08%). Scripts: `equiv_replay.py`
 (session scratchpad, not committed).
+
+## Global Intelligence R2 (2026-11-02)
+
+Project `.venv`, Python 3.13.12.
+
+| Suite | Command | Passed | Failed | Deselected | Time |
+|---|---|---|---|---|---|
+| Unit / integration | `.venv\Scripts\python.exe -m pytest -q` | **954** | 0 | 139 (e2e) | 284 s |
+| Browser (Playwright) | `.venv\Scripts\python.exe -m pytest -m e2e -q` | **139** | 0 | 954 | 430 s |
+| Dependency audit | `.venv\Scripts\python.exe -m pip_audit -r requirements.txt` | No known vulnerabilities | | | |
+
+Before R2: 807 unit, 129 e2e. Live check on the real database: 12 of 13 sources OK; GDELT answered HTTP 429.

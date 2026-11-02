@@ -2,6 +2,7 @@
 {% macro icon(name) -%}
 <svg class="ico" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
 {%- if name == "overview" %}<path d="M3 3h6v6H3zM11 3h6v6h-6zM3 11h6v6H3zM11 11h6v6h-6z"/>
+{%- elif name == "intel" %}<circle cx="10" cy="10" r="7.5"/><path d="M2.5 10h15M10 2.5c2.4 2.2 3.5 4.7 3.5 7.5s-1.1 5.3-3.5 7.5c-2.4-2.2-3.5-4.7-3.5-7.5s1.1-5.3 3.5-7.5z"/>
 {%- elif name == "market" %}<path d="M3 17h14M4 13l4-4 3 3 5-6"/>
 {%- elif name == "news" %}<path d="M4 4h10v12H4zM14 7h2v8.5a1 1 0 0 1-2 0M6.5 7h5M6.5 10h5M6.5 13h3"/>
 {%- elif name == "signal" %}<circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3"/><path d="M10 1.5v3M10 15.5v3"/>

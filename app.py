@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import logging
 import math
-import os
 import time
 from pathlib import Path
 
@@ -44,6 +43,7 @@ from services.alerts import AlertMonitor, AlertService
 from services.exports import ExportService
 from services.watchlist import WatchlistService
 from services.calendar_service import CalendarService
+from services.intel_service import IntelService, IntelWorker
 from services.http_client import ProviderError
 from services import security
 from services.security import MAX_BODY_BYTES
@@ -60,13 +60,14 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
                news: NewsService | None = None, signals: SignalService | None = None,
                backtests: BacktestService | None = None, ollama: OllamaService | None = None,
                watchlist: WatchlistService | None = None, calendar: CalendarService | None = None,
-               start_monitor: bool = False, notifiers: list | None = None) -> Flask:
+               start_monitor: bool = False, notifiers: list | None = None, intel: IntelService | None = None) -> Flask:
     """start_monitor=True (only from `python app.py`) starts the background alert monitor. Tests never pass it."""
     config = config or Config()
     ensure_dirs(config)
     db = Database(config.db_path)
     db.init()
-    settings = SettingsService(db, secrets=lambda: {"coingecko_demo_key": bool(config.coingecko_demo_key)})
+    settings = SettingsService(db, secrets=lambda: {"coingecko_demo_key": bool(config.coingecko_demo_key),
+                                                    "fred_api_key": bool(config.fred_api_key)})
     if market is None:
         config.providers = settings.get("market", "provider_order")      # restart required to change
     market = market or MarketDataService(db, config)
@@ -179,8 +180,9 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         except ProviderError as exc:
             raise ValueError(f"Could not reach Binance to validate the symbols ({exc}). Try again later.") from None
     settings.symbol_check = _symbol_check
-    calendar = calendar or CalendarService(db, market.http,
-                                           contact_email=lambda: os.getenv("CALENDAR_CONTACT_EMAIL", "").strip())
+    calendar = calendar or CalendarService(
+        db, market.http, bea=True, bls_curated_path=Path(__file__).parent / "data" / "calendars" / "bls_2026_2027.json",
+        health=lambda source, ok, error=None: db.intel_record_health(source, ok, error, now_ms(), None, kind="calendar"))
     app.config["BTC_CALENDAR"] = calendar
 
     def display_tz() -> str:
@@ -280,6 +282,14 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     app.config["BTC_MONITOR"] = monitor
     if start_monitor:
         monitor.start()
+
+    # Global Intelligence: context only, one-way (it reads the news table; nothing existing reads it). Own worker thread.
+    intel = intel or IntelService(db, fred_key=lambda: config.fred_api_key)
+    intel_worker = IntelWorker(intel)
+    app.config["BTC_INTEL"] = intel
+    app.config["BTC_INTEL_WORKER"] = intel_worker
+    if start_monitor:
+        intel_worker.start()
         strategy_charts.warm()            # history charts are ready before anyone opens them
 
     def _candle_source() -> tuple[str, str]:
@@ -750,7 +760,25 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
 
     @app.get("/api/calendar")
     def calendar_get():
-        return jsonify(calendar.upcoming())
+        return jsonify(calendar.upcoming(days=_int_arg("days", 14, 1, 120), past_days=_int_arg("past", 0, 0, 60)))
+
+    # ---------------------------------------------------------------- Global Intelligence (context, read-only)
+    @app.get("/api/intel/overview")
+    def intel_overview():
+        return jsonify(intel.overview(hours=_int_arg("hours", 168, 1, 2160)))
+
+    @app.get("/api/intel/events")
+    def intel_events():
+        country = request.args.get("country") or None
+        if country and len(country) > 60:
+            raise ValueError("'country' is too long")
+        return jsonify(intel.events(group=request.args.get("group") or None, category=request.args.get("category") or None,
+                                    status=request.args.get("status") or None, country=country,
+                                    hours=_int_arg("hours", 168, 1, 2160), limit=_int_arg("limit", 100, 1, 500)))
+
+    @app.get("/api/intel/markets")
+    def intel_markets():
+        return jsonify(intel.markets.latest())
 
     @app.get("/api/sources")
     def sources():
@@ -761,7 +789,7 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
                       "notes": "Headline + short snippet only; full article stays on the publisher's site."
                                + (" Aggregator: publisher taken from the source tag." if f.get("aggregator") else "")}
                      for f in FEEDS]
-        return jsonify({"health": db.get_health(), "docs": SOURCE_DOCS + feed_docs})
+        return jsonify({"health": db.get_health(), "intel_health": intel.health(), "docs": SOURCE_DOCS + feed_docs})
 
     return app
 

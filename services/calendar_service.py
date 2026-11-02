@@ -4,17 +4,18 @@ Sources (researched Phase 8):
 * FOMC meetings - Federal Reserve Board "Meeting calendars" page (federalreserve.gov, US-government work, public
   domain; the Board asks for attribution). There is no ICS/JSON feed for FOMC dates, so the page's dated
   meeting rows are parsed. Fetched at most once per day.
-* BLS releases (CPI, PPI, Employment Situation) - the official BLS iCalendar feed. BLS blocks anonymous
-  automated clients (HTTP 403) and asks scripts to identify their owner, so it is OPTIONAL: set
-  CALENDAR_CONTACT_EMAIL in .env to your own e-mail and the app identifies itself with it. Without it the BLS
-  part is skipped and the UI says why. Nothing is bypassed.
-* GDP (BEA) - BEA publishes no machine-readable schedule feed; not included.
+* GDP and PCE - the official BEA release calendar (iCalendar), fetched at most once per day.
+* CPI and the jobs report - a curated file, data/calendars/bls_2026_2027.json, checked by a person against the official
+  BLS schedule. The app never fetches bls.gov, because BLS blocks automated clients (HTTP 403). The page warns when the
+  file was last verified more than 12 months ago.
 """
 from __future__ import annotations
 
 import datetime as dt
 import html
+import json
 import re
+from pathlib import Path
 from typing import Callable
 from zoneinfo import ZoneInfo
 
@@ -22,8 +23,10 @@ from database import Database, now_ms
 from services.http_client import HttpClient, ProviderError
 
 FOMC_URL = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
-BLS_ICS_URL = "https://www.bls.gov/schedule/news_release/bls.ics"
+BEA_ICS_URL = "https://www.bea.gov/news/schedule/ics/online-calendar-subscription.ics"
+BEA_SCHEDULE_URL = "https://www.bea.gov/news/schedule"
 BLS_SCHEDULE_URL = "https://www.bls.gov/schedule/"
+CURATED_MAX_AGE_DAYS = 365
 CACHE_S = 24 * 3600
 RETRY_AFTER_FAILURE_S = 3600
 WINDOW_DAYS = 14
@@ -119,18 +122,72 @@ def parse_bls_ics(text: str) -> list[dict]:
     return sorted(out, key=lambda e: e["at"])
 
 
+def parse_bea_ics(text: str) -> list[dict]:
+    """GDP and PCE ("Personal Income and Outlays") from BEA's iCalendar file. Its times are in UTC."""
+    out, seen = [], set()
+    for line_block in re.findall(r"BEGIN:VEVENT(.*?)END:VEVENT", "\n".join(_unfold(text)), re.S):
+        summary = re.search(r"^SUMMARY[^:]*:(.*)$", line_block, re.M)
+        start = re.search(r"^DTSTART[^:]*:(\d{8}T\d{6})Z", line_block, re.M)
+        if not summary or not start:
+            continue
+        title = summary.group(1).replace("\\,", ",").replace("\\;", ";").strip()
+        kind = "GDP" if title.startswith("GDP (") else "PCE" if title.startswith("Personal Income and Outlays") else None
+        if not kind:
+            continue
+        at = int(dt.datetime.strptime(start.group(1), "%Y%m%dT%H%M%S").replace(tzinfo=dt.timezone.utc).timestamp() * 1000)
+        if (kind, at) in seen:
+            continue
+        seen.add((kind, at))
+        out.append({"id": f"bea-{kind}-{start.group(1)[:8]}", "event": title, "kind": kind, "country": "US", "importance": "high",
+                    "at": at, "at_utc": iso(at), "time_note": "Official BEA release time",
+                    "source": "U.S. Bureau of Economic Analysis", "link": BEA_SCHEDULE_URL})
+    return sorted(out, key=lambda e: e["at"])
+
+
+def load_bls_curated(path: str | Path, now: int) -> tuple[list[dict], dict]:
+    """CPI and jobs-report dates from the curated file. Raises ValueError/KeyError/OSError when it is missing or broken."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    verified = dt.date.fromisoformat(data["last_verified"])
+    hour, minute = (int(x) for x in data.get("release_time_et", "08:30").split(":"))
+    url = data["source_url"]
+    if not url.startswith("https://www.bls.gov/"):
+        raise ValueError("source_url must be on www.bls.gov")
+    events = []
+    for kind, rel in data["releases"].items():
+        for d in rel["dates"]:
+            day = dt.date.fromisoformat(d["date"])
+            t = dt.datetime(day.year, day.month, day.day, hour, minute, tzinfo=ET)
+            at = int(t.timestamp() * 1000)
+            events.append({"id": f"bls-{kind}-{d['date']}", "event": f"{rel['name']} for {d['period']}", "kind": kind, "period": d["period"],
+                           "country": "US", "importance": "high", "at": at, "at_utc": iso(at),
+                           "time_note": f"Official BLS schedule, curated file last verified {data['last_verified']}",
+                           "source": "U.S. Bureau of Labor Statistics", "link": (data.get("schedule_urls") or {}).get(kind, url)})
+    if not events:
+        raise ValueError("no dates in the file")
+    age = (dt.datetime.fromtimestamp(now / 1000, dt.timezone.utc).date() - verified).days
+    return sorted(events, key=lambda e: e["at"]), {"last_verified": data["last_verified"], "stale": age > CURATED_MAX_AGE_DAYS,
+                                                   "age_days": age, "source_url": url}
+
+
 class CalendarService:
-    def __init__(self, db: Database, http: HttpClient, contact_email: Callable[[], str] = lambda: "",
-                 clock: Callable[[], int] = now_ms, user_agent: str = "btc-signal-lab/0.8 (local research tool)"):
+    def __init__(self, db: Database, http: HttpClient, clock: Callable[[], int] = now_ms,
+                 user_agent: str = "btc-signal-lab/0.8 (local research tool)", bea: bool = False,
+                 bls_curated_path: str | Path | None = None, health: Callable[..., None] | None = None):
+        """bea / bls_curated_path add GDP, PCE, CPI and NFP. `health` records BEA's status (never source_health, whose rows
+        raise source-failure alerts)."""
         self.db = db
         self.http = http
-        self.contact_email = contact_email
         self.clock = clock
         self.user_agent = user_agent
+        self.bea = bea
+        self.bls_curated_path = bls_curated_path
+        self.health = health or (lambda source, ok, error=None: None)
 
-    def _cached_fetch(self, key: str, fetch: Callable[[], list[dict]]) -> tuple[list[dict] | None, str | None, int | None]:
+    def _cached_fetch(self, key: str, fetch: Callable[[], list[dict]],
+                      record: Callable[..., None] | None = None) -> tuple[list[dict] | None, str | None, int | None]:
         """Fetch at most once per day; after a failure wait an hour before trying again."""
         now = self.clock()
+        record = record or (lambda source, ok, error=None: self.db.record_health(source, ok, error=error))
         hit = self.db.cache_get(key)
         if hit and now - hit[1] < CACHE_S * 1000:
             return hit[0]["events"], None, hit[1]
@@ -140,10 +197,10 @@ class CalendarService:
         try:
             events = fetch()
         except (ProviderError, UnicodeDecodeError) as exc:
-            self.db.record_health(key, False, error=str(exc))
+            record(key, False, error=str(exc))
             self.db.cache_set(key + ":failed", str(exc), now)
             return (hit[0]["events"] if hit else None), str(exc), (hit[1] if hit else None)
-        self.db.record_health(key, True)
+        record(key, True)
         self.db.cache_set(key, {"events": events}, now)
         return events, None, now
 
@@ -154,16 +211,18 @@ class CalendarService:
             raise ProviderError("federalreserve.gov: no meeting dates found (page layout changed?)")
         return events
 
-    def _bls(self) -> list[dict]:
-        email = self.contact_email()
-        body, _ = self.http.get_bytes(BLS_ICS_URL, headers={"Accept": "text/calendar",
-                                                            "User-Agent": f"{self.user_agent} contact: {email}",
-                                                            "From": email})
-        return parse_bls_ics(body.decode("utf-8", errors="replace"))
+    def _bea(self) -> list[dict]:
+        body, _ = self.http.get_bytes(BEA_ICS_URL, headers={"Accept": "text/calendar", "User-Agent": self.user_agent})
+        events = parse_bea_ics(body.decode("utf-8", errors="replace"))
+        if not events:
+            raise ProviderError("www.bea.gov: no GDP or PCE dates found (calendar format changed?)")
+        return events
 
-    def upcoming(self, days: int = WINDOW_DAYS) -> dict:
+    def upcoming(self, days: int = WINDOW_DAYS, past_days: int = 0) -> dict:
+        """Events in the next `days`, and released ones from the last `past_days`, each marked released or upcoming."""
         now = self.clock()
         horizon = now + days * 86_400_000
+        low = now - max(3 * 3_600_000, past_days * 86_400_000)
         sources, events, warnings = [], [], []
         fomc, err, at = self._cached_fetch("calendar:fomc", self._fomc)
         sources.append({"source": "Federal Reserve Board (FOMC calendar)", "link": FOMC_URL,
@@ -175,29 +234,45 @@ class CalendarService:
         for e in fomc or []:
             if e["at"] >= now - 3 * 3_600_000:
                 next_fomc = next_fomc or e
-                if e["at"] <= horizon:
-                    events.append(e)
-        if self.contact_email():
-            bls, err, at = self._cached_fetch("calendar:bls", self._bls)
-            sources.append({"source": "U.S. Bureau of Labor Statistics (iCalendar)", "link": BLS_SCHEDULE_URL,
-                            "status": "ok" if bls is not None and not err else ("cached" if bls else "error"),
+            if low <= e["at"] <= horizon:
+                events.append(e)
+        if self.bea:
+            bea, err, at = self._cached_fetch("calendar:bea", self._bea, record=self.health)
+            sources.append({"source": "U.S. Bureau of Economic Analysis (release calendar)", "link": BEA_SCHEDULE_URL,
+                            "status": "ok" if bea is not None and not err else ("cached" if bea else "error"),
                             "fetched_at": at, "error": err})
             if err:
-                warnings.append(f"BLS calendar fetch failed: {err}")
-            events += [e for e in bls or [] if now - 3 * 3_600_000 <= e["at"] <= horizon]
+                warnings.append(f"BEA calendar fetch failed: {err}" + (" - showing the cached copy." if bea else ""))
+            events += [e for e in bea or [] if low <= e["at"] <= horizon]
+        if self.bls_curated_path:
+            try:
+                bls, meta = load_bls_curated(self.bls_curated_path, now)
+            except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+                sources.append({"source": "U.S. Bureau of Labor Statistics (curated schedule)", "link": BLS_SCHEDULE_URL, "status": "error",
+                                "fetched_at": None, "error": f"The curated schedule file could not be read ({type(exc).__name__})."})
+                warnings.append("CPI and jobs-report dates are unavailable: the curated schedule file could not be read.")
+            else:
+                sources.append({"source": "U.S. Bureau of Labor Statistics (curated schedule)", "link": BLS_SCHEDULE_URL,
+                                "status": "stale" if meta["stale"] else "curated", "fetched_at": None, "last_verified": meta["last_verified"],
+                                "error": "Dates from a curated file, not fetched live: BLS blocks automated clients."})
+                if meta["stale"]:
+                    warnings.append(f"CPI and jobs-report dates were last verified on {meta['last_verified']}, over 12 months ago. "
+                                    "Check them against the BLS schedule.")
+                events += [e for e in bls if low <= e["at"] <= horizon]
         else:
-            sources.append({"source": "U.S. Bureau of Labor Statistics (iCalendar)", "link": BLS_SCHEDULE_URL,
+            sources.append({"source": "U.S. Bureau of Labor Statistics (curated schedule)", "link": BLS_SCHEDULE_URL,
                             "status": "not_configured", "fetched_at": None,
-                            "error": "Optional: BLS asks automated clients to identify their owner. Set "
-                                     "CALENDAR_CONTACT_EMAIL in .env to enable CPI, PPI and jobs-report dates."})
+                            "error": "No curated schedule configured. BLS blocks automated clients, so its dates are never fetched."})
+        events = [{**e, "status": "released" if e["at"] <= now else "upcoming"} for e in events]
         events.sort(key=lambda e: e["at"])
         if not events:
             if fomc is None:
                 empty = "No free verified calendar source could be loaded right now."
             else:
-                empty = f"No verified FOMC{'/BLS' if self.contact_email() else ''} events in the next {days} days."
+                what = "macro" if self.bea or self.bls_curated_path else "FOMC"
+                empty = f"No verified {what} events in the next {days} days."
         else:
             empty = None
         return {"events": events, "window_days": days, "generated_at": now, "next_fomc": next_fomc,
                 "sources": sources, "warnings": warnings, "empty_reason": empty,
-                "note": "Official US release schedules only. GDP (BEA) has no machine-readable schedule feed."}
+                "note": "Official US release schedules only. No consensus forecasts: no verified free source."}

@@ -83,6 +83,8 @@ class Config:
     )
     # Optional free CoinGecko Demo key (free registration). Works without a key at lower limits.
     coingecko_demo_key: str = field(default_factory=lambda: _env_str("COINGECKO_DEMO_API_KEY", ""))
+    # Optional free FRED API key: only enables the S&P 500 in Global Intelligence. Never returned, logged or stored.
+    fred_api_key: str = field(default_factory=lambda: _env_str("FRED_API_KEY", ""))
 
     # Caching / freshness
     price_cache_seconds: int = field(default_factory=lambda: _env_int("PRICE_CACHE_SECONDS", 10))

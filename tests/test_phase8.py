@@ -397,7 +397,7 @@ class FakeHttp:
         return (v.encode("utf-8") if isinstance(v, str) else v), 5.0
 
 
-def make_app(config, db, watch_http=None, cal_http=None, cal_email="", fake_ollama=None, wl_symbols=None):
+def make_app(config, db, watch_http=None, cal_http=None, fake_ollama=None, wl_symbols=None):
     from app import create_app
     from services.http_client import HttpClient
     from services.market_data import MarketDataService
@@ -411,7 +411,7 @@ def make_app(config, db, watch_http=None, cal_http=None, cal_email="", fake_olla
     settings_for_wl = SettingsService(db)
     wl = WatchlistService(db, watch_http or FakeHttp(), symbols=lambda: wl_symbols or settings_for_wl.get("watchlist", "symbols"),
                           clock=lambda: FIXED_NOW)
-    cal = CalendarService(db, cal_http or FakeHttp(), contact_email=lambda: cal_email, clock=lambda: FIXED_NOW)
+    cal = CalendarService(db, cal_http or FakeHttp(), clock=lambda: FIXED_NOW)
     app = create_app(config, market=svc, news=news, ollama=service(fake_ollama or FakeOllama(up=False)),
                      watchlist=wl, calendar=cal, notifiers=[])
     app.testing = True
@@ -769,7 +769,7 @@ def test_calendar_window_next_event_and_daily_cache(db):
     out = cal.upcoming()
     assert [e["at_utc"] for e in out["events"]] == ["2026-12-09T19:00:00Z"] and out["empty_reason"] is None
     assert out["sources"][0]["status"] == "ok" and out["sources"][1]["status"] == "not_configured"
-    assert "CALENDAR_CONTACT_EMAIL" in out["sources"][1]["error"]
+    assert "curated" in out["sources"][1]["error"]              # R2, deliberate: BLS is never fetched, was a contact e-mail
     clock.advance(12 * HOUR)
     cal.upcoming()
     assert len(http.calls) == 1                                   # at most one fetch per day
@@ -822,16 +822,16 @@ END:VCALENDAR\r
 """
 
 
-def test_bls_ics_parser_and_contact_header(db):
+def test_bls_ics_parser_and_never_fetched(db):
+    # R2, deliberate change: dates come from a curated file, so the app no longer fetches BLS with a contact header.
     ev = parse_bls_ics(BLS_ICS)                                   # synthetic sample in the official ICS layout
     assert [(e["kind"], e["at_utc"]) for e in ev] == [("Jobs report", "2026-12-04T13:30:00Z"), ("CPI", "2026-12-10T13:30:00Z")]
     assert ev[0]["event"] == "Employment Situation for November 2026"
     http = FakeHttp({"fomccalendars.htm": FIXTURE.read_text(encoding="utf-8"), "bls.ics": BLS_ICS})
-    cal = CalendarService(db, http, contact_email=lambda: "owner@example.com", clock=Clock(iso_ms("2026-12-01T00:00:00Z")))
+    cal = CalendarService(db, http, clock=Clock(iso_ms("2026-12-01T00:00:00Z")))
     out = cal.upcoming()
-    assert [e["kind"] for e in out["events"]] == ["Jobs report", "FOMC", "CPI"]
-    bls_call = [c for c in http.calls if "bls.ics" in c[0]][0]
-    assert bls_call[2]["From"] == "owner@example.com" and "owner@example.com" in bls_call[2]["User-Agent"]
+    assert [e["kind"] for e in out["events"]] == ["FOMC"]
+    assert not any("bls" in c[0] for c in http.calls)
 
 
 def test_calendar_route(config, db):
