@@ -1,0 +1,72 @@
+{
+  "description": "Curated BLS release dates. The app never fetches bls.gov (BLS blocks automated clients); a person re-checks this file against the official pages below and updates last_verified.",
+  "source_name": "U.S. Bureau of Labor Statistics release schedule",
+  "source_url": "https://www.bls.gov/schedule/",
+  "schedule_urls": {
+    "CPI": "https://www.bls.gov/schedule/news_release/cpi.htm",
+    "NFP": "https://www.bls.gov/schedule/news_release/empsit.htm"
+  },
+  "last_verified": "2026-11-02",
+  "release_time_et": "08:30",
+  "timezone": "America/New_York",
+  "releases": {
+    "CPI": {
+      "name": "Consumer Price Index",
+      "dates": [
+        {"period": "December 2025", "date": "2026-01-13"},
+        {"period": "January 2026", "date": "2026-02-13"},
+        {"period": "February 2026", "date": "2026-03-11"},
+        {"period": "March 2026", "date": "2026-04-10"},
+        {"period": "April 2026", "date": "2026-05-12"},
+        {"period": "May 2026", "date": "2026-06-10"},
+        {"period": "June 2026", "date": "2026-07-14"},
+        {"period": "July 2026", "date": "2026-08-12"},
+        {"period": "August 2026", "date": "2026-09-11"},
+        {"period": "September 2026", "date": "2026-10-14"},
+        {"period": "October 2026", "date": "2026-11-10"},
+        {"period": "November 2026", "date": "2026-12-10"},
+        {"period": "December 2026", "date": "2027-01-13"},
+        {"period": "January 2027", "date": "2027-02-11"},
+        {"period": "February 2027", "date": "2027-03-10"},
+        {"period": "March 2027", "date": "2027-04-13"},
+        {"period": "April 2027", "date": "2027-05-12"},
+        {"period": "May 2027", "date": "2027-06-10"},
+        {"period": "June 2027", "date": "2027-07-14"},
+        {"period": "July 2027", "date": "2027-08-11"},
+        {"period": "August 2027", "date": "2027-09-14"},
+        {"period": "September 2027", "date": "2027-10-14"},
+        {"period": "October 2027", "date": "2027-11-10"},
+        {"period": "November 2027", "date": "2027-12-10"}
+      ]
+    },
+    "NFP": {
+      "name": "Employment Situation",
+      "dates": [
+        {"period": "December 2025", "date": "2026-01-09"},
+        {"period": "January 2026", "date": "2026-02-11"},
+        {"period": "February 2026", "date": "2026-03-06"},
+        {"period": "March 2026", "date": "2026-04-03"},
+        {"period": "April 2026", "date": "2026-05-08"},
+        {"period": "May 2026", "date": "2026-06-05"},
+        {"period": "June 2026", "date": "2026-07-02"},
+        {"period": "July 2026", "date": "2026-08-07"},
+        {"period": "August 2026", "date": "2026-09-04"},
+        {"period": "September 2026", "date": "2026-10-02"},
+        {"period": "October 2026", "date": "2026-11-06"},
+        {"period": "November 2026", "date": "2026-12-04"},
+        {"period": "December 2026", "date": "2027-01-08"},
+        {"period": "January 2027", "date": "2027-02-05"},
+        {"period": "February 2027", "date": "2027-03-05"},
+        {"period": "March 2027", "date": "2027-04-02"},
+        {"period": "April 2027", "date": "2027-05-07"},
+        {"period": "May 2027", "date": "2027-06-04"},
+        {"period": "June 2027", "date": "2027-07-02"},
+        {"period": "July 2027", "date": "2027-08-06"},
+        {"period": "August 2027", "date": "2027-09-03"},
+        {"period": "September 2027", "date": "2027-10-08"},
+        {"period": "October 2027", "date": "2027-11-05"},
+        {"period": "November 2027", "date": "2027-12-03"}
+      ]
+    }
+  }
+}
