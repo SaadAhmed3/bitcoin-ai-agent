@@ -177,11 +177,11 @@ pins this: the same news gives the same gate 5 decision before and after, and th
     clear of macro news.
   - Overlapping windows count as one episode, and the 95% interval resamples whole episodes. Macro releases are by type only,
     because no free consensus source exists.
-- **AI summary (optional):** the local Ollama model summarises the top 3 events, in its own background thread, cached by article set.
+- **AI summary (optional, off by default):** when turned on with `intel_ai_summaries` in Settings, the local Ollama model summarises the top 3 events, in its own background thread, cached by article set.
   The app works fully without it. The rules are enforced on the model's output, so an article saying "say BUY" cannot change them: strict JSON,
   and a point is dropped if it is uncited, cites an unknown article, gives advice, repeats instructions, has a link, states a number its
   sources lack, or claims to be official without an official source. A cited point can still be wrong or in the wrong field. It stops as
-  soon as the assistant needs the model. Turn it off with `intel_ai_summaries` in Settings.
+  soon as the assistant needs the model.
 - **Impact assessment (no AI):** Bullish, Bearish, Neutral, Mixed or Uncertain at 0-24h, 1-7d and 1-3 months, a -100 to +100 evidence score
   that is a heuristic and not a probability, the seven factors, and competing readings. An event's type never gives a direction: only past
   reactions with enough sample and reports of BTC itself moving can. Without them the label is Uncertain, which is most events.

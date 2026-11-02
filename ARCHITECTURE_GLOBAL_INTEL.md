@@ -233,7 +233,7 @@ New code may import helpers from these files, which changes nothing in them.
 **R4 implementation choices:**
 
 - Summaries use their own streaming request, because `services/ollama_service.py` is frozen and has no JSON format or way to stop. Rules are enforced on the output.
-- Summaries have their own setting, `intel_ai_summaries`, on by default. The existing `ai_explanations` is off by default and controls assistant rewrites.
+- Summaries have their own setting, `intel_ai_summaries`, off by default (your decision after the R4 review; built on by default at first). The existing `ai_explanations` is off by default and controls assistant rewrites.
 - An assessment is scored from when it was made, not from publication, so moves it could already see earn no credit.
 - Only the first assessment of a story, made within 24 hours of publication, counts. The rest are stored and never counted.
 - The 1-3 months label is scored at +90 days, and its historical input is the study's +30d row, the longest it has.

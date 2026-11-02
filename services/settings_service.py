@@ -92,7 +92,7 @@ SECTIONS: dict[str, dict[str, Field]] = {
         "channel_desktop": Field(False, "bool", "Windows desktop notifications (needs the optional plyer package)"),
     },
     "assistant": {
-        "intel_ai_summaries": Field(True, "bool", "Global intelligence: let the local AI summarise the top 3 events (about a minute each on CPU, in the background). Needs Ollama"),
+        "intel_ai_summaries": Field(False, "bool", "Global intelligence: let the local AI summarise the top 3 events (about a minute each on CPU, in the background). Needs Ollama. The first summaries can take up to 30 minutes after you turn this on"),
         "ai_explanations": Field(False, "bool", "Use the local AI to rewrite explanation answers (slow on CPU; may contain mistakes)"),
         "model": Field("qwen2.5:3b", "str", "Ollama model name (checked against `ollama list` when Ollama runs)",
                        env="OLLAMA_MODEL"),

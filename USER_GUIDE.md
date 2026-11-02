@@ -173,9 +173,10 @@ changes the signal, its score, its gates, the strategies or paper trading.
 - **What Bitcoin did around this event**, under each event, shows Bitcoin before and after that event, and other markets by day.
   "Waiting" means the time has not passed yet; "Candle missing" means the price data for that hour is not stored.
 
-- **AI summary of the top events** is written by the local AI (Ollama) from the cited reports. Each point links to its sources. It can still be
-  wrong or put a point under the wrong heading, so open the sources. If Ollama is off it says "AI summary unavailable" and everything else works.
-  A summary takes about a minute of CPU in the background, and it stops if the assistant needs the model. To turn it off, use **Settings, Assistant**.
+- **AI summary of the top events** is off by default. To turn it on, use **Settings, Assistant**; it needs Ollama, and the first summaries can take
+  up to 30 minutes to appear. The local AI writes them from the cited reports, and each point links to its sources. It can still be wrong or put a
+  point under the wrong heading, so open the sources. While it is off, or if Ollama is off, it says "AI summary unavailable" and everything else
+  works. A summary takes about a minute of CPU in the background, and it stops if the assistant needs the model.
 - **Impact assessment**, under each event, gives a label for three horizons, a score, its factors and competing readings. The score is not a
   probability. Most events say Uncertain, and that is deliberate: the type of event alone never gives a direction.
 - **Accuracy tracker** shows whether those labels turn out right more often than simple baselines. It will show no hit rate for a long time, because
