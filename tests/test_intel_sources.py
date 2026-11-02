@@ -300,7 +300,7 @@ def test_migration_from_schema_15_is_additive_with_a_backup(tmp_path):
             if t != "schema_meta":
                 assert conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0] == n, t
         tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        assert conn.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone()[0] == "17"
+        assert conn.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone()[0] == "18"
     assert {"intel_articles", "intel_events", "intel_event_articles", "intel_market_points", "intel_source_health"} <= tables
     assert d2.get_setting("keep") == {"x": 1}
 

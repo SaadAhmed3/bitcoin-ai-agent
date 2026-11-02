@@ -315,6 +315,14 @@
       <p class="muted small" id="intelUnavailable"></p>
     </section>
 
+    <section id="intelSummaries" class="card" data-views="intel" data-state="loading">
+      <div class="card-head"><div><h2>AI summary of the top events</h2>
+        <p class="muted" id="intelSummariesMeta">From the local AI, using only the cited reports</p></div>
+        <span class="tag calc">Context, not part of the signal</span></div>
+      <p class="muted small" id="intelSummariesNote"></p>
+      <div id="intelSummaryList"><p class="empty">Loading…</p></div>
+    </section>
+
     <section id="intelEvents" class="card" data-views="intel" data-state="loading">
       <div class="card-head"><div><h2>Events</h2><p class="muted" id="intelEventsMeta">Articles about the same event are grouped into one</p></div>
         <span class="tag calc">Context</span></div>
@@ -351,6 +359,17 @@
       <div class="table-wrap"><table class="table stack" id="intelStudyReleases">
         <thead><tr><th>Release</th><th>Measured</th><th>Median move</th><th>Lowest to highest</th><th>95% interval of the median</th><th>Size vs a normal move</th><th>Sample</th></tr></thead>
         <tbody><tr><td colspan="7" class="empty">Loading…</td></tr></tbody></table></div>
+    </section>
+
+    <section id="intelTracker" class="card" data-views="intel" data-state="loading">
+      <div class="card-head"><div><h2>Accuracy tracker</h2>
+        <p class="muted">Are the impact labels right more often than simple baselines? Rules were fixed in advance in <code>PREREGISTRATION_NEWS_IMPACT.md</code>.</p></div>
+        <span class="tag calc">Context, not part of the signal</span></div>
+      <ul class="small intel-study-notes" id="intelTrackerNotes"><li class="empty">Loading…</li></ul>
+      <p class="muted small" id="intelTrackerTotals"></p>
+      <div class="table-wrap"><table class="table stack" id="intelTrackerTable">
+        <thead><tr><th>Horizon</th><th>Scored at</th><th>Hit rate</th><th>Scored</th><th>Always Neutral</th><th>Random labels</th><th>Same label mix</th><th>Result</th><th>Near a macro release</th><th>Not scored, waiting, no candle</th></tr></thead>
+        <tbody><tr><td colspan="10" class="empty">Loading…</td></tr></tbody></table></div>
     </section>
 
     <section class="grid-2" data-views="intel">

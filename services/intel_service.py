@@ -13,11 +13,14 @@ from typing import Callable
 
 from database import Database, now_ms
 from services.http_client import HttpClient, ProviderError
+from services.intel_impact import ImpactService
 from services.intel_events import (CATEGORIES, CATEGORY_LABELS, CLUSTER_WINDOW_MS, FILTER_GROUPS, STATUSES, cluster, freshness,
                                    summarize_event)
 from services.intel_markets import IntelMarkets
 from services.intel_reactions import ReactionService
 from services.intel_sources import SOURCES, backoff_ms, fetch_source
+from services.intel_summaries import SummaryService
+from services.intel_tracker import TrackerService
 
 log = logging.getLogger("btc_agent.intel")
 
@@ -39,7 +42,8 @@ UNAVAILABLE_DATA = [
 class IntelService:
     def __init__(self, db: Database, http=None, markets: IntelMarkets | None = None, sources: list[dict] | None = None,
                  clock: Callable[[], int] = now_ms, fred_key: Callable[[], str] = lambda: "", calendar=None,
-                 contact: Callable[[], str] = lambda: ""):
+                 contact: Callable[[], str] = lambda: "", ollama=None, busy: Callable[[], bool] = lambda: False,
+                 summaries_enabled: Callable[[], bool] = lambda: True):
         self.db = db
         # No retries: a failure backs off instead. One request per 1.5 s per host, polite for official sites.
         self.http = http if http is not None else HttpClient(timeout=30, retries=0, min_interval=1.5,
@@ -48,6 +52,9 @@ class IntelService:
         self.clock = clock
         self.markets = markets or IntelMarkets(db, self.http, fred_key=fred_key, clock=clock)
         self.reactions = ReactionService(db, calendar=calendar, clock=clock)
+        self.impact = ImpactService(db, self.reactions, clock=clock)
+        self.tracker = TrackerService(db, clock=clock)
+        self.summaries = SummaryService(db, ollama, busy=busy, enabled=summaries_enabled, clock=clock)
         self.contact = contact
         self._lock = threading.Lock()
 
@@ -115,12 +122,20 @@ class IntelService:
             added += self.add_articles(self._existing_news())
             touched = self.regroup()
             markets = self.markets.refresh(force)
-            try:
-                reactions = self.reactions.update()
-            except Exception as exc:       # the study must never stop fetching and grouping
-                log.exception("Reaction study failed")
-                reactions = {"error": type(exc).__name__}
-        return {"articles_added": added, "events_touched": touched, "sources": results, "markets": markets, "reactions": reactions}
+            reactions = self._guarded(self.reactions.update)
+            impact = self._guarded(self.impact.update)
+            tracker = self._guarded(self.tracker.score_due)
+        return {"articles_added": added, "events_touched": touched, "sources": results, "markets": markets, "reactions": reactions,
+                "impact": impact, "tracker": tracker}
+
+    @staticmethod
+    def _guarded(step: Callable[[], dict]) -> dict:
+        """The study, assessments and scoring must never stop fetching and grouping."""
+        try:
+            return step()
+        except Exception as exc:
+            log.exception("Global Intelligence step failed")
+            return {"error": type(exc).__name__}
 
     # ------------------------------------------------------------------ read
     def events(self, group: str | None = None, category: str | None = None, status: str | None = None,

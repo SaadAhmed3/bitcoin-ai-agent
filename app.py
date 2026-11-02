@@ -44,6 +44,7 @@ from services.exports import ExportService
 from services.watchlist import WatchlistService
 from services.calendar_service import CalendarService
 from services.intel_service import IntelService, IntelWorker
+from services.intel_summaries import SummaryWorker
 from services.http_client import ProviderError
 from services import security
 from services.security import MAX_BODY_BYTES
@@ -286,12 +287,16 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
 
     # Global Intelligence: context only, one-way (it reads the news table; nothing existing reads it). Own worker thread.
     intel = intel or IntelService(db, fred_key=lambda: config.fred_api_key, calendar=calendar,
-                                  contact=lambda: config.calendar_contact_email)
+                                  contact=lambda: config.calendar_contact_email, ollama=ollama, busy=lambda: bool(assistant.status()["busy"]),
+                                  summaries_enabled=lambda: bool(settings.get("assistant", "intel_ai_summaries")))
     intel_worker = IntelWorker(intel)
+    summary_worker = SummaryWorker(intel.summaries)
     app.config["BTC_INTEL"] = intel
     app.config["BTC_INTEL_WORKER"] = intel_worker
+    app.config["BTC_SUMMARY_WORKER"] = summary_worker
     if start_monitor:
         intel_worker.start()
+        summary_worker.start()
         strategy_charts.warm()            # history charts are ready before anyone opens them
 
     def _candle_source() -> tuple[str, str]:
@@ -788,6 +793,21 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         if detail is None:
             return jsonify({"error": "Unknown event. The grouping may have been rebuilt; reload the page."}), 404
         return jsonify(detail)
+
+    @app.get("/api/intel/events/<int:event_id>/impact")
+    def intel_event_impact(event_id: int):
+        detail = intel.impact.event_impact(event_id)
+        if detail is None:
+            return jsonify({"error": "Unknown event. The grouping may have been rebuilt; reload the page."}), 404
+        return jsonify(detail)
+
+    @app.get("/api/intel/summaries")
+    def intel_summaries():
+        return jsonify(intel.summaries.overview())
+
+    @app.get("/api/intel/tracker")
+    def intel_tracker():
+        return jsonify(intel.tracker.report())
 
     @app.get("/api/intel/markets")
     def intel_markets():

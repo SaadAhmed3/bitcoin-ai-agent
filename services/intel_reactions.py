@@ -105,6 +105,10 @@ class Candles:
         i = (open_time - self.first) // HOUR
         return i if i < len(self.close) and np.isfinite(self.close[i]) else None
 
+    def last_index(self) -> int | None:
+        found = np.flatnonzero(np.isfinite(self.close))
+        return int(found[-1]) if len(found) else None
+
     def volume_ratio(self, i: int) -> float | None:
         prior = self.volume[max(0, i - VOLUME_WINDOW):i]
         if len(prior) < VOLUME_WINDOW or not np.isfinite(prior).all() or prior.mean() <= 0:
@@ -265,6 +269,9 @@ class ReactionService:
             return
         if releases:
             self.db.cache_set("intel:macro_releases", {"releases": releases}, now)
+
+    def windows(self) -> MacroWindows:
+        return MacroWindows(self._releases())
 
     def _releases(self) -> list[dict]:
         hit = self.db.cache_get("intel:macro_releases")

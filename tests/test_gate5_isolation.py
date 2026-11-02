@@ -222,3 +222,35 @@ def test_reaction_study_leaves_gate5_and_the_signal_identical(config, db):
     again = c.get("/api/signal").get_json()
     for key in ("signal", "setup", "score", "no_trade_reasons"):
         assert again[key] == signal[key], key
+
+
+def test_summaries_impact_and_tracker_leave_gate5_and_the_signal_identical(config, db):
+    """R4 writes only its own tables, and reaches nothing the signal reads."""
+    from services.intel_events import summarize_event
+    from services.intel_impact import ImpactService
+    from services.intel_reactions import ReactionService
+    from services.intel_tracker import TrackerService
+    c = make_client(config, db, [FakeProvider("fake1")])
+    c.post("/api/news/refresh")
+    rows, before = _news_rows(db), _report(db)
+    decisions = _decisions(before)
+    signal = c.get("/api/signal").get_json()
+    t = (FIXED_NOW // HOUR) * HOUR
+    a = {**BLOCKER, "published_at": t - HOUR, "collected_at": t - HOUR}
+    db.intel_add_articles([a])
+    db.intel_save_event(None, summarize_event([a], t), [a["id"]], t)
+    reactions = ReactionService(db, calendar=None, clock=lambda: t)
+    assert ImpactService(db, reactions, clock=lambda: t).update()["assessed"] == 1
+    TrackerService(db, clock=lambda: t).score_due()
+    assert _news_rows(db) == rows
+    assert _stable(_report(db)) == _stable(before) and _decisions(_report(db)) == decisions
+    again = c.get("/api/signal").get_json()
+    for key in ("signal", "setup", "score", "no_trade_reasons"):
+        assert again[key] == signal[key], key
+
+
+def test_summaries_use_their_own_client_and_leave_the_frozen_ollama_module_alone():
+    src = (ROOT / "services" / "intel_summaries.py").read_text(encoding="utf-8")
+    assert "from services.assistant" not in src
+    assert FROZEN["services/ollama_service.py"] == sha(ROOT / "services" / "ollama_service.py")
+    assert FROZEN["services/assistant.py"] == sha(ROOT / "services" / "assistant.py")

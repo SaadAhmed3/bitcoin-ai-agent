@@ -378,7 +378,7 @@ def test_existing_database_upgrades_to_chat_table(tmp_path):
     # 0.9.8 follow-up: version 13 (sweep_corrections, append-only) - from "12".
     # Strategy Lab: version 14 (strategy_* tables, append-only) - from "13".
     # Strategy Lab round 2: version 15 (strategy_forward_rebases) - from "14".
-    assert "chat_messages" in tables and version == "17" and d2.get_setting("keep_me") == {"x": 1}
+    assert "chat_messages" in tables and version == "18" and d2.get_setting("keep_me") == {"x": 1}
     assert {"alerts", "alert_rules", "alert_state", "holdout_runs"} <= tables
     d2.add_chat("user", "hi", 1)
     assert d2.chat_history()[0]["content"] == "hi"

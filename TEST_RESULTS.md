@@ -134,3 +134,15 @@ Project `.venv`, Python 3.13.12.
 | Dependency audit | not rerun: `requirements.txt` did not change in R3 | | | | |
 
 Before R3: 954 unit, 139 e2e. Live check on the real database: 2,330 stored outcomes re-derived from raw candles by a separate script, 0 mismatches.
+
+## Global Intelligence R4 (2026-11-02)
+
+Project `.venv`, Python 3.13.12.
+
+| Suite | Command | Passed | Failed | Deselected | Time |
+|---|---|---|---|---|---|
+| Unit / integration | `.venv\Scripts\python.exe -m pytest -q` | **1255** | 0 | 155 (e2e) | 318 s |
+| Browser (Playwright) | `.venv\Scripts\python.exe -m pytest -m e2e -q` | **155** | 0 | 1255 | 465 s |
+| Dependency audit | not rerun: `requirements.txt` did not change in R4 | | | | |
+
+Before R4: 1057 unit, 148 e2e. Live checks: real model (qwen2.5:3b, CPU) on real clusters and a hostile article, stored nothing. Scoring on a throwaway copy of the database with real candles: 13 scores re-derived by a separate script, 0 mismatches. No real horizon had passed when this was written, so the real tracker holds 0 scores.

@@ -395,6 +395,20 @@ ul.ev a { color: var(--info); }
 .react-status.pending, .react-status.unavailable { color: var(--muted); }
 #intelStudy .table td:last-child { min-width: 150px; }
 #intelMarkets { grid-column: 1 / -1; }
+.intel-impact { margin-top: 6px; font-size: 13px; }
+.intel-impact > summary { cursor: pointer; color: var(--accent); font-size: 12px; min-height: 24px; }
+.intel-impact-body { padding: 8px 0 0; }
+.intel-impact-body h4 { margin: 10px 0 2px; font-size: 13px; }
+.impact-label { font-weight: 600; }
+.impact-label.bullish { color: var(--up); }
+.impact-label.bearish { color: var(--down); }
+.impact-label.mixed { color: var(--warn); }
+.impact-label.neutral, .impact-label.uncertain { color: var(--muted); }
+.intel-summary { border-top: 1px solid var(--line); padding: 12px 0; overflow-wrap: anywhere; }
+.intel-summary:first-child { border-top: 0; }
+.intel-summary-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px 16px; margin: 8px 0; font-size: 13px; }
+.intel-summary-field ul { margin: 2px 0 0; padding-left: 16px; }
+#intelTracker .tracker-rate { display: inline-block; }
 .mk-source { display: block; }
 .cal-status { font-size: 11px; font-weight: 600; }
 .cal-status.upcoming { color: var(--info); }

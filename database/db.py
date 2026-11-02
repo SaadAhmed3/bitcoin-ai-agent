@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
-SCHEMA_VERSION = 17  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
+SCHEMA_VERSION = 18  # 2: news_items, 3: signals, 4: backtests + paper trading, 5: assistant chat, 6: alerts,
                      # 7: holdout_runs (0.9.2), 8: holdout_runs.holdout_start (0.9.3),
                      # 9: holdout_runs.verdict + criteria, write-once triggers (0.9.4),
                      # 10: forward_tests + forward_events, append-only (research-1),
@@ -23,6 +23,7 @@ SCHEMA_VERSION = 17  # 2: news_items, 3: signals, 4: backtests + paper trading, 
                      # 15: strategy_forward_rebases, append-only, only before a test's first processed day,
                      # 16: intel_* tables (Global Intelligence, context only); articles and market points append-only.
                      # 17: reaction study: intel_reaction_* (append-only, keyed to articles), event time columns on intel_events.
+                     # 18: AI summaries, impact assessments and accuracy scores, all append-only and keyed to article sets.
                     # Migrations are additive; an upgrade backs the file up first.
 
 SCHEMA = """
@@ -505,6 +506,69 @@ CREATE TRIGGER IF NOT EXISTS intel_reaction_outcomes_no_update BEFORE UPDATE ON 
     BEGIN SELECT RAISE(ABORT, 'intel reactions are append-only'); END;
 CREATE TRIGGER IF NOT EXISTS intel_reaction_outcomes_no_delete BEFORE DELETE ON intel_reaction_outcomes
     BEGIN SELECT RAISE(ABORT, 'intel reactions are append-only'); END;
+-- AI summaries, cached by article set; assessments and their scores are the pre-registered record: written once, never edited.
+CREATE TABLE IF NOT EXISTS intel_summaries (
+    article_set_hash   TEXT    NOT NULL,
+    prompt_version     INTEGER NOT NULL,
+    anchor_article_id  TEXT,
+    event_time_at      INTEGER,
+    article_ids_json   TEXT    NOT NULL,
+    model              TEXT    NOT NULL,
+    summary_json       TEXT    NOT NULL,
+    dropped_count      INTEGER NOT NULL,
+    duration_ms        INTEGER,
+    created_at         INTEGER NOT NULL,
+    PRIMARY KEY (article_set_hash, prompt_version)
+);
+CREATE INDEX IF NOT EXISTS idx_intel_summaries_anchor ON intel_summaries (anchor_article_id, created_at);
+CREATE TABLE IF NOT EXISTS intel_assessments (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    article_set_hash   TEXT    NOT NULL,
+    article_ids_json   TEXT    NOT NULL,
+    anchor_article_id  TEXT,
+    event_time_at      INTEGER,
+    category           TEXT    NOT NULL,
+    status             TEXT    NOT NULL,
+    rules_version      INTEGER NOT NULL,
+    assessed_at        INTEGER NOT NULL,
+    eligible           INTEGER NOT NULL,
+    macro_window       INTEGER NOT NULL,
+    time_flag          TEXT,
+    label_0_24h        TEXT    NOT NULL,
+    label_1_7d         TEXT    NOT NULL,
+    label_1_3m         TEXT    NOT NULL,
+    payload_json       TEXT    NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_intel_assessments ON intel_assessments (article_set_hash, IFNULL(event_time_at, -1), rules_version);
+CREATE TABLE IF NOT EXISTS intel_assessment_scores (
+    assessment_id      INTEGER NOT NULL REFERENCES intel_assessments (id),
+    horizon            TEXT    NOT NULL,
+    label              TEXT    NOT NULL,
+    base_open_time     INTEGER NOT NULL,
+    base_close         REAL    NOT NULL,
+    target_open_time   INTEGER NOT NULL,
+    target_close       REAL    NOT NULL,
+    return_pct         REAL    NOT NULL,
+    window_hours       INTEGER NOT NULL,
+    normal_abs_pct     REAL    NOT NULL,
+    threshold_pct      REAL    NOT NULL,
+    zone               TEXT    NOT NULL CHECK (zone IN ('up', 'down', 'band')),
+    outcome            TEXT    NOT NULL CHECK (outcome IN ('hit', 'miss', 'not_scored')),
+    computed_at        INTEGER NOT NULL,
+    PRIMARY KEY (assessment_id, horizon)
+);
+CREATE TRIGGER IF NOT EXISTS intel_summaries_no_update BEFORE UPDATE ON intel_summaries
+    BEGIN SELECT RAISE(ABORT, 'intel summaries are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS intel_summaries_no_delete BEFORE DELETE ON intel_summaries
+    BEGIN SELECT RAISE(ABORT, 'intel summaries are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS intel_assessments_no_update BEFORE UPDATE ON intel_assessments
+    BEGIN SELECT RAISE(ABORT, 'intel assessments are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS intel_assessments_no_delete BEFORE DELETE ON intel_assessments
+    BEGIN SELECT RAISE(ABORT, 'intel assessments are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS intel_assessment_scores_no_update BEFORE UPDATE ON intel_assessment_scores
+    BEGIN SELECT RAISE(ABORT, 'intel assessment scores are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS intel_assessment_scores_no_delete BEFORE DELETE ON intel_assessment_scores
+    BEGIN SELECT RAISE(ABORT, 'intel assessment scores are append-only'); END;
 
 -- A stored sweep event is never changed or deleted; a later finding (e.g. a duplicate of the same move) is recorded
 -- here, once per event, and every reader excludes superseded events.
@@ -1346,6 +1410,65 @@ class Database:
                              [(subject_type, subject_id, h, o["target_open_time"], o["target_close"], o["return_pct"], o["window_hours"],
                                o["normal_abs_pct"], o["normal_median_pct"], o["normal_samples"], now) for h, o in outcomes.items()])
             return added_base, conn.total_changes - before - added_base
+
+    def intel_event_articles(self, event_id: int) -> list[dict]:
+        with self.connect() as conn:
+            return self._intel_event_articles(conn, event_id)
+
+    def intel_summary(self, article_set_hash: str, prompt_version: int) -> dict | None:
+        with self.connect() as conn:
+            r = conn.execute("SELECT * FROM intel_summaries WHERE article_set_hash = ? AND prompt_version = ?", (article_set_hash, prompt_version)).fetchone()
+        return dict(r) if r else None
+
+    def intel_latest_summary_for_anchor(self, anchor_article_id: str, prompt_version: int) -> dict | None:
+        with self.connect() as conn:
+            r = conn.execute("SELECT * FROM intel_summaries WHERE anchor_article_id = ? AND prompt_version = ? ORDER BY created_at DESC LIMIT 1",
+                             (anchor_article_id, prompt_version)).fetchone()
+        return dict(r) if r else None
+
+    def intel_add_summary(self, s: dict, now: int) -> None:
+        with self.connect() as conn:
+            conn.execute("""INSERT OR IGNORE INTO intel_summaries (article_set_hash, prompt_version, anchor_article_id, event_time_at, article_ids_json, model,
+                            summary_json, dropped_count, duration_ms, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                         (s["article_set_hash"], s["prompt_version"], s.get("anchor_article_id"), s.get("event_time_at"), json.dumps(s["article_ids"]), s["model"],
+                          json.dumps(s["summary"]), s["dropped_count"], s.get("duration_ms"), now))
+
+    def intel_assessment_for(self, article_set_hash: str, event_time_at: int | None, rules_version: int) -> dict | None:
+        with self.connect() as conn:
+            r = conn.execute("SELECT * FROM intel_assessments WHERE article_set_hash = ? AND IFNULL(event_time_at, -1) = ? AND rules_version = ?",
+                             (article_set_hash, -1 if event_time_at is None else event_time_at, rules_version)).fetchone()
+        return dict(r) if r else None
+
+    def intel_assessment_exists(self, article_set_hash: str, event_time_at: int | None, rules_version: int) -> bool:
+        return self.intel_assessment_for(article_set_hash, event_time_at, rules_version) is not None
+
+    def intel_add_assessment(self, a: dict) -> int | None:
+        """Store an assessment as it was made. A repeat of the same article set, time and rules is ignored. Returns the new id, or None."""
+        labels = a["labels"]
+        with self.connect() as conn:
+            cur = conn.execute("""INSERT OR IGNORE INTO intel_assessments (article_set_hash, article_ids_json, anchor_article_id, event_time_at, category, status, rules_version,
+                                  assessed_at, eligible, macro_window, time_flag, label_0_24h, label_1_7d, label_1_3m, payload_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                               (a["article_set_hash"], json.dumps(a["article_ids"]), a.get("anchor_article_id"), a.get("event_time_at"), a["category"], a["status"], a["rules_version"],
+                                a["assessed_at"], a["eligible"], a["macro_window"], a.get("time_flag"), labels["0-24h"], labels["1-7d"], labels["1-3m"], json.dumps(a["payload"])))
+            return int(cur.lastrowid) if cur.rowcount else None
+
+    def intel_assessments(self) -> list[dict]:
+        """Everything except the payload, which the tracker does not need."""
+        with self.connect() as conn:
+            return [dict(r) for r in conn.execute("""SELECT id, article_set_hash, anchor_article_id, event_time_at, category, rules_version, assessed_at, eligible, macro_window,
+                                                     time_flag, label_0_24h, label_1_7d, label_1_3m FROM intel_assessments ORDER BY id""")]
+
+    def intel_add_score(self, s: dict, now: int) -> int:
+        with self.connect() as conn:
+            cur = conn.execute("""INSERT OR IGNORE INTO intel_assessment_scores (assessment_id, horizon, label, base_open_time, base_close, target_open_time, target_close, return_pct,
+                                  window_hours, normal_abs_pct, threshold_pct, zone, outcome, computed_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                               (s["assessment_id"], s["horizon"], s["label"], s["base_open_time"], s["base_close"], s["target_open_time"], s["target_close"], s["return_pct"],
+                                s["window_hours"], s["normal_abs_pct"], s["threshold_pct"], s["zone"], s["outcome"], now))
+            return cur.rowcount
+
+    def intel_assessment_scores(self) -> list[dict]:
+        with self.connect() as conn:
+            return [dict(r) for r in conn.execute("SELECT * FROM intel_assessment_scores")]
 
     def intel_market_range(self, series: str) -> list[dict]:
         with self.connect() as conn:
