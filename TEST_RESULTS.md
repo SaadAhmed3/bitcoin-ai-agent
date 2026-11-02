@@ -146,3 +146,14 @@ Project `.venv`, Python 3.13.12.
 | Dependency audit | not rerun: `requirements.txt` did not change in R4 | | | | |
 
 Before R4: 1057 unit, 148 e2e. Live checks: real model (qwen2.5:3b, CPU) on real clusters and a hostile article, stored nothing. Scoring on a throwaway copy of the database with real candles: 13 scores re-derived by a separate script, 0 mismatches. No real horizon had passed when this was written, so the real tracker holds 0 scores.
+
+## AI summaries off by default (2026-11-02)
+
+Project `.venv`, Python 3.13.12.
+
+| Suite | Command | Passed | Failed | Deselected | Time |
+|---|---|---|---|---|---|
+| Unit / integration | `.venv\Scripts\python.exe -m pytest -q` | **1259** | 0 | 155 (e2e) | 331 s |
+| Browser (Playwright) | `.venv\Scripts\python.exe -m pytest -m e2e -q` | **155** | 0 | 1259 | 482 s |
+
+Before: 1255 unit, 155 e2e. Live check on the real app: setting off by default, no new summary and no model loaded after the worker's first delay, stored summaries still shown, assessments still running.
