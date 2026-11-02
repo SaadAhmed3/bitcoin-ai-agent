@@ -81,3 +81,16 @@ An assessment is marked if its publication time or its assessment time is within
 - A rule-based label can be right for the wrong reason.
 - Most events are expected to be Uncertain, so coverage will be low. A high hit rate on few labels is reported with its coverage.
 - Nothing will be connected to the signal because of this tracker. Any such change would be a separate proposal needing approval.
+
+## Amendment 1, 2026-11-02: rules version 2
+
+The text above is unchanged. This amendment was added after the first live run and **before any horizon was scored: the database held 0 scores, so no outcome was known.**
+
+The first live run stored 359 assessments under rules version 1. Real headlines showed that the labelling rules misread wording: "Why Bitcoin Didn't Crash" and "AI found a way to crash bitcoin nodes" were labelled Bearish because of the word "crash", and "Bitcoin ETFs sink into outflows" was read as BTC falling. A score of -86 from wording alone was also far too strong for weak evidence.
+
+Rules version 2:
+
+- A report counts as saying BTC moved only if the direction word directly follows the name, as in "Bitcoin drops". Negated or unrelated uses no longer count.
+- Reports of BTC moving carry half the weight: 0.5 at 0-24h, 0.25 at 1-7d, none at 1-3 months.
+
+**Only rules version 2 counts from now on, so item 1 under "Which assessments count" now reads version 2.** Version 1 rows stay stored, as this file requires, and are never counted or pooled. The hit rules, horizons, baselines, minimum samples and macro handling do not change.
