@@ -271,6 +271,13 @@ class SummaryService:
                 out["generated"] += 1
         return out
 
+    def _status_text(self, available: bool) -> str:
+        if available:
+            return "Written by a local AI from the cited reports only. It can be wrong, so check the sources."
+        if self.ollama is not None and not self.enabled():
+            return f"{UNAVAILABLE}: turned off. To turn it on, go to Settings, Assistant. Everything else works without it."
+        return f"{UNAVAILABLE}: Ollama is not available. Everything else works without it."
+
     def overview(self) -> dict:
         """For the page. Reads SQLite and the cached Ollama status; never asks the model anything."""
         available = self.available()
@@ -296,7 +303,7 @@ class SummaryService:
                           "model": row["model"] if row else None, "created_at": row["created_at"] if row else None, "dropped_count": row["dropped_count"] if row else 0,
                           "state_text": None if row else ("Summary being prepared" if available else UNAVAILABLE)})
         return {"label": LABEL, "available": available, "items": items, "generated_at": self.clock(),
-                "status_text": "Written by a local AI from the cited reports only. It can be wrong, so check the sources." if available else f"{UNAVAILABLE}: Ollama is off or the summaries setting is off. Everything else works without it.",
+                "status_text": self._status_text(available),
                 "note": "Bullish and bearish factors are what the reports say, not advice. Whether something is verified comes from the reports; the status beside each event comes from the app's rules."}
 
 

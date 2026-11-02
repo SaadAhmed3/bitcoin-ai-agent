@@ -2,6 +2,11 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## AI summaries off by default — 2026-11-02
+
+`intel_ai_summaries` now defaults to off, so the local AI uses no CPU for summaries until you turn it on in Settings, Assistant. Stored summaries
+stay visible. Nothing else changes: engine signal-1.8, news weight 0%, every forward-test fingerprint unchanged.
+
 ## Global Intelligence, round 4: AI summaries, impact assessment, accuracy tracker — 2026-11-02
 
 Context only: nothing here changes the live signal, score, gates, strategies or paper trading. Engine signal-1.8, news
