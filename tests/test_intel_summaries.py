@@ -424,3 +424,45 @@ def test_get_route_never_calls_the_model(config, db):
     add_event(db, [art("a1", hours_ago=1)])
     c.get("/api/intel/summaries")
     assert stream.bodies == []
+
+
+# ---------------------------------------------------------------- off by default
+def test_setting_is_off_by_default_and_sends_nothing_even_with_ollama_running(config, db):
+    c, app = make_app(config, db, fake_ollama=FakeOllama(up=True))
+    s = c.get("/api/settings").get_json()["assistant"]["intel_ai_summaries"]
+    assert s["value"] is False and s["source"] == "default"
+    intel = app.config["BTC_INTEL"]
+    stream = FakeStream()
+    intel.summaries.http_post = stream
+    now = intel.clock()
+    add_event(db, [{**art("a1"), "published_at": now - HOUR, "collected_at": now - HOUR}])
+    assert intel.summaries.refresh()["status"] == "unavailable" and stream.bodies == []
+    assert c.get("/api/intel/summaries").get_json()["available"] is False
+
+
+def test_turning_it_on_in_settings_works_without_a_restart(config, db):
+    c, app = make_app(config, db, fake_ollama=FakeOllama(up=True))
+    intel = app.config["BTC_INTEL"]
+    stream = FakeStream()
+    intel.summaries.http_post = stream
+    now = intel.clock()
+    add_event(db, [{**art("a1"), "published_at": now - HOUR, "collected_at": now - HOUR}])
+    assert c.put("/api/settings/assistant", json={"intel_ai_summaries": True}).status_code == 200
+    assert intel.summaries.refresh()["generated"] == 1 and len(stream.bodies) == 1
+    assert c.put("/api/settings/assistant", json={"intel_ai_summaries": False}).status_code == 200
+    assert intel.summaries.refresh()["status"] == "unavailable"
+
+
+def test_page_text_says_where_to_turn_it_on(db):
+    add_event(db, [art("a1")])
+    off = svc(db, enabled=lambda: False).overview()
+    assert off["status_text"].startswith("AI summary unavailable") and "Settings" in off["status_text"] and off["items"][0]["state_text"] == "AI summary unavailable"
+    down = svc(db, up=False).overview()
+    assert "Ollama" in down["status_text"] and "Settings" not in down["status_text"]
+
+
+def test_a_stored_summary_is_still_shown_while_the_setting_is_off(db):
+    add_event(db, [art("a1")])
+    svc(db).refresh()
+    item = svc(db, enabled=lambda: False).overview()["items"][0]
+    assert item["summary"] is not None and item["state_text"] is None
