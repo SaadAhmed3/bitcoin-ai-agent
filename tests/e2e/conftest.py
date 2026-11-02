@@ -102,7 +102,7 @@ def intel_routes() -> dict:
         "home.treasury.gov/resource-center": (f'<feed><entry><d:NEW_DATE>{day(2)}T00:00:00</d:NEW_DATE><d:BC_10YEAR>4.10</d:BC_10YEAR></entry>'
                                               f'<entry><d:NEW_DATE>{day(1)}T00:00:00</d:NEW_DATE><d:BC_10YEAR>4.20</d:BC_10YEAR></entry></feed>'),
         "datadownload": f'"Series Description","Nominal Broad Dollar Index"\n"Time Period","X"\n{day(9)},120.0\n{day(8)},121.0\n',
-        "cdn.cboe.com": f"DATE,OPEN,HIGH,LOW,CLOSE\n{us(2)},17,18,16,16.50\n{us(1)},17,18,16,17.50\n",
+        "cdn.cboe.com": f"DATE,OPEN,HIGH,LOW,CLOSE\n{us(13)},17,18,16,16.50\n{us(12)},17,18,16,17.50\n",
         "hist_xls": (Path(__file__).resolve().parents[1] / "fixtures" / "eia_synthetic.xls").read_bytes(),
     }
 
@@ -218,6 +218,11 @@ class LiveServer:
                                       "link": "https://news.test/intel-xss", "summary": "", "published_at": now_ms() - 3_600_000,
                                       "collected_at": now_ms()}])
         a["BTC_INTEL"].regroup()
+        hour = now_ms() // 3_600_000 * 3_600_000                        # synthetic closed candles for the reaction study, tests only
+        self.db.upsert_candles("binance", "BTCUSDT", "1h", [
+            {"open_time": hour - i * 3_600_000, "open": 60_000 + i, "high": 60_010 + i, "low": 59_990 + i, "close": 60_000 + i,
+             "volume": 10 + i % 5, "close_time": hour - i * 3_600_000 + 3_599_999} for i in range(1, 1000)], now_ms())
+        a["BTC_INTEL"].reactions.update()
         sig = a["BTC_SIGNALS"].current()                                # stores the first live record
         for hours, score in ((30, -0.05), (20, 0.08)):                  # two older audit-log records
             self.db.save_signal({**sig, "generated_at": now_ms() - hours * 3_600_000, "score": score},
