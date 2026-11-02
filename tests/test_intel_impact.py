@@ -135,6 +135,30 @@ def test_reported_btc_move_is_direction_evidence_short_term_only():
     assert abs(a["horizons"]["1-7d"]["score"]) < abs(a["horizons"]["0-24h"]["score"])
 
 
+@pytest.mark.parametrize("title", ["Binance Hack: Why Bitcoin Didn't Crash Like It Did in 2018",        # real headlines misread on 2026-11-02
+                                   "AI found a way to crash bitcoin nodes on Windows and Macs. It's now public",
+                                   "Bitcoin ETFs sink into October outflows with $643M exit after Binance",
+                                   "Bitcoin risks worst October in 12 years as tech sell-off spreads to gold",
+                                   "Bitcoin could fall further, analysts say", "Will bitcoin rise after the vote?"])
+def test_misleading_wording_about_btc_is_not_a_reported_move(title):
+    a = run([art("a", title=title)])
+    assert a["wording"] == {"reports_up": 0, "reports_down": 0}
+    assert a["horizons"]["0-24h"]["label"] == "Uncertain"
+
+
+@pytest.mark.parametrize("title,up,down", [("Bitcoin drops to $80,000 on Fed dissent", 0, 1), ("Bitcoin slides below $77,000, BNB drops amid Binance hack", 0, 1),
+                                           ("Bitcoin rebounds above $81,000 as Asian chip rally spills into crypto", 1, 0), ("BTC price surges past resistance", 1, 0),
+                                           ("Bitcoin's price falls sharply", 0, 1), ("Bitcoin ETF inflows climb to $176M as BTC rebounds above $80K", 1, 0),
+                                           ("Crypto markets tumble on the news", 0, 1)])
+def test_real_reports_of_btc_moving_still_count(title, up, down):
+    assert run([art("a", title=title)])["wording"] == {"reports_up": up, "reports_down": down}
+
+
+def test_reports_of_btc_moving_alone_are_weak_evidence():
+    best = run([art("a", title="Bitcoin plunges 10% after a $5 billion hack and an emergency halt", source_type="official", publisher="Federal Reserve")], status="official_statement")
+    assert -50 <= best["horizons"]["0-24h"]["score"] < 0
+
+
 def test_a_move_of_something_else_is_not_btc_evidence():
     assert run([art("a", title="Oil slides as traders retreat")])["horizons"]["0-24h"]["label"] == "Uncertain"
 

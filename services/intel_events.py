@@ -13,6 +13,7 @@ Status comes from the wording and the kind of sources, not from a judgement of t
 """
 from __future__ import annotations
 
+import hashlib
 import re
 from typing import Iterable
 
@@ -260,6 +261,11 @@ def _event_country(lead: dict, arts: list[dict], official: bool) -> str:
         if named.count(top) >= max(2, COUNTRY_MIN_SHARE * len(arts)):
             return top
     return "Global"
+
+
+def article_set_hash(article_ids: list[str]) -> str:
+    """Identifies a cluster by its articles, because event IDs change when the grouping is rebuilt."""
+    return hashlib.sha256("\n".join(sorted(article_ids)).encode("utf-8")).hexdigest()
 
 
 def summarize_event(articles: list[dict], now: int) -> dict:

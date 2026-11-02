@@ -35,7 +35,8 @@ def test_code_matches_the_preregistered_numbers():
     assert SCORE_HORIZONS == {"0-24h": 24, "1-7d": 168, "1-3m": 2160}
     assert (MIN_SAMPLES, MIN_EPISODES) == (30, 20)
     assert "at least 30 counted scored assessments and at least 20 separate episodes" in text
-    assert "X = 0.5 x the normal move" in text and "+90 days" in text and RULES_VERSION == 1
+    assert "X = 0.5 x the normal move" in text and "+90 days" in text and RULES_VERSION == 2
+    assert "Amendment 1, 2026-11-02: rules version 2" in text and "0 scores" in text
 
 
 # ---------------------------------------------------------------- the hit rule

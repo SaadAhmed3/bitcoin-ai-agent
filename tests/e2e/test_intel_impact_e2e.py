@@ -45,6 +45,7 @@ def test_impact_panel_shows_labels_factors_and_competing_readings(browser, live_
                        "Market relevance", "Already priced in", "Historical reaction", "One reading", "Another reading"):
             assert phrase in text, phrase
         assert body.locator("tr[data-horizon='0-24h'] .impact-label").text_content().strip() == "Uncertain"      # war alone gives no direction
+        assert [body.locator("tr[data-horizon]").nth(i).get_attribute("data-horizon") for i in range(3)] == ["0-24h", "1-7d", "1-3m"]
         assert p.errors == []
     finally:
         p.context.close()
@@ -58,6 +59,7 @@ def test_tracker_says_small_samples_prove_nothing_and_hides_the_rate(browser, li
         text = card.text_content()
         assert "small samples prove nothing" in text.lower() and "PREREGISTRATION_NEWS_IMPACT.md" in text
         assert card.locator("tr[data-horizon]").count() == 3
+        assert [card.locator("tr[data-horizon]").nth(i).get_attribute("data-horizon") for i in range(3)] == ["0-24h", "1-7d", "1-3m"]
         assert "Always Neutral" in text
         assert card.locator("tr[data-horizon='0-24h'] .tracker-rate").text_content().strip() == "Hidden until 30 scored, 20 episodes"
         assert p.errors == []

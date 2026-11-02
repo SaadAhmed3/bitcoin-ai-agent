@@ -230,6 +230,15 @@ New code may import helpers from these files, which changes nothing in them.
 - All reactions are keyed to articles, not events.
 - Events within 2 hours of a macro release are shown separately from the per-category statistics.
 
+**R4 implementation choices:**
+
+- Summaries use their own streaming request, because `services/ollama_service.py` is frozen and has no JSON format or way to stop. Rules are enforced on the output.
+- Summaries have their own setting, `intel_ai_summaries`, on by default. The existing `ai_explanations` is off by default and controls assistant rewrites.
+- An assessment is scored from when it was made, not from publication, so moves it could already see earn no credit.
+- Only the first assessment of a story, made within 24 hours of publication, counts. The rest are stored and never counted.
+- The 1-3 months label is scored at +90 days, and its historical input is the study's +30d row, the longest it has.
+- Rules version 2 replaced version 1 before any horizon was scored. See Amendment 1 in `PREREGISTRATION_NEWS_IMPACT.md`.
+
 **R3 implementation choices:**
 
 - Flagged events are left out of the statistics and counted, not only labelled, because their time is absent or provably wrong.

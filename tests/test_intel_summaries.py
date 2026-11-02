@@ -310,6 +310,34 @@ def test_a_number_not_in_the_cited_article_is_dropped():
     assert [d["reason"] for d in dropped] == ["unsupported_number", "unsupported_number"]
 
 
+@pytest.mark.parametrize("text", ["Official statement", "Official statement from Binance", "The Fed officially confirmed the hold."])
+def test_official_claim_needs_an_official_source(text):            # real output on 2026-11-02 called a Bloomberg preview an official statement
+    summary, dropped = check(good_reply(verified=[{"text": text, "citations": ["A1"]}]))
+    assert summary["verified"] == [] and dropped == [{"field": "verified", "reason": "unsupported_official"}]
+
+
+def test_official_claim_stands_when_an_official_source_is_cited():
+    arts = {**ARTS, "id-1": {**art("id-1"), "source_type": "official"}}
+    raw = json.dumps(good_reply(verified=[{"text": "Official statement", "citations": ["A1"]}]))
+    assert validate_summary(raw, HANDLES, arts)[0]["verified"] == [{"text": "Official statement", "citations": ["id-1"]}]
+
+
+def test_officials_speaking_is_not_an_official_claim():
+    assert check(good_reply(who=[{"text": "Fed officials spoke.", "citations": ["A1"]}]))[1] == []
+
+
+def test_prompt_no_longer_suggests_the_words_official_statement():
+    assert "official statement" not in build_messages([art("a")])[0][0]["content"].lower()
+
+
+def test_an_older_prompt_version_is_not_shown_as_the_older_summary(db):
+    add_event(db, [art("a1")])
+    db.intel_add_summary({"article_set_hash": "old", "prompt_version": 0, "anchor_article_id": "a1", "event_time_at": NOW, "article_ids": ["a1"], "model": "m",
+                          "summary": good_reply(), "dropped_count": 0, "duration_ms": 1}, NOW)
+    item = svc(db, up=False).overview()["items"][0]
+    assert item["summary"] is None and item["older_articles"] is False
+
+
 def test_repeated_points_are_kept_once():
     p = {"text": "The Federal Reserve.", "citations": ["A1"]}
     assert len(check(good_reply(who=[p, dict(p)]))[0]["who"]) == 1

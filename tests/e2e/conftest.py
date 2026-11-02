@@ -112,6 +112,11 @@ def top_fields():
     return FIELDS
 
 
+def top_prompt_version():
+    from services.intel_summaries import PROMPT_VERSION
+    return PROMPT_VERSION
+
+
 def seeded_backtest(engine_cfg) -> dict:
     """A stored design-period run shaped exactly like services.backtesting.run_backtest output (few trades, so
     passed criteria are shown greyed as 'not meaningful')."""
@@ -232,7 +237,7 @@ class LiveServer:
         top = a["BTC_INTEL"].summaries.overview()["items"][0]           # one stored summary; Ollama is off, so the rest say unavailable
         cited = next(iter(top["articles"]))
         self.db.intel_add_summary({"article_set_hash": top["article_set_hash"], "anchor_article_id": top["anchor_article_id"], "event_time_at": top["event_time_at"],
-                                   "article_ids": list(top["articles"]), "model": "fake", "prompt_version": 1, "dropped_count": 0, "duration_ms": 1,
+                                   "article_ids": list(top["articles"]), "model": "fake", "prompt_version": top_prompt_version(), "dropped_count": 0, "duration_ms": 1,
                                    "summary": {**{f: [] for f in top_fields()}, "what_happened": [{"text": "seeded summary point <script>window.__hacked=1</script>", "citations": [cited]}]}}, now_ms())
         sig = a["BTC_SIGNALS"].current()                                # stores the first live record
         for hours, score in ((30, -0.05), (20, 0.08)):                  # two older audit-log records

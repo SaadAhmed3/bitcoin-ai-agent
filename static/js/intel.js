@@ -49,6 +49,8 @@
         ${e.time_flag ? `<span class="kpi-warn" data-flag="${esc(e.time_flag)}">${esc(TIME_FLAG[e.time_flag] || e.time_flag)}</span>` : ""}
       </div>
       <ul class="intel-sources">${shown.map((a) => `<li>${link(a.link, a.publisher)}${a.title !== e.title ? `: ${esc(a.title)}` : ""}</li>`).join("")}${more > 0 ? `<li class="muted">and ${more} more</li>` : ""}</ul>
+      <details class="intel-impact" data-event="${Number(e.id)}"><summary>Impact assessment</summary>
+        <div class="intel-impact-body" data-state="idle"></div></details>
       <details class="intel-reaction" data-event="${Number(e.id)}"><summary>What Bitcoin did around this event</summary>
         <div class="intel-reaction-body" data-state="idle"></div></details>
     </li>`;
@@ -178,6 +180,112 @@
     }
   }
 
+  const IMPACT_NAMES = { "0-24h": "0-24h", "1-7d": "1-7d", "1-3m": "1-3 months" };
+  const IMPACT_ORDER = Object.keys(IMPACT_NAMES);      // the API's JSON keys arrive sorted, which would put 1-3 months before 1-7d
+  const READING = { could_weigh: "One reading", could_support: "Another reading", no_clear_link: "Or" };
+
+  function impactHtml(d) {
+    const a = d.assessment;
+    if (!a) return `<p class="small muted">${esc(d.note)}</p>`;
+    const rows = IMPACT_ORDER.map((h) => [h, a.horizons[h]]).map(([h, v]) => `<tr data-horizon="${esc(h)}"><td><b>${esc(IMPACT_NAMES[h] || h)}</b></td>
+      <td><span class="impact-label ${esc(v.label.toLowerCase())}">${esc(v.label)}</span></td>
+      <td class="mono">${v.score > 0 ? "+" : ""}${Number(v.score)}</td><td class="small">${esc(v.why)}</td></tr>`).join("");
+    const factors = a.factors.map((f) => {
+      if (f.key !== "historical_reaction") {
+        return `<tr><td><b>${esc(f.label)}</b></td><td class="mono">${Number(f.value).toFixed(2)}</td><td class="small">${esc(f.note)}</td></tr>`;
+      }
+      const hist = IMPACT_ORDER.map((h) => [h, f.by_horizon[h]]).map(([h, s]) => (s
+        ? `${esc(IMPACT_NAMES[h] || h)}: ${s.n} measured, ${s.episodes} episode${s.episodes === 1 ? "" : "s"}, median ${esc(sign(s.median_pct))} (${esc(s.sample_flag.replace("_", " "))})`
+        : `${esc(IMPACT_NAMES[h] || h)}: no data`)).join("<br>");
+      return `<tr><td><b>${esc(f.label)}</b></td><td class="mono">N/A</td><td class="small">${esc(f.note)}<div class="muted">${hist}</div></td></tr>`;
+    }).join("");
+    const readings = a.interpretations.map((i) => `<li><b>${esc(READING[i.stance] || "Or")}:</b> ${esc(i.text)}</li>`).join("");
+    return `<p class="muted small">${esc(a.score_note)} Assessed ${esc(utc(d.assessed_at))}. ${esc(d.note)}${d.macro_window ? " Near a macro release, or with unknown release dates, so it is left out of the main tracker figures." : ""}${d.eligible ? "" : " Not counted by the tracker: made more than 24 hours after publication, or its time is flagged."}</p>
+      <div class="table-wrap"><table class="table stack"><thead><tr><th>Horizon</th><th>Label</th><th>Evidence score</th><th>Why</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <h4>Competing readings</h4><ul class="small intel-study-notes">${readings}</ul>
+      <h4>Factors</h4><p class="muted small">Only the historical reaction and reports of BTC moving can give a direction. The others change the size of the score. The event type never decides it.</p>
+      <div class="table-wrap"><table class="table stack"><thead><tr><th>Factor</th><th>Value (0 to 1)</th><th>Detail</th></tr></thead><tbody>${factors}</tbody></table></div>
+      <p class="muted small">${esc(d.label)}.</p>`;
+  }
+
+  async function loadImpact(details) {
+    const body = details.querySelector(".intel-impact-body");
+    if (body.dataset.state !== "idle") return;
+    body.dataset.state = "loading";
+    body.textContent = "Loading…";
+    try {
+      body.innerHTML = impactHtml(await get(`/api/intel/events/${Number(details.dataset.event)}/impact`));
+      body.querySelectorAll("table").forEach(labelTable);
+      body.dataset.state = "ready";
+    } catch (err) {
+      body.textContent = `Unavailable: ${err.message}`;
+      body.dataset.state = "idle";
+    }
+  }
+
+  function summaryHtml(item) {
+    const head = `<div class="intel-title">${esc(item.title)}</div>
+      <div class="intel-meta"><span class="intel-status ${esc(item.status)}">${esc(STATUS[item.status] || item.status)}</span><span class="intel-cat">${esc(item.category_label)}</span>
+      <span>${item.sources_count} source${item.sources_count === 1 ? "" : "s"} · ${item.articles_count} article${item.articles_count === 1 ? "" : "s"}</span></div>`;
+    if (!item.summary) return `<article class="intel-summary" data-has-summary="false">${head}<p class="muted small">${esc(item.state_text)}</p></article>`;
+    const cite = (id, n) => {
+      const a = item.articles[id] || {};
+      return /^https?:\/\//i.test(a.link || "")
+        ? `<a class="intel-cite" href="${esc(a.link)}" target="_blank" rel="noopener noreferrer" title="${esc(`${a.publisher || ""}: ${a.title || ""}`)}">${esc(a.publisher || `Source ${n}`)}</a>` : "";
+    };
+    const fields = item.fields.filter((f) => (item.summary[f.key] || []).length).map((f) => `<div class="intel-summary-field"><b>${esc(f.label)}</b><ul>${
+      item.summary[f.key].map((p) => `<li>${esc(p.text)} <span class="small muted">[${p.citations.map(cite).filter(Boolean).join(", ")}]</span></li>`).join("")}</ul></div>`).join("");
+    return `<article class="intel-summary" data-has-summary="true">${head}<div class="intel-summary-body">${fields}</div>
+      <p class="muted small">${esc(item.model)}, ${esc(utc(item.created_at))}.${item.older_articles ? " Written before the newest articles arrived." : ""}${item.dropped_count ? ` ${item.dropped_count} point${item.dropped_count === 1 ? " was" : "s were"} removed by the checks.` : ""}</p></article>`;
+  }
+
+  async function loadSummaries() {
+    const card = $("intelSummaries");
+    try {
+      const d = await get("/api/intel/summaries");
+      $("intelSummaryList").innerHTML = d.items.length ? d.items.map(summaryHtml).join("") : `<p class="empty">No recent events to summarise yet.</p>`;
+      $("intelSummariesMeta").textContent = d.status_text;
+      $("intelSummariesNote").textContent = d.note;
+      card.dataset.state = "ready";
+    } catch (err) {
+      $("intelSummaryList").innerHTML = `<p class="empty">AI summary unavailable: ${esc(err.message)}</p>`;
+      card.dataset.state = "error";
+    }
+  }
+
+  const rate = (v) => (v === null || v === undefined ? "N/A" : `${(v * 100).toFixed(1)}%`);
+
+  function trackerRow(h, v) {
+    const c = v.counted;
+    const hidden = `Hidden until ${tracker.min_samples} scored, ${tracker.min_episodes} episodes`;
+    const b = c.baselines || {};
+    const m = v.macro_window;
+    return `<tr data-horizon="${esc(h)}"><td><b>${esc(IMPACT_NAMES[h] || h)}</b></td><td class="small">${esc(v.scored_at)}</td>
+      <td class="mono"><span class="tracker-rate">${c.shown ? `${rate(c.hit_rate)} (${c.hits} of ${c.n})` : esc(hidden)}</span>${c.ci95 ? `<div class="muted small">${rate(c.ci95[0])} to ${rate(c.ci95[1])}</div>` : ""}</td>
+      <td class="mono">${c.n}<div class="muted small">${c.episodes} episode${c.episodes === 1 ? "" : "s"}</div></td>
+      <td class="mono">${rate(b.always_neutral)}</td><td class="mono">${rate(b.random_uniform)}</td><td class="mono">${rate(b.label_mix)}</td>
+      <td class="small">${esc(c.note)}</td>
+      <td class="small">${m.n} scored${m.shown ? `, ${rate(m.hit_rate)}` : ""}</td>
+      <td class="small">${v.not_scored} Mixed or Uncertain, ${v.pending} waiting, ${v.unscorable} no candle</td></tr>`;
+  }
+  let tracker = null;
+
+  async function loadTracker() {
+    const card = $("intelTracker");
+    try {
+      tracker = await get("/api/intel/tracker");
+      $("intelTrackerNotes").innerHTML = tracker.notes.map((n) => `<li>${esc(n)}</li>`).join("");
+      const t = tracker.totals;
+      $("intelTrackerTotals").textContent = `Rules version ${tracker.rules_version}. ${t.assessments} assessments stored, ${t.counted_first_assessments} count (first of a story, within 24 hours), ${t.not_eligible} stored but never counted. Baselines use the same rows: always Neutral, random labels, and random labels with the same mix.`;
+      $("intelTrackerTable").querySelector("tbody").innerHTML = IMPACT_ORDER.map((h) => trackerRow(h, tracker.horizons[h])).join("");
+      labelTable($("intelTrackerTable"));
+      card.dataset.state = "ready";
+    } catch (err) {
+      $("intelTrackerNotes").innerHTML = `<li class="empty">The tracker is unavailable: ${esc(err.message)}</li>`;
+      card.dataset.state = "error";
+    }
+  }
+
   function changeText(s) {
     if (s.change === null || s.change === undefined) return "N/A";
     const sign = s.change >= 0 ? "+" : "";
@@ -212,7 +320,7 @@
     }
   }
 
-  const load = () => Promise.all([loadOverview(), loadEvents(), loadStudy(), loadCalendar(), loadMarkets()]);
+  const load = () => Promise.all([loadOverview(), loadSummaries(), loadEvents(), loadStudy(), loadTracker(), loadCalendar(), loadMarkets()]);
 
   $("intelStudyHorizons").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-horizon]");
@@ -222,7 +330,9 @@
   });
   // "toggle" does not bubble, so listen in the capture phase.
   $("intelEventList").addEventListener("toggle", (e) => {
-    if (e.target.matches && e.target.matches("details.intel-reaction") && e.target.open) loadReaction(e.target);
+    if (!e.target.matches || !e.target.open) return;
+    if (e.target.matches("details.intel-reaction")) loadReaction(e.target);
+    if (e.target.matches("details.intel-impact")) loadImpact(e.target);
   }, true);
 
   $("intelFilters").addEventListener("click", (e) => {

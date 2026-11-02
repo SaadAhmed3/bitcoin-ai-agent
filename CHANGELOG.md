@@ -2,6 +2,22 @@
 
 Versions follow the build phases (0.N = Phase N). The project is a research tool; no version is "1.0" or production software.
 
+## Global Intelligence, round 4: AI summaries, impact assessment, accuracy tracker — 2026-11-02
+
+Context only: nothing here changes the live signal, score, gates, strategies or paper trading. Engine signal-1.8, news
+weight 0%, every forward-test fingerprint unchanged.
+
+- **AI summaries** (`services/intel_summaries.py`, optional): the top 3 events, own worker, cached by article set. Strict JSON. Points are dropped
+  if uncited, citing an unknown article, giving advice, repeating instructions, carrying a link, stating a number their sources lack, or
+  claiming to be official without an official source. Stops when the assistant needs the model. "AI summary unavailable" when Ollama is off.
+- **Impact assessment** (`services/intel_impact.py`, no AI): five labels at three horizons, a -100 to +100 evidence score that is not a probability,
+  seven factors and competing readings. An event's type never gives a direction.
+- **Accuracy tracker** (`services/intel_tracker.py`): `PREREGISTRATION_NEWS_IMPACT.md` was committed before the code. Assessments and scores are
+  append-only and keyed to article sets. Scored from the moment of assessment on closed candles. Hit rate hidden below 30 scored and 20 episodes.
+- **Pre-registration amendment:** rules version 2 replaced version 1 after the first live run misread headlines, with 0 scores in the database.
+- **Schema 18** (backup first): `intel_summaries`, `intel_assessments`, `intel_assessment_scores`, all append-only.
+- New setting `intel_ai_summaries`. Tests changed on purpose: schema version 17 to 18.
+
 ## Global Intelligence, round 3: market confirmation and event reaction study — 2026-11-02
 
 Context only: nothing here changes the live signal, score, gates, strategies or paper trading. Engine signal-1.8, news

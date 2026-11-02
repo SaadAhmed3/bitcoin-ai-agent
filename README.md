@@ -177,6 +177,18 @@ pins this: the same news gives the same gate 5 decision before and after, and th
     clear of macro news.
   - Overlapping windows count as one episode, and the 95% interval resamples whole episodes. Macro releases are by type only,
     because no free consensus source exists.
+- **AI summary (optional):** the local Ollama model summarises the top 3 events, in its own background thread, cached by article set.
+  The app works fully without it. The rules are enforced on the model's output, so an article saying "say BUY" cannot change them: strict JSON,
+  and a point is dropped if it is uncited, cites an unknown article, gives advice, repeats instructions, has a link, states a number its
+  sources lack, or claims to be official without an official source. A cited point can still be wrong or in the wrong field. It stops as
+  soon as the assistant needs the model. Turn it off with `intel_ai_summaries` in Settings.
+- **Impact assessment (no AI):** Bullish, Bearish, Neutral, Mixed or Uncertain at 0-24h, 1-7d and 1-3 months, a -100 to +100 evidence score
+  that is a heuristic and not a probability, the seven factors, and competing readings. An event's type never gives a direction: only past
+  reactions with enough sample and reports of BTC itself moving can. Without them the label is Uncertain, which is most events.
+- **Accuracy tracker:** rules fixed in advance in `PREREGISTRATION_NEWS_IMPACT.md`. Every assessment is stored when made and never edited,
+  keyed to the article set and publication time, then scored on closed candles from the moment it was made. No hit rate appears below 30 scored
+  assessments and 20 separate episodes, because small samples prove nothing. Baselines: always Neutral, random labels, and random labels with
+  the same mix.
 - **Unavailable, never estimated:** gold (no verified free series), ETF flows, exchange flows, whale movements, consensus
   forecasts; S&P 500 without the optional key.
 - **Known limits of the grouping:** it is rule-based. A big story can split into several events (the Binance hack split into
@@ -239,6 +251,7 @@ Writes (POST/PUT/DELETE) from outside the dashboard need the header `X-Requested
 | `GET /api/news`, `POST /api/news/refresh` | News events; fetch now |
 | `GET /api/calendar?days=14&past=0` | Macro calendar, each event marked released or upcoming |
 | `GET /api/intel/overview`, `/api/intel/events?group=war\|elections\|macro\|crypto&category=&status=&country=&hours=&limit=`, `/api/intel/markets` | Global intelligence (read-only, context) |
+| `GET /api/intel/summaries`, `/api/intel/events/<id>/impact`, `/api/intel/tracker` | AI summaries of the top events; one event's rule-based impact assessment; the accuracy tracker (read-only, context) |
 | `GET /api/intel/reactions`, `/api/intel/events/<id>/reaction` | Reaction study by category and macro release type; one event's before and after (read-only, context) |
 | `GET /api/signal`, `/api/signal/history`, `/api/signal/<id>` | Current signal; stored history |
 | `GET`/`PUT /api/signal/config` | Engine settings (range-checked; `{"reset": true}`) |
@@ -269,7 +282,7 @@ services/paper_trading.py   SIMULATED account (atomic orders)
 services/news_*.py          RSS collection and rule-based news analysis
 services/assistant.py       grounded question answering (+ optional Ollama)
 services/alerts.py          alert rules, cooldowns, background monitor
-services/intel_*.py         Global intelligence: sources, event grouping, other markets, own worker thread (context only)
+services/intel_*.py         Global intelligence: sources, grouping, markets, reaction study, AI summaries, impact, tracker; own worker threads (context only)
 services/regime.py, liquidity_sweeps.py, volume_profile.py, advanced_analysis.py   context panels + shadow mode
 services/chart_overlays.py  regime shading / sweep markers as chart coordinates (visualisation only)
 services/strategies/        Strategy Lab engines (base.py schema, dca.py); strategy_lab.py, strategy_forward.py
