@@ -364,6 +364,9 @@ def test_no_key_like_strings_in_the_source_tree():
 ALLOWED_HOSTS = {"api.binance.com", "data-api.binance.vision", "api.exchange.coinbase.com", "api.coingecko.com",
                  "www.coindesk.com", "cointelegraph.com", "decrypt.co", "bitcoinmagazine.com", "www.theblock.co",
                  "news.google.com", "www.federalreserve.gov", "www.bls.gov", "127.0.0.1",
+                 # Global Intelligence, deliberately added in R2 (www.bls.gov stays a display link: it is never fetched)
+                 "feeds.bbci.co.uk", "www.sec.gov", "www.cftc.gov", "home.treasury.gov", "api.gdeltproject.org", "www.bea.gov",
+                 "cdn.cboe.com", "www.cboe.com", "www.eia.gov", "api.stlouisfed.org", "fred.stlouisfed.org",
                  # display-only links (never fetched)
                  "www.binance.com", "exchange.coinbase.com"}
 

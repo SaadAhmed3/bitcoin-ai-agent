@@ -35,7 +35,7 @@ def test_page_shows_label_counts_events_calendar_markets(browser, live_server, t
         assert "UTC" in cal and "Asia/Karachi" in cal and ("upcoming" in cal.lower() or "released" in cal.lower())
         assert p.errors == []
     finally:
-        p.close()
+        p.context.close()
 
 
 def test_filters_are_views_of_one_event_list(browser, live_server):
@@ -57,7 +57,7 @@ def test_filters_are_views_of_one_event_list(browser, live_server):
         assert page.locator("#intelEventList .intel-event").count() == total
         assert p.errors == []
     finally:
-        p.close()
+        p.context.close()
 
 
 def test_links_open_safely_and_hostile_text_stays_text(browser, live_server):
@@ -74,7 +74,7 @@ def test_links_open_safely_and_hostile_text_stays_text(browser, live_server):
         assert "<script>" in page.locator("#intelEventList").text_content()     # shown as text
         assert page.evaluate("window.__hacked === undefined")
     finally:
-        p.close()
+        p.context.close()
 
 
 def test_health_of_intel_sources_shows_in_system(browser, live_server):
@@ -85,7 +85,7 @@ def test_health_of_intel_sources_shows_in_system(browser, live_server):
         assert "gdelt" in page.locator("#intelHealthTable").text_content().lower()
         assert p.errors == []
     finally:
-        p.close()
+        p.context.close()
 
 
 @pytest.mark.parametrize("theme", ["dark", "light"])
@@ -97,7 +97,7 @@ def test_phone_no_horizontal_scroll(browser, live_server, theme):
         assert no_horizontal_scroll(page) == []
         assert p.errors == []
     finally:
-        p.close()
+        p.context.close()
 
 
 def test_empty_state_before_the_first_refresh(browser, fresh_server):
@@ -108,4 +108,4 @@ def test_empty_state_before_the_first_refresh(browser, fresh_server):
         assert page.locator("#intelEventList .intel-event").count() == 0
         assert p.errors == []
     finally:
-        p.close()
+        p.context.close()

@@ -203,3 +203,78 @@ def test_summary_prefers_the_official_title_and_country():
                           art("Federal Reserve issues FOMC statement", publisher="Federal Reserve", source_type="official", hours_ago=1, aid="a2")], FIXED_NOW)
     assert ev["title"] == "Federal Reserve issues FOMC statement" and ev["status"] == "official_statement"
     assert ev["category"] == "central_banks" and ev["country"] == "United States"
+
+
+# ---------------------------------------------------------------- regressions from the first live run (2026-11-02, real headlines)
+@pytest.mark.parametrize("a,b", [
+    ("Federal Reserve Board announces approval of application by The Bank of Nova Scotia",
+     "What the Fed's interest rate decision means for your bank accounts, loans, credit"),
+    ("Federal reserve overflowing with expired PPE from pandemic, AG report finds", "Federal Reserve keeps rates unchanged despite elevated inflation"),
+    ("Treasury Sanctions Facilitators of DPRK IT Worker Fraud Targeting U.S. Businesses",
+     "Samara Asset Group CEO: Bitcoin Treasury Companies a Disservice to Shareholders"),
+    ("Treasury Sanctions Facilitators of DPRK IT Worker Fraud Targeting U.S. Businesses",
+     "Treasury Sanctions Rwandan Ministry of Defence and Financial Institution Supporting"),
+])
+def test_live_overmerge_cases_stay_apart(a, b):
+    assert not similar(a, b)
+
+
+@pytest.mark.parametrize("a,b", [
+    ("Binance investigating hack as suspicious outflows reach up to $5.8 billion", "Bitcoin slides below $77,000, BNB drops amid Binance hack"),
+    ("Federal Reserve keeps rates unchanged despite elevated inflation", "Fed leaves rates unchanged as it awaits more information"),
+    ("Intel, IBM, Oracle and IonQ latest to object to OKX-ICE tokenized stocks", "JPMorgan, Coca-Cola, Dell also say no to OKX-ICE tokenized stock trading plan"),
+])
+def test_live_same_event_cases_still_merge(a, b):
+    assert similar(a, b)
+
+
+def test_an_official_release_only_joins_a_nearly_identical_report():
+    fed = art("Federal Reserve Board announces approval of application by The Bank of Nova Scotia", publisher="Federal Reserve",
+              source_type="official", aid="o1", hours_ago=3)
+    press = art("Fed rate decision: what it means for bank accounts", publisher="Yahoo Finance", aid="n1", hours_ago=2)
+    assert len(cluster([fed, press], [])) == 2
+    same = art("Federal Reserve Board announces approval of application by The Bank of Nova Scotia", publisher="Wire", aid="n2", hours_ago=1)
+    groups = cluster([fed, press, same], [])
+    assert sorted(len(g["articles"]) for g in groups) == [1, 2]
+
+
+def test_clusters_do_not_drift_through_a_chain():
+    """Each headline shares words only with the one before it: without a limit one event would swallow them all."""
+    chain = ["Binance hack drains hot wallet", "Binance hot wallet review after outage", "Binance outage hits traders in Asia",
+             "Binance traders in Asia get refunds", "Binance refunds delayed for Korean users", "Binance Korean users file complaint",
+             "Binance complaint reaches regulator", "Binance regulator opens new licence talks"]
+    arts = [art(t, publisher=f"P{i}", hours_ago=8 - i, aid=f"c{i}") for i, t in enumerate(chain)]
+    assert max(len(g["articles"]) for g in cluster(arts, [])) < len(chain)
+
+
+def test_syndicated_wire_copies_are_not_independent_confirmation():
+    same = "Inflation accelerated last month, highlighting affordability issues for consumers"
+    a, b, c = art(same, publisher="kare11.com", aid="s1"), art(same, publisher="KTVB", aid="s2"), art(same + " - WRAL", publisher="WRAL", aid="s3")
+    status, reason = classify_status([a, b, c])
+    assert status == "developing" and "same wording" in reason
+    assert classify_status([a, art("Inflation accelerated in September, data shows", publisher="Reuters", aid="s4")])[0] == "confirmed"
+
+
+def test_country_comes_from_the_lead_headline_not_any_member():
+    arts = [art("Binance drained of $5.5 billion in suspected hack", publisher="A", hours_ago=9, aid="k1"),
+            art("North Korea suspected in Binance hack", publisher="B", hours_ago=8, aid="k2"),
+            art("Binance hack: withdrawals resume", publisher="C", hours_ago=7, aid="k3"),
+            art("Binance hack losses grow", publisher="D", hours_ago=6, aid="k4"),
+            art("Binance hack: what users should do", publisher="E", hours_ago=5, aid="k5")]
+    assert summarize_event(arts, FIXED_NOW)["country"] == "Global"
+    fed = [art("Federal Reserve meeting: experts available", publisher="A", hours_ago=3, aid="f1"), art("Fed meeting watched in London", publisher="B", hours_ago=2, aid="f2")]
+    assert summarize_event(fed, FIXED_NOW)["country"] == "United States"
+    many = [art("Hack hits exchange", publisher="A", hours_ago=3, aid="m1"), art("Korean exchange hack in Seoul", publisher="B", hours_ago=2, aid="m2"),
+            art("Seoul exchange hack spreads", publisher="C", hours_ago=1, aid="m3")]
+    assert summarize_event(many, FIXED_NOW)["country"] == "South Korea"
+
+
+@pytest.mark.parametrize("title,summary,expected", [
+    ("Christmas shoebox appeal launches to help children", "The campaign asks families to fill shoeboxes.", "other"),
+    ("BTCPay Server warns of hot wallet thefts running on outdated software", "", "crypto_incident"),
+    ("Intel, Oracle, IBM Join Objections to OKX-ICE Tokenized Stock Venue", "", "crypto_industry"),
+    ("Strategy (MSTR) Shareholders Approve Daily Dividends on Four Preferred Stocks", "", "crypto_industry"),
+    ("Trump makes fevered campaign push in final weekend before election", "", "elections_politics"),
+])
+def test_live_category_cases(title, summary, expected):
+    assert classify_category(title, summary) == expected

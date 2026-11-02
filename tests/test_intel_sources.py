@@ -248,10 +248,30 @@ def test_articles_and_market_points_are_append_only(db):
                          "published_at": FIXED_NOW, "collected_at": FIXED_NOW}])
     db.intel_add_market_points("vix", [("2025-10-08", 17.0)], "Cboe", FIXED_NOW)
     intel.regroup()
+    # Deliberate change after the first live run: event membership is derived and rebuildable, so it is no longer append-only.
     for sql in ("UPDATE intel_articles SET title='x'", "DELETE FROM intel_articles", "UPDATE intel_market_points SET value=1",
-                "DELETE FROM intel_market_points", "UPDATE intel_event_articles SET event_id=9", "DELETE FROM intel_event_articles"):
+                "DELETE FROM intel_market_points"):
         with pytest.raises(sqlite3.IntegrityError, match="append-only"), db.connect() as conn:
             conn.execute(sql)
+
+
+def test_better_rules_rebuild_the_groups_and_keep_every_article(db, monkeypatch):
+    from services import intel_service
+    intel = IntelService(db, http=FakeHttp(), clock=Clock())
+    base = {"source_type": "news", "summary": "", "published_at": FIXED_NOW - HOUR, "collected_at": FIXED_NOW}
+    intel.add_articles([{**base, "id": "1", "source_id": "a", "publisher": "A", "title": "Binance hacked for $1.5 billion", "link": "https://a.test/1"},
+                        {**base, "id": "2", "source_id": "b", "publisher": "B", "title": "Federal Reserve holds rates", "link": "https://b.test/2"}])
+    intel.regroup()
+    assert len(intel.events()["events"]) == 2
+    with db.connect() as conn:                                   # as a wrong older rule would have stored them
+        conn.execute("UPDATE intel_event_articles SET event_id = (SELECT MIN(id) FROM intel_events)")
+    assert intel.regroup() == 0                                  # same rules: nothing is redone
+    monkeypatch.setattr(intel_service, "GROUPING_RULES_VERSION", intel_service.GROUPING_RULES_VERSION + 1)
+    assert intel.regroup() == 2
+    evs = intel.events()["events"]
+    assert sorted(e["articles_count"] for e in evs) == [1, 1] and len(evs) == 2
+    with db.connect() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM intel_articles").fetchone()[0] == 2
 
 
 def test_market_point_keeps_the_first_value(db):
@@ -563,12 +583,15 @@ def test_worker_not_started_by_create_app(config, db):
 def test_hostile_text_is_data_and_stored_links_are_http_only(config, db):
     c, app = intel_app(config, db)
     intel = app.config["BTC_INTEL"]
-    base = {"source_id": "a", "source_type": "news", "publisher": "A", "summary": "", "published_at": FIXED_NOW - HOUR, "collected_at": FIXED_NOW}
+    t = intel.clock()                                            # this app runs on real time
+    base = {"source_id": "a", "source_type": "news", "publisher": "A", "summary": "", "published_at": t - HOUR, "collected_at": t}
     assert intel.add_articles([{**base, "id": "1", "title": "<script>alert(1)</script> war", "link": "https://a.test/1"},
                                {**base, "id": "2", "title": "Bad link story", "link": "javascript:alert(1)"}]) == 1
     intel.regroup()
     assert c.get("/api/intel/events").mimetype == "application/json"
-    assert all(a["link"].startswith("https://") for e in intel.events()["events"] for a in e["articles"])
+    events = intel.events()["events"]
+    assert [e["title"] for e in events] == ["<script>alert(1)</script> war"]
+    assert all(a["link"].startswith("https://") for e in events for a in e["articles"])
 
 
 def test_intel_health_in_sources_route_and_docs(config, db):
