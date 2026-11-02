@@ -50,9 +50,9 @@ def test_source_list_is_the_approved_one():
     assert {s["id"] for s in SOURCES if s["type"] == "official"} == {"fed_press", "sec_press", "cftc_general", "cftc_enforcement", "treasury_press"}
 
 
-def test_no_contact_address_is_sent_to_sec():
+def test_no_from_header_is_ever_sent():
     src = (ROOT / "services" / "intel_sources.py").read_text(encoding="utf-8")
-    assert "CONTACT" not in src and '"From"' not in src
+    assert '"From"' not in src                       # the SEC contact goes in its User-Agent only: test_intel_contact_freshness.py
 
 
 # ---------------------------------------------------------------- parsers
@@ -300,7 +300,7 @@ def test_migration_from_schema_15_is_additive_with_a_backup(tmp_path):
             if t != "schema_meta":
                 assert conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0] == n, t
         tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        assert conn.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone()[0] == "16"
+        assert conn.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone()[0] == "17"
     assert {"intel_articles", "intel_events", "intel_event_articles", "intel_market_points", "intel_source_health"} <= tables
     assert d2.get_setting("keep") == {"x": 1}
 
@@ -544,7 +544,7 @@ def intel_app(config, db):
 
 def test_routes_validation_and_label(config, db):
     c, app = intel_app(config, db)
-    app.config["BTC_INTEL"].http = FakeHttp(routes())
+    app.config["BTC_INTEL"].http = app.config["BTC_INTEL"].markets.http = FakeHttp(routes())
     app.config["BTC_INTEL"].refresh(force=True)
     for url in ("/api/intel/overview", "/api/intel/events", "/api/intel/markets"):
         r = c.get(url)
@@ -596,7 +596,7 @@ def test_hostile_text_is_data_and_stored_links_are_http_only(config, db):
 
 def test_intel_health_in_sources_route_and_docs(config, db):
     c, app = intel_app(config, db)
-    app.config["BTC_INTEL"].http = FakeHttp(routes(gdeltproject=ProviderError("HTTP 429")))
+    app.config["BTC_INTEL"].http = app.config["BTC_INTEL"].markets.http = FakeHttp(routes(gdeltproject=ProviderError("HTTP 429")))
     app.config["BTC_INTEL"].refresh(force=True)
     body = c.get("/api/sources").get_json()
     assert any(h["source"] == "gdelt" and h["status"] == "backing_off" for h in body["intel_health"])
@@ -619,7 +619,7 @@ def test_fred_key_status_only_and_never_exposed(config, db):
 def test_requirements_and_env_example():
     req = (ROOT / "requirements.txt").read_text(encoding="utf-8")
     env = (ROOT / ".env.example").read_text(encoding="utf-8")
-    assert "xlrd==" in req and "FRED_API_KEY=" in env and "CALENDAR_CONTACT_EMAIL" not in env
+    assert "xlrd==" in req and "FRED_API_KEY=" in env and "CALENDAR_CONTACT_EMAIL=" in env
 
 
 def test_page_has_the_view_and_context_label(config, db):

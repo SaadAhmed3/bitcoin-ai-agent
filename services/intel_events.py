@@ -269,6 +269,15 @@ def summarize_event(articles: list[dict], now: int) -> dict:
     lead = official or arts[0]
     status, reason = classify_status(arts)
     first, last = _when(arts[0]), _when(arts[-1])
+    timed = sorted((a for a in arts if a.get("published_at")), key=lambda a: (a["published_at"], a["id"]))
+    seen = [a["collected_at"] for a in arts if a.get("collected_at")]
+    event_time, first_seen = (timed[0]["published_at"] if timed else None), (min(seen) if seen else None)
+    if not timed:
+        time_flag = "publication_missing"
+    elif first_seen is not None and event_time > first_seen:
+        time_flag = "published_after_first_seen"
+    else:
+        time_flag = "publication_partial" if len(timed) < len(arts) else None
     return {
         "title": lead["title"],
         "category": classify_category(lead["title"], lead.get("summary") or ""),
@@ -278,6 +287,10 @@ def summarize_event(articles: list[dict], now: int) -> dict:
         "first_published_at": first,
         "last_published_at": last,
         "date_known": all(a.get("published_at") for a in arts),
+        "event_time_at": event_time,
+        "first_seen_at": first_seen,
+        "anchor_article_id": timed[0]["id"] if timed else None,
+        "time_flag": time_flag,
         "articles_count": len(arts),
         "sources_count": len({(a.get("publisher") or "").strip().lower() for a in arts}),
         "freshness": freshness(first, now),

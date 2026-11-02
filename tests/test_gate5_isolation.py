@@ -191,3 +191,34 @@ def test_gate5_sees_news_rows_but_not_intel_articles(config, db):
     db.insert_news([{"id": BLOCKER["id"], "feed": "t", "publisher": "P", "title": BLOCKER["title"], "link": BLOCKER["link"],
                      "summary": "", "published_at": BLOCKER["published_at"], "collected_at": FIXED_NOW}])
     assert any(e["title"] == BLOCKER["title"] for e in _report(db)["events"])
+
+
+def test_reaction_study_leaves_gate5_and_the_signal_identical(config, db):
+    """The study reads candles and writes only its own tables."""
+    from services.intel_events import summarize_event
+    from services.intel_reactions import ReactionService
+    c = make_client(config, db, [FakeProvider("fake1")])
+    c.post("/api/news/refresh")
+    rows, before = _news_rows(db), _report(db)
+    decisions = _decisions(before)
+    signal = c.get("/api/signal").get_json()
+    with db.connect() as conn:
+        candles = [tuple(r) for r in conn.execute("SELECT * FROM candles ORDER BY 1,2,3,4")]
+        stored_signals = conn.execute("SELECT COUNT(*) FROM signals").fetchone()[0]
+    t = (FIXED_NOW // HOUR) * HOUR
+    db.upsert_candles("binance", "BTCUSDT", "1h", [{"open_time": t - i * HOUR, "open": 100, "high": 101, "low": 99, "close": 100 + i,
+                                                    "volume": 5, "close_time": t - i * HOUR + HOUR - 1} for i in range(1, 60)], t)
+    a = {**BLOCKER, "published_at": t - 30 * HOUR, "collected_at": t - 29 * HOUR}
+    db.intel_add_articles([a])
+    db.intel_save_event(None, summarize_event([a], t), [a["id"]], t)
+    assert ReactionService(db, calendar=None, clock=lambda: t).update()["outcomes_added"] > 0
+
+    assert _news_rows(db) == rows
+    assert _stable(_report(db)) == _stable(before) and _decisions(_report(db)) == decisions
+    with db.connect() as conn:
+        now = [tuple(r) for r in conn.execute("SELECT * FROM candles WHERE provider != 'binance' ORDER BY 1,2,3,4")]
+        assert now == [r for r in candles if r[0] != "binance"]
+        assert conn.execute("SELECT COUNT(*) FROM signals").fetchone()[0] >= stored_signals
+    again = c.get("/api/signal").get_json()
+    for key in ("signal", "setup", "score", "no_trade_reasons"):
+        assert again[key] == signal[key], key

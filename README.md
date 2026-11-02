@@ -164,7 +164,19 @@ pins this: the same news gives the same gate 5 decision before and after, and th
   so far, or several running the same wording. Unverified = every report is hedged. Speculative = every report is a forecast.
   Disputed = one report denies the others.
 - **Macro calendar:** FOMC, CPI, PCE, jobs report and GDP, in UTC and your display time zone, marked released or upcoming.
-- **Other markets:** latest value, change, data date and delay. These are daily and often days old, so never live prices.
+- **Other markets:** latest value, change, data date, release cadence and delay. These are daily and often days old, so never
+  live prices. A series older than its normal release lag is flagged.
+- **What happened after similar events:** BTC's move at +1h, +4h, +24h, +7d and +30d after events and macro releases, next to a
+  normal move of the same length. Descriptive only: correlation is not causation, events overlap, and most samples are small.
+  - Event time is the earliest publication among the event's articles; first-seen time is stored too. An event with no publication
+    time, or one later than first seen, is flagged and left out of the statistics.
+  - Closed 1h candles only. Each window starts at the last candle closed before the event and ends at the first close at least the
+    horizon after it. A missing candle stays missing.
+  - Reactions are stored per article and never rewritten, because event grouping can be rebuilt.
+  - Events within 2 hours of a macro release are shown separately. If any release type's dates are unavailable, nothing counts as
+    clear of macro news.
+  - Overlapping windows count as one episode, and the 95% interval resamples whole episodes. Macro releases are by type only,
+    because no free consensus source exists.
 - **Unavailable, never estimated:** gold (no verified free series), ETF flows, exchange flows, whale movements, consensus
   forecasts; S&P 500 without the optional key.
 - **Known limits of the grouping:** it is rule-based. A big story can split into several events (the Binance hack split into
@@ -196,6 +208,7 @@ Method, rules against data snooping and results: [STRATEGY_LAB.md](STRATEGY_LAB.
 ## Data sources
 
 All free; no account needed. The only optional keys are a free CoinGecko Demo key and a free FRED API key (S&P 500 only).
+`CALENDAR_CONTACT_EMAIL` is optional too: your contact address for the SEC feed. It is never logged, stored or shown.
 
 | Source | Provides | Notes |
 |---|---|---|
@@ -206,7 +219,7 @@ All free; no account needed. The only optional keys are a free CoinGecko Demo ke
 | federalreserve.gov | FOMC dates | Fetched once a day |
 | bea.gov release calendar (ICS) | GDP and PCE dates | Fetched once a day |
 | `data/calendars/bls_2026_2027.json` | CPI and jobs-report dates | A curated file, never fetched: BLS blocks automated clients (HTTP 403). Warns when last verified over 12 months ago |
-| BBC, Fed, SEC, CFTC, U.S. Treasury (Global intelligence only) | World news and official press releases | Headline, short summary and link only. SEC is best-effort: no contact address is sent. Treasury's list page has no feed, so a layout change shows as an error |
+| BBC, Fed, SEC, CFTC, U.S. Treasury (Global intelligence only) | World news and official press releases | Headline, short summary and link only. SEC is best-effort unless `CALENDAR_CONTACT_EMAIL` is set; that address goes only in the SEC request's User-Agent, redirects refused. Treasury's list page has no feed, so a layout change shows as an error |
 | GDELT DOC 2.0 API (Global intelligence only, optional) | World news links | Exponential back-off up to one day. Answered HTTP 429 on every try from this connection on 2026-11-02; the app works without it |
 | U.S. Treasury, Fed H.10, U.S. EIA, Cboe (Global intelligence only) | 10-year yield, broad dollar index, Brent and WTI, VIX | Daily data shown with its date and delay. Cboe data is for personal non-commercial use and is not exported |
 | FRED API (optional free key, `FRED_API_KEY`) | S&P 500 | Without a key the S&P 500 shows as unavailable. Personal use; the key is never shown or stored |
@@ -226,6 +239,7 @@ Writes (POST/PUT/DELETE) from outside the dashboard need the header `X-Requested
 | `GET /api/news`, `POST /api/news/refresh` | News events; fetch now |
 | `GET /api/calendar?days=14&past=0` | Macro calendar, each event marked released or upcoming |
 | `GET /api/intel/overview`, `/api/intel/events?group=war\|elections\|macro\|crypto&category=&status=&country=&hours=&limit=`, `/api/intel/markets` | Global intelligence (read-only, context) |
+| `GET /api/intel/reactions`, `/api/intel/events/<id>/reaction` | Reaction study by category and macro release type; one event's before and after (read-only, context) |
 | `GET /api/signal`, `/api/signal/history`, `/api/signal/<id>` | Current signal; stored history |
 | `GET`/`PUT /api/signal/config` | Engine settings (range-checked; `{"reset": true}`) |
 | `POST /api/backtest/run` `{"years": 4, "period": "design", "entry_mode": "standard"}` | Start a backtest |

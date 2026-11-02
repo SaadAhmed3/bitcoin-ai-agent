@@ -165,7 +165,13 @@ changes the signal, its score, its gates, the strategies or paper trading.
 - **Status** comes from the wording and the kind of sources, not from checking the facts. "Confirmed" means two or more
   publishers reported it in their own words, not that it is proven true. Hover over a status to see why it was given.
 - **Macro calendar** shows the main US releases in UTC and your time zone, marked released or upcoming.
-- **Other markets** shows daily values with their date and delay. They are not live prices.
+- **Other markets** shows daily values with their date, how often they are released, and their delay. They are not live prices.
+  "Older than usual" means the value is older than that series normally gets, so the source is late or the fetch is failing.
+- **What happened after similar events** shows what Bitcoin did after past events and macro releases, next to a normal move
+  of the same length. It describes the past and says nothing about why Bitcoin moved: other news is always happening. Trust the
+  "Sample" column. Most categories say "too few" for now because the app has only collected articles for a few weeks.
+- **What Bitcoin did around this event**, under each event, shows Bitcoin before and after that event, and other markets by day.
+  "Waiting" means the time has not passed yet; "Candle missing" means the price data for that hour is not stored.
 
 The grouping uses rules, so a big story can appear as several events and some items can land in the wrong category.
 
@@ -455,7 +461,9 @@ Invoke-RestMethod http://127.0.0.1:5000/api/health
 - **Global intelligence**: daily market values are often days old, so check the date beside each one. The dollar index
   can be about a week behind. Gold, ETF flows, exchange flows and whale movements show as unavailable because there is
   no verified free source. The S&P 500 needs an optional free FRED API key in `.env` (`FRED_API_KEY`). GDELT may show as
-  failing; it retries by itself and everything else works without it.
+  failing; it retries by itself and everything else works without it. The SEC asks automated tools to identify themselves:
+  put your address in `.env` as `CALENDAR_CONTACT_EMAIL` and it is sent only to the SEC feed, in its User-Agent. Settings shows
+  only "set" or "not set".
 - **History for backtests** comes from Binance; a few hourly candles are missing in the record (exchange outages),
   and the app counts them rather than filling them in.
 

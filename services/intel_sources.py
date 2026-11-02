@@ -29,7 +29,7 @@ SOURCES: list[dict] = [
      "url": "https://feeds.bbci.co.uk/news/business/rss.xml"},
     {"id": "fed_press", "name": "Federal Reserve", "kind": "rss", "type": "official", "interval_min": 60,
      "url": "https://www.federalreserve.gov/feeds/press_all.xml"},
-    {"id": "sec_press", "name": "U.S. SEC", "kind": "rss", "type": "official", "interval_min": 60,
+    {"id": "sec_press", "name": "U.S. SEC", "kind": "rss", "type": "official", "interval_min": 60, "contact_user_agent": True,
      "url": "https://www.sec.gov/news/pressreleases.rss"},
     {"id": "cftc_general", "name": "U.S. CFTC", "kind": "rss", "type": "official", "interval_min": 60,
      "url": "https://www.cftc.gov/RSS/RSSGP/rssgp.xml"},
@@ -44,8 +44,15 @@ SOURCES: list[dict] = [
                 "mode": "ArtList", "format": "json", "maxrecords": "75", "timespan": "6h", "sort": "DateDesc"}},
 ]
 
+_CONTACT_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")
 _PRESS_RE = re.compile(r"<time[^>]*datetime=[\"']?([0-9TZ:-]+)[\"']?[^>]*>.*?"
                        r"<a[^>]*href=[\"']?(/news/press-releases/[a-z0-9-]+/?)[\"']?[^>]*>(.*?)</a>", re.S | re.I)
+
+
+def contact_user_agent(contact: str | None) -> str | None:
+    """The SEC asks automated clients to identify themselves. A missing or malformed address is simply not sent."""
+    contact = (contact or "").strip()
+    return f"bitcoin-ai-agent/0.9 personal research {contact}" if _CONTACT_RE.fullmatch(contact) else None
 
 
 def backoff_ms(source: dict, failures: int) -> int:
@@ -92,12 +99,17 @@ def parse_gdelt(data: dict, source: dict, collected: int) -> list[dict]:
     return items
 
 
-def fetch_source(source: dict, http, now: int) -> list[dict]:
-    """One request. Raises ProviderError; the caller records it and backs off."""
+def fetch_source(source: dict, http, now: int, contact: str | None = None) -> list[dict]:
+    """One request. Raises ProviderError; the caller records it and backs off. `contact` reaches only a source marked for it,
+    and that request refuses redirects, so the address cannot follow one to another host."""
     if source["kind"] == "gdelt":
         data, _ = http.get_json(source["url"] + "?" + urlencode(source["params"]))
         return parse_gdelt(data, source, now)
-    body, _ = http.get_bytes(source["url"])
+    agent = contact_user_agent(contact) if source.get("contact_user_agent") else None
+    if agent:
+        body, _ = http.get_bytes(source["url"], headers={"User-Agent": agent}, follow_redirects=False)
+    else:
+        body, _ = http.get_bytes(source["url"])
     if source["kind"] == "treasury_html":
         return parse_treasury_press(body.decode("utf-8", errors="replace"), source, now)
     items, _warnings = parse_feed(body, source, now)

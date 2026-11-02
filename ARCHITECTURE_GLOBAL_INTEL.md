@@ -175,7 +175,7 @@ The dependency runs one way: Intelligence may read existing data, and nothing ex
 | R2 | `intel_articles`, `intel_events`, `intel_event_articles` | Articles append-only; events updated only as a cluster grows |
 | R2 | `intel_market_points` | Append-only |
 | R2 | `intel_source_health` | Separate from `source_health` (see risk R4) |
-| R3 | `intel_reactions` | Append-only, one row per event and horizon |
+| R3 | `intel_reaction_baselines`, `intel_reaction_outcomes` | Append-only, enforced by triggers, keyed to an article or macro release (changed from the original one row per event and horizon: events can be rebuilt) |
 | R4 | `intel_summaries` | Cached output, each claim with article IDs |
 | R4 | `intel_assessments`, `intel_assessment_scores` | Append-only, enforced by triggers |
 
@@ -222,7 +222,21 @@ New code may import helpers from these files, which changes nothing in them.
 3. GDELT DOC API: optional, exponential back-off, own health table, clear status. No raw GKG files.
 4. Google News: unchanged for now, so gate 5 inputs stay identical. See the proposal below.
 5. Extra frozen files approved: `news_collector.py`, `news_analyzer.py`, `news_service.py`, `signal_service.py`, `paper_trading.py`, `alerts.py`, `assistant.py`, `ollama_service.py`.
-6. Contact address: not chosen in your reply (the `[CHOOSE ONE]` was left in). R2 uses the conservative option: no contact address, SEC stays best-effort. Changing this later is a small edit.
+6. Contact address: not chosen at R1 (the `[CHOOSE ONE]` was left in), so R2 used none. Your R2 review chose it: `CALENDAR_CONTACT_EMAIL` from `.env`, only in the SEC User-Agent, best-effort when missing. Built before R3.
+
+**Your decisions (R2 review, 2026-11-02), built in R3:**
+
+- Event time is the earliest publication among the event's articles. First-seen time is stored too. Reactions use publication time. Events with a publication time missing or later than first seen are flagged.
+- All reactions are keyed to articles, not events.
+- Events within 2 hours of a macro release are shown separately from the per-category statistics.
+
+**R3 implementation choices:**
+
+- Flagged events are left out of the statistics and counted, not only labelled, because their time is absent or provably wrong.
+- If any release type's dates are unavailable, or an event falls outside their span, the event is "macro unknown", not clean.
+- Overlapping windows count as one episode. The bootstrap resamples whole episodes, and no interval is given below 5 episodes.
+- A candle counts as closed only if it was fetched after it closed, because a row saved while forming keeps partial values.
+- Macro reactions are keyed by release id and time, so a rescheduled release is measured at its new time.
 
 **Proposal for later: replace Google News.** `news.google.com/robots.txt` says `Disallow: /` for general agents, and the feed supplies about half of the stored news (296 of 592 items on 2026-11-02). I could not find current official terms for the feed. A replacement could be BBC plus official press releases and, if it starts answering, GDELT.
 

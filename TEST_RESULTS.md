@@ -122,3 +122,15 @@ Project `.venv`, Python 3.13.12.
 | Dependency audit | `.venv\Scripts\python.exe -m pip_audit -r requirements.txt` | No known vulnerabilities | | | |
 
 Before R2: 807 unit, 129 e2e. Live check on the real database: 12 of 13 sources OK; GDELT answered HTTP 429.
+
+## Global Intelligence R3 (2026-11-02)
+
+Project `.venv`, Python 3.13.12.
+
+| Suite | Command | Passed | Failed | Deselected | Time |
+|---|---|---|---|---|---|
+| Unit / integration | `.venv\Scripts\python.exe -m pytest -q` | **1057** | 0 | 148 (e2e) | 304 s |
+| Browser (Playwright) | `.venv\Scripts\python.exe -m pytest -m e2e -q` | **148** | 0 | 1057 | 443 s |
+| Dependency audit | not rerun: `requirements.txt` did not change in R3 | | | | |
+
+Before R3: 954 unit, 139 e2e. Live check on the real database: 2,330 stored outcomes re-derived from raw candles by a separate script, 0 mismatches.

@@ -211,6 +211,10 @@ class SettingsService:
                                          "source": "env", "read_only": True, "env": "FRED_API_KEY",
                                          "restart_required": True, "kind": "secret",
                                          "help": "Optional free FRED API key. Enables the S&P 500 in Global Intelligence. Set it in .env; it is never shown or stored here."}
+        out["market"]["calendar_contact_email"] = {"value": "set" if self.secrets().get("calendar_contact_email") else "not set",
+                                                   "source": "env", "read_only": True, "env": "CALENDAR_CONTACT_EMAIL",
+                                                   "restart_required": True, "kind": "secret",
+                                                   "help": "Optional contact address, sent only in the User-Agent of the SEC press-release feed. Set it in .env; it is never shown or stored here."}
         return out
 
     # ------------------------------------------------------------------ write

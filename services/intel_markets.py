@@ -107,27 +107,35 @@ def parse_fred_api(data: dict) -> list[tuple[str, float]]:
 
 
 # ------------------------------------------------------------------------- series
+# max_normal_age_days: the oldest the latest value should be, in calendar days, just before the next release. It allows for a
+# weekend and a one-day holiday. Beyond it the source is late or the fetch is failing, and the page says so.
 EIA_NOTE = "U.S. government data, public domain. Source: U.S. Energy Information Administration."
 MARKET_SERIES = [
     {"id": "us10y", "name": "US 10-year Treasury yield", "unit": "%", "source": "U.S. Treasury", "health": "market:treasury",
      "source_url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates",
-     "delay_label": "Daily, published after the US close", "notes": ""},
+     "delay_label": "Daily, published after the US close", "notes": "",
+     "release_cadence": "Daily, each business day", "max_normal_age_days": 4},
     {"id": "usd_broad", "name": "US dollar index (broad, nominal)", "unit": "index", "source": "Federal Reserve H.10", "health": "market:h10",
      "source_url": "https://www.federalreserve.gov/releases/h10/current/",
-     "delay_label": "Daily values, released weekly: often about a week behind", "notes": ""},
+     "delay_label": "Daily values, released weekly: often about a week behind", "notes": "",
+     "release_cadence": "Weekly release, on Mondays, of daily values", "max_normal_age_days": 11},
     {"id": "vix", "name": "VIX volatility index", "unit": "index", "source": "Cboe", "health": "market:cboe",
      "source_url": "https://www.cboe.com/tradable-products/vix/vix-historical-data/",
      "delay_label": "Daily close, published after the close",
-     "notes": "Cboe data, shown for personal non-commercial use only. Not included in exports."},
+     "notes": "Cboe data, shown for personal non-commercial use only. Not included in exports.",
+     "release_cadence": "Daily, each trading day", "max_normal_age_days": 4},
     {"id": "brent", "name": "Brent crude (spot)", "unit": "USD/barrel", "source": "U.S. EIA", "health": "market:eia",
      "source_url": "https://www.eia.gov/dnav/pet/hist/RBRTEd.htm",
-     "delay_label": "Daily spot price, usually published about a week later", "notes": EIA_NOTE},
+     "delay_label": "Daily spot price, usually published about a week later", "notes": EIA_NOTE,
+     "release_cadence": "Weekly release, on Wednesdays, of daily values", "max_normal_age_days": 9},
     {"id": "wti", "name": "WTI crude (spot)", "unit": "USD/barrel", "source": "U.S. EIA", "health": "market:eia",
      "source_url": "https://www.eia.gov/dnav/pet/hist/RWTCd.htm",
-     "delay_label": "Daily spot price, usually published about a week later", "notes": EIA_NOTE},
+     "delay_label": "Daily spot price, usually published about a week later", "notes": EIA_NOTE,
+     "release_cadence": "Weekly release, on Wednesdays, of daily values", "max_normal_age_days": 9},
     {"id": "sp500", "name": "S&P 500", "unit": "index", "source": "FRED (S&P Dow Jones Indices)", "health": "market:fred",
      "source_url": "https://fred.stlouisfed.org/series/SP500", "delay_label": "Daily close, published the next business day",
-     "notes": "S&P Dow Jones Indices data retrieved through FRED, personal use only. Not included in exports.", "needs_key": True},
+     "notes": "S&P Dow Jones Indices data retrieved through FRED, personal use only. Not included in exports.", "needs_key": True,
+     "release_cadence": "Daily, each trading day", "max_normal_age_days": 4},
 ]
 UNAVAILABLE = {
     "gold": {"name": "Gold", "reason": "No verified free gold price series. The LBMA series were removed from FRED, and the others "
@@ -192,7 +200,7 @@ class IntelMarkets:
         now = self.clock()
         out = []
         for s in MARKET_SERIES:
-            row = {k: s.get(k) for k in ("id", "name", "unit", "source", "source_url", "delay_label", "notes")}
+            row = {k: s.get(k) for k in ("id", "name", "unit", "source", "source_url", "delay_label", "notes", "release_cadence")}
             pts = self.db.intel_market_points(s["id"], 2)
             state = self.db.intel_market_state(s["id"]) or {}
             row["fetch_error"] = state.get("last_error")
@@ -205,8 +213,11 @@ class IntelMarkets:
                 continue
             p = pts[0]
             age = (dt.datetime.fromtimestamp(now / 1000, dt.timezone.utc).date() - dt.date.fromisoformat(p["data_date"])).days
+            stale = age > s["max_normal_age_days"]
             row.update(status="ok", value=p["value"], data_date=p["data_date"], age_days=age, change=None, change_pct=None,
-                       previous_date=None)
+                       previous_date=None, stale=stale,
+                       stale_note=(f"Older than usual: {p['data_date']} is {age} days old, and this series is normally at most "
+                                   f"{s['max_normal_age_days']} days old. The source may be late or the fetch failing.") if stale else None)
             if len(pts) > 1:
                 prev = pts[1]
                 row.update(change=p["value"] - prev["value"], previous_date=prev["data_date"],

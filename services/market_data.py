@@ -575,8 +575,8 @@ SOURCE_DOCS = [
     {"source": "intel:official", "provides": "Fed, SEC, CFTC and Treasury press releases (Global Intelligence only)", "api_key": "No",
      "limits": "One request per source per hour", "refresh": "Hourly", "delay": "As published",
      "failure": "Stored items still shown; exponential back-off up to one day",
-     "notes": "Not part of the signal. SEC asks automated tools to declare themselves; no contact address is sent, so SEC is "
-              "best-effort. Treasury has no press feed: its list page is read, and a layout change shows as an error."},
+     "notes": "Not part of the signal. SEC asks automated tools to declare themselves: CALENDAR_CONTACT_EMAIL, when set, goes only "
+              "in the SEC request's User-Agent; without it SEC is best-effort. Treasury has no press feed: its list page is read, and a layout change shows as an error."},
     {"source": "intel:bbc", "provides": "BBC World and Business headlines and links (Global Intelligence only)", "api_key": "No",
      "limits": "One request per feed per 30 min", "refresh": "Every 30 min", "delay": "Minutes after publication",
      "failure": "Stored items still shown; back-off", "notes": "Not part of the signal. Headline, short summary and link only; for personal use."},

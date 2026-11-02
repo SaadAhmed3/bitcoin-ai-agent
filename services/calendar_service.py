@@ -218,6 +218,25 @@ class CalendarService:
             raise ProviderError("www.bea.gov: no GDP or PCE dates found (calendar format changed?)")
         return events
 
+    def known_releases(self) -> dict:
+        """Every stored release date, past and future, for the reaction study. Uses the same daily cache as upcoming()."""
+        releases, warnings = [], []
+        fomc, err, _ = self._cached_fetch("calendar:fomc", self._fomc)
+        if err:
+            warnings.append(f"FOMC: {err}")
+        releases += fomc or []
+        if self.bea:
+            bea, err, _ = self._cached_fetch("calendar:bea", self._bea, record=self.health)
+            if err:
+                warnings.append(f"BEA: {err}")
+            releases += bea or []
+        if self.bls_curated_path:
+            try:
+                releases += load_bls_curated(self.bls_curated_path, self.clock())[0]
+            except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+                warnings.append(f"BLS: curated schedule unreadable ({type(exc).__name__})")
+        return {"releases": [{k: e.get(k) for k in ("id", "kind", "at", "event", "link")} for e in releases], "warnings": warnings}
+
     def upcoming(self, days: int = WINDOW_DAYS, past_days: int = 0) -> dict:
         """Events in the next `days`, and released ones from the last `past_days`, each marked released or upcoming."""
         now = self.clock()

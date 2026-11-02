@@ -16,6 +16,7 @@ from services.http_client import HttpClient, ProviderError
 from services.intel_events import (CATEGORIES, CATEGORY_LABELS, CLUSTER_WINDOW_MS, FILTER_GROUPS, STATUSES, cluster, freshness,
                                    summarize_event)
 from services.intel_markets import IntelMarkets
+from services.intel_reactions import ReactionService
 from services.intel_sources import SOURCES, backoff_ms, fetch_source
 
 log = logging.getLogger("btc_agent.intel")
@@ -25,7 +26,7 @@ HOUR = 3_600_000
 DAY = 24 * HOUR
 MAX_ARTICLE_AGE_MS = 14 * DAY      # older items are not "live" events (feeds re-list old stories)
 EXISTING_NEWS_WINDOW_MS = 7 * DAY
-GROUPING_RULES_VERSION = 2         # raise when the rules change: events are derived, so they are rebuilt from the articles
+GROUPING_RULES_VERSION = 3         # raise when the rules or stored fields change: events are derived, so they are rebuilt from the articles
 MAX_TITLE = 300
 UNAVAILABLE_DATA = [
     {"name": "ETF flows", "reason": "No verified free source."},
@@ -37,7 +38,8 @@ UNAVAILABLE_DATA = [
 
 class IntelService:
     def __init__(self, db: Database, http=None, markets: IntelMarkets | None = None, sources: list[dict] | None = None,
-                 clock: Callable[[], int] = now_ms, fred_key: Callable[[], str] = lambda: ""):
+                 clock: Callable[[], int] = now_ms, fred_key: Callable[[], str] = lambda: "", calendar=None,
+                 contact: Callable[[], str] = lambda: ""):
         self.db = db
         # No retries: a failure backs off instead. One request per 1.5 s per host, polite for official sites.
         self.http = http if http is not None else HttpClient(timeout=30, retries=0, min_interval=1.5,
@@ -45,6 +47,8 @@ class IntelService:
         self.sources = sources if sources is not None else SOURCES
         self.clock = clock
         self.markets = markets or IntelMarkets(db, self.http, fred_key=fred_key, clock=clock)
+        self.reactions = ReactionService(db, calendar=calendar, clock=clock)
+        self.contact = contact
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------------ ingest
@@ -77,7 +81,7 @@ class IntelService:
             if not force and h.get("next_attempt_at") and now < h["next_attempt_at"]:
                 continue
             try:
-                items = fetch_source(src, self.http, now)
+                items = fetch_source(src, self.http, now, contact=self.contact())
             except ProviderError as exc:
                 fails = int(h.get("consecutive_failures") or 0) + 1
                 self.db.intel_record_health(src["id"], False, str(exc), now, now + backoff_ms(src, fails), kind="article")
@@ -111,7 +115,12 @@ class IntelService:
             added += self.add_articles(self._existing_news())
             touched = self.regroup()
             markets = self.markets.refresh(force)
-        return {"articles_added": added, "events_touched": touched, "sources": results, "markets": markets}
+            try:
+                reactions = self.reactions.update()
+            except Exception as exc:       # the study must never stop fetching and grouping
+                log.exception("Reaction study failed")
+                reactions = {"error": type(exc).__name__}
+        return {"articles_added": added, "events_touched": touched, "sources": results, "markets": markets, "reactions": reactions}
 
     # ------------------------------------------------------------------ read
     def events(self, group: str | None = None, category: str | None = None, status: str | None = None,

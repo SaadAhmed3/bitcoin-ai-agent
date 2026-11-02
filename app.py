@@ -67,7 +67,8 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
     db = Database(config.db_path)
     db.init()
     settings = SettingsService(db, secrets=lambda: {"coingecko_demo_key": bool(config.coingecko_demo_key),
-                                                    "fred_api_key": bool(config.fred_api_key)})
+                                                    "fred_api_key": bool(config.fred_api_key),
+                                                    "calendar_contact_email": bool(config.calendar_contact_email)})
     if market is None:
         config.providers = settings.get("market", "provider_order")      # restart required to change
     market = market or MarketDataService(db, config)
@@ -284,7 +285,8 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         monitor.start()
 
     # Global Intelligence: context only, one-way (it reads the news table; nothing existing reads it). Own worker thread.
-    intel = intel or IntelService(db, fred_key=lambda: config.fred_api_key)
+    intel = intel or IntelService(db, fred_key=lambda: config.fred_api_key, calendar=calendar,
+                                  contact=lambda: config.calendar_contact_email)
     intel_worker = IntelWorker(intel)
     app.config["BTC_INTEL"] = intel
     app.config["BTC_INTEL_WORKER"] = intel_worker
@@ -775,6 +777,17 @@ def create_app(config: Config | None = None, market: MarketDataService | None = 
         return jsonify(intel.events(group=request.args.get("group") or None, category=request.args.get("category") or None,
                                     status=request.args.get("status") or None, country=country,
                                     hours=_int_arg("hours", 168, 1, 2160), limit=_int_arg("limit", 100, 1, 500)))
+
+    @app.get("/api/intel/reactions")
+    def intel_reactions():
+        return jsonify(intel.reactions.study())
+
+    @app.get("/api/intel/events/<int:event_id>/reaction")
+    def intel_event_reaction(event_id: int):
+        detail = intel.reactions.event_detail(event_id)
+        if detail is None:
+            return jsonify({"error": "Unknown event. The grouping may have been rebuilt; reload the page."}), 404
+        return jsonify(detail)
 
     @app.get("/api/intel/markets")
     def intel_markets():

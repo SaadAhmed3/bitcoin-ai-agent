@@ -381,7 +381,20 @@ ul.ev a { color: var(--info); }
 .intel-status.official_statement, .intel-status.confirmed { border-color: var(--up); }
 .intel-status.disputed, .intel-status.speculative, .intel-status.unverified { border-color: var(--warn); }
 .intel-sources { margin: 6px 0 0; padding-left: 18px; font-size: 12px; }
-#intelFilters .chip-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+#intelFilters .chip-btn[aria-pressed="true"], #intelStudyHorizons .chip-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.intel-time { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 4px; }
+.intel-time .kpi-warn { margin: 0; }
+.intel-reaction { margin-top: 6px; font-size: 13px; }
+.intel-reaction > summary { cursor: pointer; color: var(--accent); font-size: 12px; min-height: 24px; }
+.intel-reaction-body { padding: 8px 0 0; }
+.intel-reaction-body h4 { margin: 10px 0 2px; font-size: 13px; }
+.intel-study-notes { margin: 8px 0; padding-left: 18px; }
+.study-flag.too_few, .study-flag.small { color: var(--warn); }
+.react-status.measured { color: var(--up); }
+.react-status.missing { color: var(--warn); }
+.react-status.pending, .react-status.unavailable { color: var(--muted); }
+#intelStudy .table td:last-child { min-width: 150px; }
+#intelMarkets { grid-column: 1 / -1; }
 .mk-source { display: block; }
 .cal-status { font-size: 11px; font-weight: 600; }
 .cal-status.upcoming { color: var(--info); }
